@@ -7,7 +7,7 @@
 |林伟钦|     |    | 
 
 
-##学习资料
+## 学习资料
 |名称|类型|链接|
 |:---：|:---:|:---：|
 |大磊fpga|图像算法|https://www.bilibili.com/video/BV1wA411i78E?spm_id_from=333.1387.collection.video_card.click|
