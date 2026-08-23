@@ -15,11 +15,11 @@
 |官方板卡资料|详细例程|https://pan.baidu.com/s/12hjB7BiAxT3CIVqzh4Amnw|
 
 ### 景子玞的工作日志
-2026.8.23
-获取官方资料，安装官方开发平台TD，下载Modelsim
-从代码到仿真再到添加约束，通过TD和Modelsim完整实现全流程
-参考资料为：
-官方pdf——安路软件使用全流程、
+2026.8.23  
+获取官方资料，安装官方开发平台TD，下载Modelsim  
+从代码到仿真再到添加约束，通过TD和Modelsim完整实现全流程  
+参考资料为：  
+官方pdf——安路软件使用全流程  
 视频——https://www.bilibili.com/video/BV14MFCe4EHe?t=1.8
 
 
