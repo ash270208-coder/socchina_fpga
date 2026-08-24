@@ -46,7 +46,7 @@
 8. 【video_out】: 从 DDR 读出视频，转换为 HDMI 时钟域的 24 位 RGB 数据 (S_video_rd_data[23:0])  
       ▼  
 9. 【hdmi_mixer】: 混叠器（视频窗口对齐、当前例程的 OSD/调试信息注入点）    
-      ▼  
+      ▼    
 10.【hdmi_tx】: 编码并串行化输出 TMDS 差分信号驱动屏幕 (O_tmds_ch*_p)
    
    其中isp_top和hdmi_mixer是修改的主要目标  
