@@ -52,6 +52,8 @@
    其中isp_top和hdmi_mixer是修改的主要目标  
   
    isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡化
+
+     
    在u_hdmi_mixer 与 u_hdmi_tx 之间实现
      
    1. 多算法平滑切换与状态显示  
