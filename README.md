@@ -27,33 +27,34 @@
 #### 2026.8.24  
 例程1代码结构层次
 [SC500CS 物理信号]
-      │ IO_rx_data_pad_p/n (MIPI 差分线)  
-      ▼
+      │ IO_rx_data_pad_p/n (MIPI 差分线)    
+      ▼  
 1. 【mipi_dphy_rx_ph1p_mipiio_wrapper】: 物理层 D-PHY，输出 16 位 HS 数据 (S_hs_rx_data)  
-      ▼
+      ▼  
 2. 【csi_unpacket_2lane】: CSI-2 协议解包，提取有效数据包 (S_csi_data[31:0])  
-      ▼
+      ▼  
 3. 【raw10_unpacket_2lane】: 解包为 Bayer RAW10 数据 (S_raw10_data[39:0]，4像素并行)  
-      ▼
+      ▼  
 4. 【uial2axis】: 转换为标准 AXI4-Stream 视频流 (S_axis_tdata / S_axis_tuser / S_axis_tlast)  
-      ▼
+      ▼  
 5. 【image_correction】: 图像校正（如黑电平校正 BLC、去坏点 DPC，输出 S_raw_tdata）  
-      ▼
+      ▼  
 6. 【isp_top】: 核心 ISP（Bayer 转 RGB 邻域插值、色彩校正、打包为 128 位宽 S_ISP_O_tdata）  
-      ▼
+      ▼  
 7. 【video_in】+【ddr_wrapper】: 写入片内 DDR 帧缓存（三缓存/乒乓机制）  
-      ▼
+      ▼  
 8. 【video_out】: 从 DDR 读出视频，转换为 HDMI 时钟域的 24 位 RGB 数据 (S_video_rd_data[23:0])  
-      ▼
+      ▼  
 9. 【hdmi_mixer】: 混叠器（视频窗口对齐、当前例程的 OSD/调试信息注入点）    
-      ▼
+      ▼  
 10.【hdmi_tx】: 编码并串行化输出 TMDS 差分信号驱动屏幕 (O_tmds_ch*_p)
    
    其中isp_top和hdmi_mixer是修改的主要目标  
   
    isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡化
-   在u_hdmi_mixer 与 u_hdmi_tx 之间实现  
-   1.多算法平滑切换与状态显示  
+   在u_hdmi_mixer 与 u_hdmi_tx 之间实现
+     
+   1. 多算法平滑切换与状态显示  
    将 24 位 RGB 像素并行输入多个流水线算法分支（原图分支、灰度+Sobel 边缘分支、二值化+形态学分支、色彩分割分支；  
    设计按键状态机（FSM）控制一个多路选择器（MUX），按键按下时平滑切换选择输出哪一路流；  
    状态显示：在 OSD 模块内根据当前状态机的值，在屏幕右上角显示 MODE: SOBEL 或 MODE: TRACKING  
