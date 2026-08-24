@@ -25,6 +25,7 @@
 
 
 #### 2026.8.24  
+##### 阅读官方例程，尝试找到思路
 例程1代码结构层次
 [SC500CS 物理信号]
       │ IO_rx_data_pad_p/n (MIPI 差分线)    
@@ -49,7 +50,8 @@
       ▼    
 10.【hdmi_tx】: 编码并串行化输出 TMDS 差分信号驱动屏幕 (O_tmds_ch*_p)
    
-其中isp_top和hdmi_mixer是修改的主要目标  
+   
+其中isp_top和hdmi_mixer是修改的主要目标    
   
 isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡化
 
