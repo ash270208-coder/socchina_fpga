@@ -1,289 +1,259 @@
+`timescale 1ns/1ps
+
 module histogram_equ#(
     parameter IMG_WIDTH  = 1024,
     parameter IMG_HEIGHT = 600
 )
 (
-    input               I_clk,          //axi4s_video_aclk
+    input               I_clk,          // axi4s_video_aclk
     input               I_rst_n,
     
-    input               I_tlast,        //行结束信号
-    input               I_tuser,        //帧开始信号
-    input      [7:0]    I_grey_tdata,
-    input               I_tvalid,        //数据有效信号
+    input               I_tlast,        // 行结束信号
+    input               I_tuser,        // 帧开始信号
+    input      [7:0]    I_grey_tdata,   // 输入灰度数据
+    input               I_tvalid,       // 数据有效信号
     
-    output 	            O_tlast,
-    output 	            O_tuser,
-    output 	   [7:0]    O_grey_tdata,
-    output 	            O_tvalid
- 
-     );
+    output              O_tlast,
+    output              O_tuser,
+    output     [7:0]    O_grey_tdata,   // 均衡化后的灰度数据
+    output              O_tvalid
+);
      
-     localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT; // 614400
-     localparam MAX_GREY     = 256;
-     //除法改为乘法＋移位用
-     localparam SHIFT_AMT   = 32;
-     localparam MULT_FACTOR = 32'd6990;
-     
-     wire [19:0] ram_his_rd_data;
-     reg         ram_his_wr_en;
-     reg         I_tuser_delay;
-     
-     reg [7:0]   ram_his_addr_b;
-     reg         ram_his_rd_b;
-     wire [19:0] ram_his_rd_data_b;
-     
-     reg         ram_his_wr_b;
-     
-     reg         ram_accu_wr;
-     reg [7:0]   ram_accu_wraddr;
-     wire [19:0]  ram_accu_wrdata;
-     
-     wire [19:0]  ram_accu_rddata;
-     
-     
-     //读操作比写操作提前一个周期，所以让ram_his_wr_en延迟一个周期
-	always @ (posedge I_clk, negedge I_rst_n) begin
-	    if(!I_rst_n)
-	        ram_his_wr_en<=1'b0;
-	    else
-	        ram_his_wr_en<=I_tvalid;
-	end
-     
-     
-//利用RAM来进行灰度统计，生成灰度直方图，灰度值作为地址，每统计一个出现像素，对应的灰度值作为地址，其中的数据加1
+    localparam TOTAL_PIXELS = IMG_WIDTH * IMG_HEIGHT;
+    localparam MAX_GREY     = 256;
+    localparam SHIFT_AMT    = 32;
+    localparam MULT_FACTOR  = (64'd1 << SHIFT_AMT) / TOTAL_PIXELS;
 
-    ram_2port u_ram_2port(
+    // =========================================================================
+    // 1. 像素统计流水线与 RAW 冲突前推 (Port A: 写, Port B: 读)
+    // =========================================================================
+    reg [7:0]   grey_d1, grey_d2;
+    reg         valid_d1, valid_d2;
+    reg [19:0]  his_wr_data_r;
+    wire [19:0] ram_his_rd_data;
+    wire [19:0] his_wr_data;
     
-    	//端口A，摄像头输出的灰度值数据作为RAM地址，先读出来，再加1写回
-    	.clock_a    (I_clk),
-    	.aclr_a     (!I_rst_n),
-    	.rden_a     (I_tvalid),
-    	.address_a  (I_grey_tdata),
-    	.q_a        (ram_his_rd_data),
-    	
-    	
-    	.wren_a     (ram_his_wr_en),
-    	.data_a     (ram_his_rd_data+1),
-        
-        //端口B:一帧结束后读出RAM中的数据进行寄存，下一帧开始前将RAM初始化为0
-        .clock_b    (I_clk),
-    	.aclr_b     (1'b0),
-    	.rden_b     (ram_his_rd_b),
-    	.address_b  (ram_his_addr_b),
-    	.q_b        (ram_his_rd_data_b),
-    	
-    	
-    	.wren_b     (ram_his_wr_b),
-    	.data_b     (32'd0)
-        
-        );
-        
-//        wire I_tuser_negedge;
-//        wire I_tuser_posedge;
-//        
-//        always @ (posedge I_clk,negedge I_rst_n) begin
-//            if(!I_rst_n)
-//               I_tuser_delay<=1'b0;
-//            else
-//               I_tuser_delay<=I_tuser;
-//        end
-//        
-//        assign I_tuser_negedge=I_tuser_delay & (!I_tuser);
-//        assign I_tuser_posedge=(!I_tuser_delay) & I_tuser;
-//        
-//        //帧开始上升沿表示前一帧直方图统计结束，此时将RAM中数据读出，寄存到新的RAM中
-//        always @ (posedge I_clk,negedge I_rst_n) begin
-//            if(!I_rst_n)
-//                ram_his_rd_b<=1'b0;
-//            else begin
-//                if(I_tuser_posedge)
-//                    ram_his_rd_b<=1'b1;
-//                else if(ram_his_addr_b==8'd255)
-//                    ram_his_rd_b<=1'b0;
-//            end
-//        end
-//        
-//        //帧开始下降沿表示新一帧的开始，此时将RAM初始化为0
-//        always @ (posedge I_clk,negedge I_rst_n) begin
-//            if(!I_rst_n)
-//                ram_his_wr_b<=1'b0;
-//            else begin
-//                if(I_tuser_negedge)
-//                    ram_his_wr_b<=1'b1;
-//                else if(ram_his_addr_b==8'd255)
-//                    ram_his_wr_b<=1'b0;
-//            end
-//         end
-
-	reg [19:0] pixel_cnt;
-	wire       frame_end = (pixel_cnt == TOTAL_PIXELS); // 614400 拍结束标志
-	
-	always @(posedge I_clk , negedge I_rst_n) begin
-	    if(!I_rst_n)
-	        pixel_cnt <= 20'd0;
-	    else if(I_tuser && I_tvalid)
-	        pixel_cnt <= 20'd1;           // 遇到新帧重新数
-	    else if(I_tvalid)
-	        pixel_cnt <= pixel_cnt + 20'd1;
-	end
-	
-	
-	// 状态定义：IDLE -> 读出数据并累加(256拍) -> 写0清零(256拍) -> 完成
-	localparam S_IDLE  = 2'd0;
-	localparam S_READ  = 2'd1;
-	localparam S_CLEAR = 2'd2;
-	
-	reg [1:0] state;
-	reg [7:0] addr_cnt;
-	
-	always @(posedge I_clk , negedge I_rst_n) begin
-	    if(!I_rst_n) begin
-	        state          <= S_IDLE;
-	        addr_cnt       <= 8'd0;
-	        ram_his_rd_b   <= 1'b0;
-	        ram_his_wr_b   <= 1'b0;
-	        ram_his_addr_b <= 8'd0;
-	    end else begin
-	        case(state)
-	            S_IDLE: begin
-	                addr_cnt     <= 8'd0;
-	                ram_his_rd_b <= 1'b0;
-	                ram_his_wr_b <= 1'b0;
-	                if(frame_end) begin
-	                    state        <= S_READ;
-	                    ram_his_rd_b <= 1'b1; // 启动读使能
-	                end
-	            end
-	
-	            // 阶段一：扫描 0~255 读出统计数据送去累加
-	            S_READ: begin
-	                ram_his_addr_b <= addr_cnt;
-                    ram_his_rd_b   <= 1'b1;          
-                    ram_his_wr_b   <= 1'b0;
-	                if(addr_cnt == 8'd255) begin
-	                    state        <= S_CLEAR;
-	                    addr_cnt     <= 8'd0;
-	                    
-	                end else begin
-	                    addr_cnt <= addr_cnt + 8'd1;
-	                end
-	            end
-	
-	            // 阶段二：扫描 0~255 写入 0 进行清零
-	            S_CLEAR: begin
-                    ram_his_rd_b <= 1'b0; // 关掉读
-	                ram_his_wr_b <= 1'b1; // 开启写(清零)
-	                ram_his_addr_b <= addr_cnt;
-	                if(addr_cnt == 8'd255) begin
-	                    state        <= S_IDLE;
-	                    ram_his_wr_b <= 1'b0; // 清零完成，关闭写
-	                end else begin
-	                    addr_cnt <= addr_cnt + 8'd1;
-	                end
-	            end
-                
-                default:begin
-                    state <= S_IDLE;
-                end
-	        endcase
-	    end
-	end
-    
-    
-    //计算累计直方图
-    
-    //从前一个RAM中读出直方图统计信息，延迟一个时钟周期拉高下一个RAM的写使能
-    always @(posedge I_clk , negedge I_rst_n) begin
-	    if(!I_rst_n)
-            ram_accu_wr<=1'b0;
-        else
-            ram_accu_wr<=ram_his_rd_b;
-    end
-    
-    reg [19:0] his_sum;//累积直方图结果
-    
-    always @(posedge I_clk , negedge I_rst_n) begin
-	    if(!I_rst_n)
-            his_sum<=20'd0;
-        else begin
-            if(ram_his_wr_b)
-                his_sum<=20'd0;
-            else if(ram_accu_wr)
-                his_sum<=his_sum+ram_his_rd_data_b;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n) begin
+            grey_d1  <= 8'd0;
+            grey_d2  <= 8'd0;
+            valid_d1 <= 1'b0;
+            valid_d2 <= 1'b0;
+        end else begin
+            grey_d1  <= I_grey_tdata;
+            grey_d2  <= grey_d1;
+            valid_d1 <= I_tvalid;
+            valid_d2 <= valid_d1;
         end
     end
-    
-    assign ram_accu_wrdata=his_sum;
-    
-    // 将直方图统计信息寄存到另一个RAM
-    always @(posedge I_clk , negedge I_rst_n) begin
-	    if(!I_rst_n)
-            ram_accu_wraddr<=8'd0;
-        else
-            ram_accu_wraddr<=ram_his_addr_b;
-    end
-    
-    
-    //累计直方图RAM
-    ram_2port_accumulate u_ram_2port_accumulate(
-        .clock      (I_clk),
-        .aclr       (!I_rst_n),
-        .wren       (ram_accu_wr),
-        .wraddress  (ram_accu_wraddr),
-        .data       (ram_accu_wrdata),
-        .rden       (I_tvalid),
-        .rdaddress  (I_grey_tdata),
-        .q          (ram_accu_rddata)
-    );
-    
-    //直方图均衡
-    reg  [27:0] data_mult;//乘法运算结果
-    
-    always @ (posedge I_clk,negedge I_rst_n) begin
+
+    // RAW 旁路前推：连续相同灰度时直接累加上一拍结果
+    wire raw_hazard = (grey_d1 == grey_d2) && valid_d1 && valid_d2;
+    assign his_wr_data = raw_hazard ? (his_wr_data_r + 20'd1) : (ram_his_rd_data + 20'd1);
+
+    always @(posedge I_clk or negedge I_rst_n) begin
         if(!I_rst_n)
-            data_mult<=28'd0;
-        else
-            data_mult<=ram_accu_rddata*(MAX_GREY-1);
+            his_wr_data_r <= 20'd0;
+        else if(valid_d1)
+            his_wr_data_r <= his_wr_data;
     end
-    
-    
-    wire [59:0] mult_result;               
-    assign mult_result = data_mult * MULT_FACTOR;
-    
-    reg [7:0] data_div;//除法运算结果
-    //1/TOTAL_PIXELS=MULT_FACTOR/2^SHIFT_AMT
+
+    // =========================================================================
+    // 2. 帧结束检测 (基于 AXI-Stream 行列计数器)
+    // =========================================================================
+    reg [11:0] line_cnt;
     
     always @(posedge I_clk or negedge I_rst_n) begin
         if(!I_rst_n)
-            data_div<=8'd0;
-        else
-            data_div <= (mult_result >> SHIFT_AMT);
+            line_cnt <= 12'd0;
+        else if(I_tuser && I_tvalid)
+            line_cnt <= 12'd1;
+        else if(I_tvalid && I_tlast)
+            line_cnt <= line_cnt + 12'd1;
     end
-    
-    
-    reg [2:0] I_tlast_r;           
-    reg [2:0] I_tuser_r;       
-    reg [2:0] I_tvalid_r;
-    
-    always @ (posedge I_clk,negedge I_rst_n) begin
+
+    wire frame_end = (line_cnt == IMG_HEIGHT) && I_tlast && I_tvalid;
+
+    // =========================================================================
+    // 3. 状态机 (包含复位自清零 S_INIT_CLEAR)
+    // =========================================================================
+    localparam S_INIT_CLEAR = 3'd0; // 复位后先把 RAM 刷成纯 0
+    localparam S_IDLE       = 3'd1; // 等待图像数据并统计
+    localparam S_READ       = 3'd2; // 消隐期读直方图做累加
+    localparam S_WAIT       = 3'd3; // 缓冲 1 拍
+    localparam S_CLEAR      = 3'd4; // 帧间清零
+    localparam S_DONE       = 3'd5; // 等待下一帧
+
+    reg [2:0] state;
+    reg [7:0] addr_cnt;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
         if(!I_rst_n) begin
-            I_tlast_r<=0;
-            I_tuser_r<=0;
-            I_tvalid_r<=0;
+            state    <= S_INIT_CLEAR; // 复位后必须先清零！
+            addr_cnt <= 8'd0;
+        end else begin
+            case(state)
+                S_INIT_CLEAR: begin
+                    if(addr_cnt == 8'd255) begin
+                        state    <= S_IDLE;
+                        addr_cnt <= 8'd0;
+                    end else begin
+                        addr_cnt <= addr_cnt + 8'd1;
+                    end
+                end
+
+                S_IDLE: begin
+                    addr_cnt <= 8'd0;
+                    if(frame_end)
+                        state <= S_READ;
+                end
+
+                S_READ: begin
+                    if(addr_cnt == 8'd255) begin
+                        state    <= S_WAIT;
+                        addr_cnt <= 8'd0;
+                    end else begin
+                        addr_cnt <= addr_cnt + 8'd1;
+                    end
+                end
+
+                S_WAIT: begin
+                    state    <= S_CLEAR;
+                    addr_cnt <= 8'd0;
+                end
+
+                S_CLEAR: begin
+                    if(addr_cnt == 8'd255) begin
+                        state    <= S_DONE;
+                        addr_cnt <= 8'd0;
+                    end else begin
+                        addr_cnt <= addr_cnt + 8'd1;
+                    end
+                end
+
+                S_DONE: begin
+                    if(I_tuser && I_tvalid)
+                        state <= S_IDLE;
+                end
+                
+                default: state <= S_INIT_CLEAR;
+            endcase
         end
-        else begin
-            I_tlast_r<={I_tlast_r[1:0],I_tlast};
-            I_tuser_r<={I_tuser_r[1:0],I_tuser};
-            I_tvalid_r<={I_tvalid_r[1:0],I_tvalid};
+    end
+
+    // =========================================================================
+    // 4. 直方图统计 RAM 多路复用与例化 (ram_2port)
+    // =========================================================================
+    wire is_clearing = (state == S_INIT_CLEAR) || (state == S_CLEAR);
+
+    wire [7:0]  ram_his_addra = is_clearing ? addr_cnt : grey_d1;
+    wire [19:0] ram_his_dia   = is_clearing ? 20'd0 : his_wr_data;
+    wire        ram_his_wea   = is_clearing ? 1'b1 : valid_d1;
+    wire        ram_his_cea   = is_clearing ? 1'b1 : valid_d1;
+
+    wire [7:0]  ram_his_addrb = (state == S_READ) ? addr_cnt : I_grey_tdata;
+    wire        ram_his_ceb   = (state == S_READ) ? 1'b1 : I_tvalid;
+
+    ram_2port u_ram_his (
+        .clka   (I_clk),
+        .cea    (ram_his_cea),
+        .wea    (ram_his_wea),
+        .addra  (ram_his_addra),
+        .dia    (ram_his_dia),
+        .doa    (),
+
+        .clkb   (I_clk),
+        .ceb    (ram_his_ceb),
+        .web    (1'b0),
+        .addrb  (ram_his_addrb),
+        .dib    (20'd0),
+        .dob    (ram_his_rd_data)
+    );
+
+    // =========================================================================
+    // 5. 累计直方图 (CDF) 计算与例化 (ram_accumulate)
+    // =========================================================================
+    reg        ram_accu_wr;
+    reg [7:0]  ram_accu_wraddr;
+    reg [19:0] his_sum;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n) begin
+            ram_accu_wr     <= 1'b0;
+            ram_accu_wraddr <= 8'd0;
+        end else begin
+            ram_accu_wr     <= (state == S_READ);
+            ram_accu_wraddr <= ram_his_addrb;
         end
-        
-    end   
+    end
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n)
+            his_sum <= 20'd0;
+        else if(state == S_IDLE || state == S_INIT_CLEAR)
+            his_sum <= 20'd0;
+        else if(ram_accu_wr)
+            his_sum <= his_sum + ram_his_rd_data;
+    end
+
+    wire [19:0] ram_accu_wrdata = his_sum + ram_his_rd_data;
+    wire [19:0] ram_accu_rddata;
+
+    ram_accumulate u_ram_accumulate (
+        .clka   (I_clk),
+        .cea    (ram_accu_wr),
+        .addra  (ram_accu_wraddr),
+        .dia    (ram_accu_wrdata),
+
+        .clkb   (I_clk),
+        .ceb    (I_tvalid),
+        .addrb  (I_grey_tdata),
+        .dob    (ram_accu_rddata)
+    );
+
+    // =========================================================================
+    // 6. 映射归一化计算流水线 (严格防截断)
+    // =========================================================================
+    reg [27:0] data_mult;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n)
+            data_mult <= 28'd0;
+        else
+            data_mult <= ram_accu_rddata * (MAX_GREY - 1);
+    end
+
+    // 显式 64 位防截断
+    wire [63:0] mult_result = ({36'd0, data_mult}) * ({32'd0, MULT_FACTOR});
+    wire [63:0] mult_round  = mult_result + (64'd1 << (SHIFT_AMT - 1)); 
+    reg  [7:0]  data_div;
     
-    assign O_tlast=I_tlast_r[2];
-    assign O_tuser=I_tuser_r[2];
-    assign O_tvalid=I_tvalid_r[2];
-    
-    assign O_grey_tdata=data_div;
-    
-    
-    endmodule  
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n)
+            data_div <= 8'd0;
+        else
+            data_div <= mult_round[SHIFT_AMT + 7 : SHIFT_AMT];
+    end
+
+    // 控制信号打 3 拍对齐
+    reg [2:0] I_tlast_r;
+    reg [2:0] I_tuser_r;
+    reg [2:0] I_tvalid_r;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if(!I_rst_n) begin
+            I_tlast_r  <= 3'd0;
+            I_tuser_r  <= 3'd0;
+            I_tvalid_r <= 3'd0;
+        end else begin
+            I_tlast_r  <= {I_tlast_r[1:0],  I_tlast};
+            I_tuser_r  <= {I_tuser_r[1:0],  I_tuser};
+            I_tvalid_r <= {I_tvalid_r[1:0], I_tvalid};
+        end
+    end
+
+    assign O_tlast      = I_tlast_r[2];
+    assign O_tuser      = I_tuser_r[2];
+    assign O_tvalid     = I_tvalid_r[2];
+    assign O_grey_tdata = data_div;
+
+endmodule
