@@ -1,4 +1,4 @@
-<img width="1920" height="1022" alt="Snipaste_2026-08-26_20-01-17" src="https://github.com/user-attachments/assets/33a27119-f792-4e6a-9e96-bac858184d7e" /># socchina_fpga
+socchina_fpga
 2026年嵌赛fpga赛道
 ## 团队分工
 |成员|任务|待定|
@@ -94,6 +94,15 @@ isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡�
 ###### 主要工作  
 1. 完成了vpp_top的代码关于histogram的部分
 2. 进行了代码的测试，验证了直方图均衡算法的有效性
+
+   <img width="1920" height="1022" alt="Snipaste_2026-08-26_20-01-17" src="https://github.com/user-attachments/assets/33a27119-f792-4e6a-9e96-bac858184d7e" /># 
+
+|模块|功能|文件名称|
+|:---|:---:|:---|
+|vpp_top|顶层模块，最终连接多种算法|vpp_top.v|
+|vpp_top_tb|测试模块，ai生成|vpp_top_tb.v|
+|RGB_generation|将一张图片转为RGB888数据|RGB_generation.mlx|
+|histogram_proof|将仿真后生成的处理后的灰度图显示出来|histogram_proof.mlx|
 
 期间遇到的问题： 
 1. 代码进行了相当大的修改：
