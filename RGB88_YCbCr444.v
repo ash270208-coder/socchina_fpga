@@ -1,4 +1,4 @@
-module RGB88_YCbCr444#(
+module RGB888_YCbCr444#(
     parameter IMG_WIDTH  = 1024,
     parameter IMG_HEIGHT = 600
 )(
@@ -38,9 +38,9 @@ module RGB88_YCbCr444#(
     // -------------------------------------------------------------------------
     // 流水线控制信号打拍寄存器（3 拍延迟对齐）,因为计算结果并输出需要总共三拍
     // -------------------------------------------------------------------------
-    reg [2:0] tvalid_dly;
-    reg [2:0] tlast_dly;
-    reg [2:0] tuser_dly;
+    reg [1:0] tvalid_dly;
+    reg [1:0] tlast_dly;
+    reg [1:0] tuser_dly;
 
     // -------------------------------------------------------------------------
     // Pipeline Stage 1: 并行乘法运算 (8bit x 8bit = 16bit)
@@ -123,29 +123,26 @@ module RGB88_YCbCr444#(
         end
     end
 
-    // -------------------------------------------------------------------------
-    // 控制信号打拍（3 拍完全对齐）
-    // -------------------------------------------------------------------------
-    always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            tvalid_dly <= 3'b0;
-            tlast_dly  <= 3'b0;
-            tuser_dly  <= 3'b0;
-            
-            O_tvalid   <= 1'b0;
-            O_tlast    <= 1'b0;
-            O_tuser    <= 1'b0;
-        end else begin
-            tvalid_dly <= {tvalid_dly[1:0], (I_tvalid && I_tready)};
-            tlast_dly  <= {tlast_dly[1:0],  I_tlast};
-            tuser_dly  <= {tuser_dly[1:0],  I_tuser};
+    // 控制信号打 2 拍，加上输出寄存器正好 3 拍对齐：
 
-            O_tvalid   <= tvalid_dly[2];
-            O_tlast    <= tlast_dly[2];
-            O_tuser    <= tuser_dly[2];
-        end
-    end
-
+	always @(posedge I_clk or negedge I_rst_n) begin
+	    if (!I_rst_n) begin
+	        tvalid_dly <= 2'b0;
+	        tlast_dly  <= 2'b0;
+	        tuser_dly  <= 2'b0;
+	        O_tvalid   <= 1'b0;
+	        O_tlast    <= 1'b0;
+	        O_tuser    <= 1'b0;
+	    end else begin
+	        tvalid_dly <= {tvalid_dly[0], (I_tvalid && I_tready)};
+	        tlast_dly  <= {tlast_dly[0],  I_tlast};
+	        tuser_dly  <= {tuser_dly[0],  I_tuser};
+	
+	        O_tvalid   <= tvalid_dly[1];
+	        O_tlast    <= tlast_dly[1];
+	        O_tuser    <= tuser_dly[1];
+	    end
+	end
 endmodule   
 
 
