@@ -113,7 +113,14 @@ isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡�
 
 
 （明天主要看看histogram_equ的代码再搞懂一些）
+
+#####2026.8.27  
+昨天的仿真结果误差较大，见上图，原因如下：  
+1. RGB888_YCbCr444的输出延迟一拍，导致第一个像素被忽略，已修正
+2. matlab的直方图均衡算法与verilog的略有不同，导致出现误差
+   修正后误差几乎为0
    
+<img width="1854" height="761" alt="image" src="https://github.com/user-attachments/assets/ea7b317e-5287-49d5-8d3d-ba82ac3f4fd2" />
 
 
 
