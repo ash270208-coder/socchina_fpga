@@ -127,6 +127,14 @@ isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡�
 接下来学习腐蚀+膨胀+边沿检测
 
 
+##### 2026.8.28  
+学习了边沿检测，利用官方的边沿检测代码，修改接口，放入vpp_top中，由ai编写tb以及matlab测试代码
+<img width="1889" height="484" alt="image" src="https://github.com/user-attachments/assets/430ca9cf-c7f9-4d56-bec3-c67e0a8264c3" />  
+此算法官方＋ai为主，没有太多的投入，只略微知道原理，时序尚未搞清  
+
+
+
+
 
 
 
