@@ -2,14 +2,16 @@
 
 module tb_vpp_matlab;
 
-    // 参数必须与 MATLAB 中的 64x64 一致
-    parameter WIDTH  = 64;
-    parameter HEIGHT = 64;
-    parameter TOTAL_PIXELS = WIDTH * HEIGHT;
-    parameter CLK_PERIOD = 20;
+    // 参数修改为 256 x 256
+    parameter WIDTH           = 256;
+    parameter HEIGHT          = 256;
+    parameter TOTAL_PIXELS    = WIDTH * HEIGHT; // 65536
+    parameter CLK_PERIOD      = 20;             // 50MHz
+    parameter SOBEL_THRESHOLD = 60;
 
     reg         I_clk;
     reg         I_rst_n;
+    reg  [1:0]  I_button;
     reg         I_tlast;
     reg         I_tuser;
     reg  [23:0] I_tdata;
@@ -25,69 +27,77 @@ module tb_vpp_matlab;
 
     reg [23:0] img_mem [0:TOTAL_PIXELS-1];
     integer fp_out;
-    integer frame_cnt = 0;
+    integer out_pixel_cnt = 0;
 
     PH1P_PHY_GSR PH1P_PHY_GSR();
-    // 实例化顶层模块
-    vpp_top 
-    #(
-        .IMG_WIDTH (WIDTH),
-        .IMG_HEIGHT(HEIGHT)
-    )u_vpp_top (
-        .I_clk   (I_clk),
-        .I_rst_n (I_rst_n),
-        .I_tlast (I_tlast),
-        .I_tuser (I_tuser),
-        .I_tdata (I_tdata),
-        .I_tvalid(I_tvalid),
-        .I_tdest (I_tdest),
-        .I_tready(I_tready),
-        .O_tdata (O_tdata),
-        .O_tlast (O_tlast),
-        .O_tuser (O_tuser),
-        .O_tvalid(O_tvalid),
-        .O_tready(O_tready)
+
+    // 实例化顶层 VPP 模块
+    vpp_top #(
+        .IMG_WIDTH       (WIDTH),
+        .IMG_HEIGHT      (HEIGHT),
+        .SOBEL_THRESHOLD (SOBEL_THRESHOLD)
+    ) u_vpp_top (
+        .I_button (I_button),
+        .I_clk    (I_clk),
+        .I_rst_n  (I_rst_n),
+        .I_tlast  (I_tlast),
+        .I_tuser  (I_tuser),
+        .I_tdata  (I_tdata),
+        .I_tvalid (I_tvalid),
+        .I_tdest  (I_tdest),
+        .I_tready (I_tready),
+        .O_tdata  (O_tdata),
+        .O_tlast  (O_tlast),
+        .O_tuser  (O_tuser),
+        .O_tvalid (O_tvalid),
+        .O_tready (O_tready)
     );
 
-    // 时钟生成 50MHz
+    // 时钟生成
     initial I_clk = 0;
     always #(CLK_PERIOD/2) I_clk = ~I_clk;
 
     initial begin
-        // 读取 MATLAB 生成的输入图片
         $readmemh("src_img.txt", img_mem);
         fp_out = $fopen("sim_out.txt", "w");
+        if (!fp_out) begin
+            $display("ERROR: Cannot open sim_out.txt!");
+            $finish;
+        end
 
-        I_rst_n  = 0;
-        I_tvalid = 0;
-        I_tuser  = 0;
-        I_tlast  = 0;
-        I_tdata  = 0;
-        I_tdest  = 0;
-        I_tready = 1;
+        I_rst_n   = 0;
+        I_button  = 2'b11;
+        I_tvalid  = 0;
+        I_tuser   = 0;
+        I_tlast   = 0;
+        I_tdata   = 0;
+        I_tdest   = 0;
+        I_tready  = 1;
 
         #(CLK_PERIOD * 10);
         I_rst_n = 1;
         #(CLK_PERIOD * 10);
 
-        // 发送第 1 帧（直方图统计）
-        $display("Sending Frame 1 (Histogram Statistics)...");
+        // 强制进入 Sobel 模式 (跳过 20ms 消抖)
+        force u_vpp_top.display_mode = 2'b11;
+        $display("Switch to Mode 3: Sobel Edge Detection...");
+
+        #(CLK_PERIOD * 20);
+
+        $display("Sending 256x256 Frame...");
         send_frame();
 
-        #(CLK_PERIOD * 1000); // 帧间空白
-
-        // 发送第 2 帧（此时均衡化结果正式输出）
-        $display("Sending Frame 2 (Capture Equalized Result)...");
-        frame_cnt = 1;
-        send_frame();
-
-        #(CLK_PERIOD * 100);
+        #(CLK_PERIOD * 200); // 等待流水线全部吐完
         $fclose(fp_out);
-        $display("Simulation Finished! Results written to sim_out.txt");
+
+        $display("=========================================");
+        $display("Simulation Finished!");
+        $display("Total Pixels Captured: %d (Expected: %d)", out_pixel_cnt, TOTAL_PIXELS);
+        $display("=========================================");
         $finish;
     end
 
-    // 发送一帧的任务
+    // 发送单帧任务
     task send_frame;
         integer r, c, idx;
         begin
@@ -106,13 +116,15 @@ module tb_vpp_matlab;
             I_tvalid <= 1'b0;
             I_tlast  <= 1'b0;
             I_tuser  <= 1'b0;
+            I_tdata  <= 24'd0;
         end
     endtask
 
-    // 抓取第 2 帧输出写入文本
+    // 抓取有效数据
     always @(posedge I_clk) begin
-        if (O_tvalid && frame_cnt == 1) begin
+        if (O_tvalid) begin
             $fdisplay(fp_out, "%06X", O_tdata);
+            out_pixel_cnt = out_pixel_cnt + 1;
         end
     end
 
