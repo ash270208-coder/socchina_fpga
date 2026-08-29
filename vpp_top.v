@@ -125,7 +125,7 @@ module vpp_top #(
     Sobel_edge #(
         .IMG_WIDTH       (IMG_WIDTH),
         .IMG_HEIGHT      (IMG_HEIGHT),
-        .SOBEL_THRESHOLD (60)
+        .SOBEL_THRESHOLD (SOBEL_THRESHOLD)
     ) u_Sobel_edge (
         .I_clk          (I_clk),
         .I_rst_n        (I_rst_n),
@@ -145,13 +145,21 @@ module vpp_top #(
     reg [23:0] raw_rgb_d [0:7];
     reg [7:0]  raw_y_d   [0:7];
     integer i;
-    always @(posedge I_clk) begin
-        if (I_tvalid) begin
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            for (i = 0; i < 8; i = i + 1) begin
+                raw_rgb_d[i] <= 24'd0;
+                raw_y_d[i]   <= 8'd0;
+            end
+        end
+        else begin
+            // 原图随时钟无条件推进（RGB2Y 3拍 + Sobel 4拍 = 总共对齐 7 拍）
             raw_rgb_d[0] <= I_tdata;
             for (i = 0; i < 7; i = i + 1)
                 raw_rgb_d[i+1] <= raw_rgb_d[i];
-        end
-        if (tvalid_ycbcr) begin
+
+            // 灰度图随时钟无条件推进（对齐 Sobel 的 4 拍延时）
             raw_y_d[0] <= y_tdata;
             for (i = 0; i < 7; i = i + 1)
                 raw_y_d[i+1] <= raw_y_d[i];

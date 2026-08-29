@@ -178,24 +178,22 @@ module Sobel_edge #(
     reg [3:0] tuser_shift;
 
     always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            tvalid_shift <= 4'd0;
-            tlast_shift  <= 4'd0;
-            tuser_shift  <= 4'd0;
-            O_tvalid     <= 1'b0;
-            O_tlast      <= 1'b0;
-            O_tuser      <= 1'b0;
-        end
-        else begin
-            tvalid_shift <= {tvalid_shift[2:0], I_tvalid};
-            if (I_tvalid) begin
-                tlast_shift <= {tlast_shift[2:0], I_tlast};
-                tuser_shift <= {tuser_shift[2:0], I_tuser};
-            end
-            O_tvalid <= tvalid_shift[3];
-            O_tlast  <= tlast_shift[3];
-            O_tuser  <= tuser_shift[3];
-        end
+    if (!I_rst_n) begin
+        tvalid_shift <= 4'd0;
+        tlast_shift  <= 4'd0;
+        tuser_shift  <= 4'd0;
+        O_tvalid     <= 1'b0;
+        O_tlast      <= 1'b0;
+        O_tuser      <= 1'b0;
     end
+    else begin
+        tvalid_shift <= {tvalid_shift[2:0], I_tvalid};
+        tlast_shift  <= {tlast_shift[2:0],  I_tlast};  
+        tuser_shift  <= {tuser_shift[2:0],  I_tuser};  
+        O_tvalid     <= tvalid_shift[3];
+        O_tlast      <= tlast_shift[3];
+        O_tuser      <= tuser_shift[3];
+    end
+end
 
 endmodule
