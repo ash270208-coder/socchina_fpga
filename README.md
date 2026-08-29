@@ -103,8 +103,8 @@ SC500CS 物理信号
 纯直方图版本中按键信号未使用，综合工具将 `u_ae_set` 相关逻辑优化掉；加入 Sobel + 按键消抖后，按键逻辑被激活，导致时钟混用问题暴露。
 
 **修改措施**：
-1. 使用安路 High-Speed IO IP（`cam_clk_oddr`）规范输出 24M 摄像头时钟，替代直接 `assign`
-2. 将 I2C 模块中 `always @(posedge scl_clk)` 改为以 `I_clk` 为主时钟 + Clock Enable 方式
+1. 使用安路 High-Speed IO IP（`cam_clk_oddr`）规范输出 24M 摄像头时钟，替代直接顶层模块中 `assign O_cam_24m=S_24m_clk; `
+2. 将 `uii2c` 模块中 `always @(posedge scl_clk)` 改为以 `I_clk` 为主时钟 + Clock Enable 方式
 3. 修复消隐期同步信号死锁 Bug
 4. 完善 `vpp` 模块
 
