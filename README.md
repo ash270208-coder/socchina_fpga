@@ -132,6 +132,62 @@ isp_top中适合完成AE(自动曝光)，AWB(自动白平衡)，直方图均衡�
 <img width="1889" height="484" alt="image" src="https://github.com/user-attachments/assets/430ca9cf-c7f9-4d56-bec3-c67e0a8264c3" />  
 此算法官方＋ai为主，没有太多的投入，只略微知道原理，时序尚未搞清  
 
+##### 2026.8.29  
+加入边沿检测到完整的显示模块后，出现时钟使用相关的报错  
+<img width="1517" height="150" alt="image" src="https://github.com/user-attachments/assets/bdcf5200-297d-473e-b901-14e9cb2e21d0" />   
+
+为什么未加入时不报？  
+      按键 I_button 激活了 u_ae_set，导致未被修剪（主要诱因）
+      请看这两个版本的关键差异：
+      版本 1（纯直方图）：
+      模块内部完全没有使用 I_button。综合工具（EDA）在全局分析时，发现按键没有实际驱动任何有效数据流，因此将 u_ae_set（自动曝光调节）中的大部分状态机和动态 I2C 触发逻辑判定为无用逻辑（Dead Logic）并直接优化裁剪掉了。既然动态重配 I2C 的逻辑被剪掉了，uicfgcs500/uii2c_inst/scl_clk 相关的时钟网表根本没有生成，自然不会报错。  
+      版本 2（加入 Sobel 和按键消抖）：  
+      内部加入了 display_mode 和 btn_cnt 状态机，I_button[0] 被正式接入了逻辑网表。这导致顶层的 I_button 网络被完全激活，连带使得连接在 S_24m_clk 上的 u_ae_set 逻辑被完整保留。此时 S_24m_clk 驱动的寄存器数量正好达到了 102 个（即警告中提示的 102 clock pins），同时它又通过 assign O_cam_24m = S_24m_clk; 连接到了输出引（1data/ctrl pin），从而触发了 PHY-5060 严重警告。  
+
+1.PHY-5060
+具体的两条信息分析：
+      1. .../scl_clk has mixed fanouts of 1 clock pins; 2 data/ctrl pins
+原因：I2C 模块里的 scl_clk 既被用作触发时钟（例如代码里写了 always @(posedge scl_clk)），又作为普通数据/状态信号被其它逻辑读取或直接赋值输出了。
+      2. O_cam_24m_syn_3 has mixed fanouts of 102 clock pins; 1 data/ctrl pins
+原因：这是一个 24MHz 的时钟信号，主要驱动了 102 个寄存器的时钟端，但在某处有 1 个非时钟端口（如数据输入、复位、使能或直接接到了普通输出端口）使用了这个信号。
+
+2. PHY-5079
+   有 1 个时钟网络没有走 FPGA 专用的全局时钟树/时钟网络（Global Clock Network），而是被分配走了通用/局部逻辑布线资源（Local Routing）
+   （该警告根本原因来自PHY-5060）
+
+接下来的所有改动都是为了解决这两个关键警告  
+
+对应警告代码：assign O_cam_24m = S_24m_clk;    uicfgcs500 模块内部的 I2C 代码  
+
+修改：
+      //替换assign O_cam_24m=S_24m_clk;  
+	// ----------------------------------------------------  
+      // 调用 High Speed IO IP 规范输出 24M 摄像头时钟  
+      // ----------------------------------------------------  
+    cam_clk_oddr u_cam_clk_oddr (  
+        .clk_in                 (S_24m_clk),       // PLL 产生的 24M 时钟  
+        .rst                    (~S_rst_n),        // 高电平有效复位  
+        .data_out_from_device   (2'b01),           // 上半周期输出 1，下半周期输出 0 -> 形成 24M 时钟  
+        .data_out_to_pins       (O_cam_24m)       // 对应顶层外部摄像头引脚  
+        );  
+      调用安路的输出时钟缓冲，将 24M 时钟转出给引脚  
+
+
+检查 uicfgcs500（或 uii2c）内部代码：  
+把代码中的 always @(posedge scl_clk) 改掉。  
+改为使用 I_clk (24MHz) 作为主时钟，在主时钟下对 scl_clk 产生的节拍脉冲（Clock Enable）进行条件判断   
+
+
+同时修复了消隐期同步信号“死锁”Bug，对Sobel边沿检测模块进行了一定的修改   
+完善了vpp模块
+
+
+
+        
+
+
+
+
 
 
 
