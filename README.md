@@ -119,7 +119,7 @@ vpp_top-->Sobel_edge_detection_top-->Sobel_edge+腐蚀膨胀
 <img width="1902" height="461" alt="sobel_edge" src="https://github.com/user-attachments/assets/2ef1a370-b7c1-42c2-b981-085412a9e725" />  
 <img width="1872" height="434" alt="Sobel_edge_black" src="https://github.com/user-attachments/assets/d1cc9c55-6872-4c56-bfba-415f6d87fb3c" />  
 
-前图为加入腐蚀膨胀前，后图为腐蚀膨胀后，前途噪点较多，但是线条更清晰，原因是图片较小，边沿检测的线条本来就较细，腐蚀容易使得线条消失
+前图为加入腐蚀膨胀前（设置为白色边沿），后图为腐蚀膨胀后（设置的为黑色边沿），前途噪点较多，但是线条更清晰，原因是图片较小，边沿检测的线条本来就较细，腐蚀容易使得线条消失
 
 
 
