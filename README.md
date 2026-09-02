@@ -136,4 +136,12 @@ vpp_top-->Sobel_edge_detection_top-->Sobel_edge+腐蚀膨胀
 
 关于人脸识别的方案——肤色分割-->平面椭圆肤色模型-->Haar-like级联加速器，先入手平面椭圆肤色模型
 
+** 平面椭圆肤色模型代码模块如下  
+
+| 模块              | 功能                          | 文件                |
+|-------------------|-------------------------------|---------------------|
+|face_track_top     |顶层模块，接收各算法处理的数据  |face_track_top.v     |
+|skin_binarizer     |利用平面椭圆肤色模型将图像二值化|skin_binarizer.v     |
+|centroid_calc      |计算人脸区域质心                |centroid_calc.v      |
+|osd_cross_hair     |在质心处添加十字准星            |osd_crosshair.v      |
 
