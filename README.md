@@ -134,7 +134,7 @@ vpp_top-->Sobel_edge_detection_top-->Sobel_edge+腐蚀膨胀
 - 优化 加入死区控制（Deadzone），即人已经基本在正中央（比如偏差在 ±20像素以内）时，云台保持不动，防止舵机高频抖动
 
 
-关于人脸识别的方案——肤色分割-->平面椭圆肤色模型-->Haar-like级联加速器，先入手平面椭圆肤色模型
+关于人脸识别的方案——肤色分割-->平面椭圆肤色模型-->Haar-like级联加速器或LBP级联分类器，先入手平面椭圆肤色模型
 
 ** 平面椭圆肤色模型代码模块如下  
 
@@ -145,3 +145,9 @@ vpp_top-->Sobel_edge_detection_top-->Sobel_edge+腐蚀膨胀
 |centroid_calc      |计算人脸区域质心                |centroid_calc.v      |
 |osd_cross_hair     |在质心处添加十字准星            |osd_crosshair.v      |
 
+
+LBP级联分类器思路
+- 原图RGB转YCbCr（RGB888_YCbCr444模块）
+- YCbCr数据传入skin_binarizer，既输出平面椭圆肤色模型生成的二值化数据，又输出灰度图
+- 二值化数据送入肤色局部累加器，灰度图送入积分图发生器，然后再进行LBP级联分类器
+- 25阶行缓存，形成二维积分数据矩阵
