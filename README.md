@@ -161,6 +161,14 @@ LBP级联分类器思路
 |lbp_engine         |生成24*24的肤色二值窗口和25*25的灰度积分窗口，先计算皮肤像素总数进行初筛，然后利用OPENCV的数据进行LBP积分，判断是否符合人脸要求|lbp_engine.v|
 |osd_box_drawer     |绘制边框                        |osd_box_drawer.v    |  
 
+** 2026.9.6 
+<img width="1532" height="145" alt="image" src="https://github.com/user-attachments/assets/6f1581d4-3789-4df3-a0ec-7464005e0e3e" />
+资源严重超标  
+对LBP人脸识别进行了改动： 
+- 为节省资源，删除了平面椭圆模型对人脸的判断  
+- 为节省资源，对lbp_engine进行了大改，接收的积分数据24位宽处理后变为18位，不再生成24*24的窗口，改为将所有数据全部存到ram中，自行取用即可
+- 
+
 
 
 
