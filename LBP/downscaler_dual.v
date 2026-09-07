@@ -62,7 +62,10 @@ module downscaler #(
     end
 
     // 2. 抽样输出与信号对齐
-    wire sample_pulse = I_tvalid && (sub_x == 3'd0) && (sub_y == 3'd0) && (low_x < OUT_WIDTH) && (low_y < OUT_HEIGHT);
+    // 注意: 行末复位后 sub_x=0/sub_y=0, 下一行第一拍(tvalid 且 low_x 仍为 0)
+    // 会误触发一次 x=0 的伪采样, 使积分图第 0 列读到未初始化的 prev_row_integral[0]
+    // 而产生 X 态。加入 (low_x >= 1) 过滤该伪采样 (真实采样列为 1..169)。
+    wire sample_pulse = I_tvalid && (sub_x == 3'd0) && (sub_y == 3'd0) && (low_x >= 8'd1) && (low_x < OUT_WIDTH) && (low_y < OUT_HEIGHT);
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
