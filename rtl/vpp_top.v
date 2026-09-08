@@ -26,7 +26,7 @@ module vpp_top #(
     // =========================================================================
     // 1. 按键消抖与模式切换状态机 (0:原图, 1:灰度, 2:直方图均衡, 3:Sobel边缘)
     // =========================================================================
-    reg [1:0]  display_mode;
+    reg [3:0]  display_mode;
     reg [19:0] btn_cnt;
     reg        btn_d0, btn_d1;
 
@@ -35,7 +35,7 @@ module vpp_top #(
             btn_d0       <= 1'b1;
             btn_d1       <= 1'b1;
             btn_cnt      <= 20'd0;
-            display_mode <= 2'b00; // 默认输出原图
+            display_mode <= 4'b0000; // 默认输出原图
         end
         else begin
             btn_d0 <= I_button[0];
@@ -140,7 +140,35 @@ module vpp_top #(
     );
 
     // =========================================================================
-    // 5. 对原图与灰度图做延时对齐 (与 Sobel 对齐约 4 拍，防止切换撕裂)
+    // 5. 卡通化图像风格化模块 (Cartoon Top)
+    //    输入原图 RGB888，输出卡通化 RGB888 (cycle 8)
+    //    display_mode 模式 4 时通过 MUX 输出
+    // =========================================================================
+    wire        cartoon_tlast;
+    wire        cartoon_tuser;
+    wire        cartoon_tvalid;
+    wire [23:0] cartoon_tdata;
+
+    cartoon_top #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_cartoon_top (
+        .I_clk    (I_clk),
+        .I_rst_n  (I_rst_n),
+        .I_tlast  (I_tlast),
+        .I_tuser  (I_tuser),
+        .I_tdata  (I_tdata),
+        .I_tvalid (I_tvalid),
+        .I_tready (I_tready),
+        .O_tdata  (cartoon_tdata),
+        .O_tlast  (cartoon_tlast),
+        .O_tuser  (cartoon_tuser),
+        .O_tvalid (cartoon_tvalid),
+        .O_tready ()
+    );
+
+    // =========================================================================
+    // 6. 对原图与灰度图做延时对齐 (与 Sobel 对齐约 4 拍，防止切换撕裂)
     // =========================================================================
     reg [23:0] raw_rgb_d [0:7];
     reg [7:0]  raw_y_d   [0:7];
@@ -196,6 +224,18 @@ module vpp_top #(
             end
             2'b11: begin // 模式 3: Sobel 边缘检测图
                 mux_tdata  = {sobel_tdata, sobel_tdata, sobel_tdata};
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
+            4'b0100: begin // 模式 4: 卡通化图像风格化
+                mux_tdata  = cartoon_tdata;
+                mux_tlast  = cartoon_tlast;
+                mux_tuser  = cartoon_tuser;
+                mux_tvalid = cartoon_tvalid;
+            end
+            default: begin // 其余模式默认输出彩色原图
+                mux_tdata  = raw_rgb_d[6];
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
