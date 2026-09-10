@@ -1,0 +1,107 @@
+Location         : C:\Users\19818\Desktop\fpgawholeproject\lab_ex1_mipi_hdmi+histogram+Sobel\lab_ex1_mipi_hdmi+histogram+Sobel\td_project\camera_to_dsi_display_Runs\syn_1
+Running with     : Tang Dynasty v6.2.168116
+                   Copyright (c) 2012-2025 Anlogic Inc.
+Top Model        : design_top_wrapper
+Device           : PH1P35MDG324
+Speed            : 3
+
+Timing Mode      : basic
+Setup            : WNS  1561ps  TNS        0ps  NUM_FEPS     0
+Hold             : WNS   114ps  TNS        0ps  NUM_FEPS     0
+
+Flow Statistics  :
+---------------------------------------------------------------------------------------------------
+     command     |  #calls  |  wall time   |  cpu time(s)  |  used memory(mb)  |  peak memory(mb)  
+---------------------------------------------------------------------------------------------------
+  optimize_rtl   |    1     |  4m20s(56%)  |   253(56%)    |       1001        |       1044        
+  optimize_gate  |    1     |  3m22s(43%)  |   195(43%)    |       1168        |       1168        
+  import_device  |    1     |    2s(0%)    |     1(0%)     |        323        |        323        
+    read_adc     |    1     |    0s(0%)    |     0(0%)     |        831        |        832        
+    read_sdc     |    3     |    0s(0%)    |     0(0%)     |        826        |        832        
+---------------------------------------------------------------------------------------------------
+      total      |    7     |    7m44s     |      449      |       1168        |       1168        
+---------------------------------------------------------------------------------------------------
+-----------------------------------------------------------
+| QoR metrics               |         value               |
+-----------------------------------------------------------
+| Timing                    |                             |
+|     Setup WNS             |         1561                |
+|     Setup TNS             |            0                |
+|     Num of violated S-EP  |            0                |
+|     Hold WNS              |          114                |
+|     Hold TNS              |            0                |
+|     Num of violated H-EP  |            0                |
+-----------------------------------------------------------
+| Utilization               |                             |
+|     #registers            |        14161                |
+|     #luts                 |        12767                |
+|     #lut1                 |          112                |
+|     #lut1(~A)             |          112                |
+|     #slices               |         3762                |
+|     slices percentage     |       17.73%                |
+|     #RAMs                 |           34                |
+|     #DSPs                 |           15                |
+|     #f7mux                |        0.15%                |
+|     #MACROs               |          255                |
+|     #insts in MACRO       |         3870                |
+-----------------------------------------------------------
+| kept_net                  |                             |
+|     #syn_keep             |         2500                |
+|     #keep_hier            |          844                |
+|     #dont_touch           |            0                |
+|     #mark_debug           |            0                |
+|     #max_fanout_keep      |            0                |
+|     #async_reg            |            0                |
+-----------------------------------------------------------
+| Top 10% datanet fanout#   |        52.72                |
+| dff(single fanout)->dff   |         1043                |
+| dff(single fanout)->dram  |          129                |
+-----------------------------------------------------------
+| Over-quota path num*      |                             |
+|     Total                 |            0                |
+-----------------------------------------------------------
+| Rent**                    |                             |
+-----------------------------------------------------------
+Note*: Over-quota path shows the over-path-level-threshold path number of each clock.
+       The clock will not be shown if no path is with path level over the threshold.
+       The threshold is defined as worst path_margin / 800ps.
+Note**: Rent shows the rent exponent value of the modules whose rent value exceeds the threshold.
+        Only modules under top are reported, and the threshold is defined as 0.7.
+
+Logic Level Distribution
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  Clock                                                                                               |  Period             |  0      |  1     |  2     |  3     |  4     |  5    |  6    |  7   |  8    |  9   |  10  |  11  |  17  |  18
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  HDMI_PIXEL_CLK                                                                                      |  19.230ns (52MHz)   |  1979   |  1185  |  263   |  280   |  251   |  77   |  23   |  1   |  10   |  0   |  0   |  0   |  3   |  21
+  HDMI_SERIAL_CLK                                                                                     |  3.846ns (260MHz)   |  20     |  41    |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  MIPI_RX_BYTE_CLK                                                                                    |  8.888ns (112MHz)   |  5218   |  2196  |  530   |  1616  |  869   |  464  |  16   |  3   |  9    |  0   |  0   |  0   |  0   |  0
+  mipi_rx_ck_pad                                                                                      |  2.222ns (450MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  pll_clk_100m                                                                                        |  10.000ns (100MHz)  |  5      |  3     |  2     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  pll_clk_24m                                                                                         |  41.538ns (24MHz)   |  70     |  70    |  28    |  34    |  49    |  2    |  1    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  sys_clk_50m                                                                                         |  20.000ns (50MHz)   |  131    |  2     |  0     |  106   |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_mipi_dphy_rx_ph1p_mipiio_wrapper/u_ph1p_mipiio_rx_wrapper/u_PH1P_LOGIC_DPHY_MIPI_RX.io_clk_pad_p  |  2.222ns (450MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_mipi_dphy_rx_ph1p_mipiio_wrapper/u_ph1p_mipiio_rx_wrapper/u_PH1P_LOGIC_DPHY_MIPI_RX.tif_c16_in    |  8.888ns (112MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_ph1p35_324_ddr_wrapper/u_ddr2/ctl_clk                                                             |  15.000ns (66MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_ph1p35_324_ddr_wrapper/u_ddr2/ddr_clk                                                             |  3.750ns (266MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_ph1p35_324_ddr_wrapper/u_ddr2/mcu_clk                                                             |  39.374ns (25MHz)   |  56     |  15    |  10    |  249   |  6     |  0    |  3    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_ph1p35_324_ddr_wrapper/u_ddr2/ref_clk                                                             |  15.000ns (66MHz)   |  0      |  0     |  0     |  0     |  0     |  0    |  0    |  0   |  0    |  0   |  0   |  0   |  0   |  0
+  u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk                                                             |  15.000ns (66MHz)   |  2702   |  1660  |  760   |  1075  |  725   |  276  |  221  |  87  |  206  |  98  |  2   |  1   |  0   |  0
+  Total                                                                                               |  NA                 |  10181  |  5172  |  1593  |  3360  |  1900  |  819  |  264  |  91  |  225  |  98  |  2   |  1   |  3   |  21
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Hierarchical Rent Exponent Report
++---------------------------------------------------------------------------------------------+
+|Inst                       |Model                     |Rent     |Cell     |Pin     |Term     |
++---------------------------------------------------------------------------------------------+
+|top                        |design_top_wrapper        |0.19     |36744    |157137  |30       |
+|  u_hdmi_tx                |hdmi_tx_6                 |0.48     |2318     |8402    |145      |
+|  u_ph1p35_324_ddr_wrapper |ph1p35_324_ddr_wrapper_12 |0.47     |10077    |45596   |332      |
+|  u_vpp_top                |vpp_top_18                |0.45     |1291     |9988    |193      |
+|  u_isp_top                |isp_top_8                 |0.41     |15326    |58857   |195      |
+|  u_osd_overlay            |osd_overlay_11            |0.28     |3017     |18484   |60       |
++---------------------------------------------------------------------------------------------+
+Note: Cell represents total number of cells inside module; Pin represents total number of pins
+      which have net connection inside module; Term represents total number of PIs and POs of module.
+      Rent represents the relationship between number of terms and number of cells in module.
+      A module with higher rent corresponds to highly connected logic and strong connectivity with others.
+Report gate stage QoR done.
+

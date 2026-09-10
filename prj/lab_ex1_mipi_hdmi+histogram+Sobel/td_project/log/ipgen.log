@@ -1,0 +1,4 @@
+ipgen_gui_set_spin_box_text IP_Generator IO_WIDTH 1
+ipgen_gui_click_radio_button IP_Generator protocol_external unchecked
+ipgen_gui_select_window IP_Generator
+ipgen_gui_close_window IP_Generator
