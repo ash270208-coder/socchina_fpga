@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipxact:design xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2014" xmlns:anlogic="http" xsi:schemaLocation="http://www.accellera.org/XMLSchema/IPXACT/1685-2014 http://www.accellera.org/XMLSchema/IPXACT/1685-2014/index.xsd">
+    <ipxact:vendor>anlogic.com</ipxact:vendor>
+    <ipxact:library>customized</ipxact:library>
+    <ipxact:name>design_rom_weak_lut</ipxact:name>
+    <ipxact:version>1.0</ipxact:version>
+    <ipxact:componentInstances>
+        <ipxact:componentInstance>
+            <ipxact:instanceName>rom_7b7c1dc52abc_Inst</ipxact:instanceName>
+            <ipxact:componentRef vendor="anlogic.com" library="ip" name="ROMF9F0D0P0" version="1.0"/>
+            <ipxact:configurableElementValues>
+                <ipxact:configurableElementValue referenceId="DATA_WIDTH_A">296</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="DATA_DEPTH_A">256</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="DEBUG">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="PACK">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="FAST">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="ADDR_WIDTH_A">8</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="ADDR_WIDTH_B">11</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="SP_ROM">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_WITH_OCEA">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_DISA">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_WITHOUT_OCEA">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_WITH_OCEB">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_WITHOUT_OCEB">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="OUTREG_DISB">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Load_Init_File">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="INIT_FILE">&quot;../weak_lut.dath&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Mif_File">&quot;D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/weak_lut.dath&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Fill_Memory_Initialization_Values">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="EMB20K">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="EMB20K_FAST">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Single_Port_ROM">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Dual_Port_ROM">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="PortA_Register_None">1</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="PortA_Register_without_Ocea">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="PortA_Register_with_Ocea">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="FILL_INIT_VAL">&quot;NONE&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="depth_range_display_a">&quot;2~2048&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="width_range_display_a">&quot;1~1152&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="problem_sum">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="SF2">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="DR1P">0</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="PH1P">1</ipxact:configurableElementValue>
+            </ipxact:configurableElementValues>
+        </ipxact:componentInstance>
+    </ipxact:componentInstances>
+    <ipxact:adHocConnections>
+        <ipxact:adHocConnection>
+            <ipxact:name>doa</ipxact:name>
+            <ipxact:portReferences>
+                <ipxact:internalPortReference componentRef="rom_7b7c1dc52abc_Inst" portRef="doa"/>
+                <ipxact:externalPortReference portRef="doa"/>
+            </ipxact:portReferences>
+        </ipxact:adHocConnection>
+        <ipxact:adHocConnection>
+            <ipxact:name>addra</ipxact:name>
+            <ipxact:portReferences>
+                <ipxact:internalPortReference componentRef="rom_7b7c1dc52abc_Inst" portRef="addra"/>
+                <ipxact:externalPortReference portRef="addra"/>
+            </ipxact:portReferences>
+        </ipxact:adHocConnection>
+        <ipxact:adHocConnection>
+            <ipxact:name>clka</ipxact:name>
+            <ipxact:portReferences>
+                <ipxact:internalPortReference componentRef="rom_7b7c1dc52abc_Inst" portRef="clka"/>
+                <ipxact:externalPortReference portRef="clka"/>
+            </ipxact:portReferences>
+        </ipxact:adHocConnection>
+    </ipxact:adHocConnections>
+    <ipxact:vendorExtensions>
+        <anlogic:device>PH1P35MDG324</anlogic:device>
+        <anlogic:speed>-3</anlogic:speed>
+        <anlogic:displayname>ROM</anlogic:displayname>
+        <anlogic:ipGenVersion value="168007 2025/07/10">1.0</anlogic:ipGenVersion>
+    </ipxact:vendorExtensions>
+</ipxact:design>

@@ -24,6 +24,34 @@ module vpp_top #(
 );
 
     // =========================================================================
+    // 0. 自动曝光 (输入侧全局) — AE 提亮后的 RGB888 作为全部下游分支的统一输入源
+    // =========================================================================
+    wire        ae_tlast;
+    wire        ae_tuser;
+    wire [23:0] ae_tdata;
+    wire        ae_tvalid;
+
+    auto_exposure_top #(
+        .IMG_WIDTH  (IMG_WIDTH),
+        .IMG_HEIGHT (IMG_HEIGHT),
+        .TARGET_Y   (128),
+        .GAIN_FRAC  (12)
+    ) u_auto_exposure_top (
+        .I_clk      (I_clk),
+        .I_rst_n    (I_rst_n),
+        .I_tlast    (I_tlast),
+        .I_tuser    (I_tuser),
+        .I_tdata    (I_tdata),
+        .I_tvalid   (I_tvalid),
+        .I_tready   (I_tready),
+        .O_tlast    (ae_tlast),
+        .O_tuser    (ae_tuser),
+        .O_tdata    (ae_tdata),
+        .O_tvalid   (ae_tvalid),
+        .O_tready   ()
+    );
+
+    // =========================================================================
     // 1. 按键消抖与模式切换状态机 (0:原图, 1:灰度, 2:直方图均衡, 3:Sobel边缘)
     // =========================================================================
     reg [3:0]  display_mode;
@@ -72,20 +100,20 @@ module vpp_top #(
         .IMG_WIDTH (IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
     ) u_RGB888_YCbCr444 (
-        .I_clk          (I_clk),        
-        .I_rst_n        (I_rst_n),      
-        .I_tlast        (I_tlast),      
-        .I_tuser        (I_tuser),      
-        .I_red_tdata    (I_tdata[23:16]),  
-        .I_green_tdata  (I_tdata[15:8]),
-        .I_blue_tdata   (I_tdata[7:0]), 
-        .I_tvalid       (I_tvalid),     
-        .I_tready       (I_tready),     
-        .O_tlast        (tlast_ycbcr),      
-        .O_tuser        (tuser_ycbcr),      
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+        .I_tlast        (ae_tlast),
+        .I_tuser        (ae_tuser),
+        .I_red_tdata    (ae_tdata[23:16]),
+        .I_green_tdata  (ae_tdata[15:8]),
+        .I_blue_tdata   (ae_tdata[7:0]),
+        .I_tvalid       (ae_tvalid),
+        .I_tready       (1'b1),
+        .O_tlast        (tlast_ycbcr),
+        .O_tuser        (tuser_ycbcr),
         .O_y_tdata      (y_tdata),
-        .O_cb_tdata     (cb_tdata),   
-        .O_cr_tdata     (cr_tdata),   
+        .O_cb_tdata     (cb_tdata),
+        .O_cr_tdata     (cr_tdata),
         .O_tvalid       (tvalid_ycbcr),
         .O_tready       ()
     );
@@ -155,11 +183,11 @@ module vpp_top #(
     ) u_cartoon_top (
         .I_clk    (I_clk),
         .I_rst_n  (I_rst_n),
-        .I_tlast  (I_tlast),
-        .I_tuser  (I_tuser),
-        .I_tdata  (I_tdata),
-        .I_tvalid (I_tvalid),
-        .I_tready (I_tready),
+        .I_tlast  (ae_tlast),
+        .I_tuser  (ae_tuser),
+        .I_tdata  (ae_tdata),
+        .I_tvalid (ae_tvalid),
+        .I_tready (1'b1),
         .O_tdata  (cartoon_tdata),
         .O_tlast  (cartoon_tlast),
         .O_tuser  (cartoon_tuser),
@@ -183,7 +211,7 @@ module vpp_top #(
         end
         else begin
             // 原图随时钟无条件推进（RGB2Y 3拍 + Sobel 4拍 = 总共对齐 7 拍）
-            raw_rgb_d[0] <= I_tdata;
+            raw_rgb_d[0] <= ae_tdata;
             for (i = 0; i < 7; i = i + 1)
                 raw_rgb_d[i+1] <= raw_rgb_d[i];
 

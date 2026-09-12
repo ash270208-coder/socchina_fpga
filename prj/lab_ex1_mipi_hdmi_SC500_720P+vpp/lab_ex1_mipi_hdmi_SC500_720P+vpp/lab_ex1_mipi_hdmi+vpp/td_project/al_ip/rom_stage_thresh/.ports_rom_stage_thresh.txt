@@ -1,0 +1,15 @@
+doa; 1
+addra; 1
+clka; 1
+ocea; 0
+rsta; 0
+doa; 0
+dob; 0
+addra; 0
+addrb; 0
+clka; 0
+clkb; 0
+ocea; 0
+oceb; 0
+rsta; 0
+rstb; 0
