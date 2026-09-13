@@ -1,0 +1,386 @@
+`timescale 1ns / 1ps
+
+module vpp_top #(
+    parameter IMG_WIDTH  = 1280,
+    parameter IMG_HEIGHT = 720,
+    parameter SOBEL_THRESHOLD = 60,
+    parameter MIN_FACE_AREA = 2000
+)( 
+    input  [1:0]   I_button        ,  // 按键输入，用于切换显示模式
+    
+    input          I_clk           ,
+    input          I_rst_n         ,
+    input          I_tlast         ,
+    input          I_tuser         ,
+    input  [23:0]  I_tdata         ,
+    input          I_tvalid        ,
+    input          I_tdest         ,
+    input          I_tready        ,
+    output [23:0]  O_tdata         ,
+    output         O_tlast         ,
+    output         O_tuser         ,
+    output         O_tvalid        ,
+    output         O_tready        ,
+    
+    //输出给云台控制模块的信号
+    output [11:0]  O_face_x        ,
+    output [11:0]  O_face_y        ,
+    output         O_face_valid     
+);
+
+    // =========================================================================
+    // 1. 按键消抖与模式切换状态机 (0:原图, 1:灰度, 2:直方图均衡, 3:Sobel边缘)
+    // =========================================================================
+    reg [1:0]  display_mode;
+    reg [19:0] btn_cnt;
+    reg        btn_d0, btn_d1;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            btn_d0       <= 1'b1;
+            btn_d1       <= 1'b1;
+            btn_cnt      <= 20'd0;
+            display_mode <= 2'b00; // 默认输出原图
+        end
+        else begin
+            btn_d0 <= I_button[0];
+            btn_d1 <= btn_d0;
+            
+            // 按键下降沿消抖 (假设低电平按下)
+            if (btn_d1 && !btn_d0) begin
+                btn_cnt <= 20'd1;
+            end
+            else if (btn_cnt > 20'd0) begin
+                if (btn_cnt == 20'd1_000_000) begin // 约 10~20ms 消抖
+                    btn_cnt <= 20'd0;
+                    if (!I_button[0])
+                        display_mode <= display_mode + 1'b1;
+                end
+                else begin
+                    btn_cnt <= btn_cnt + 1'b1;
+                end
+            end
+        end
+    end
+
+    // =========================================================================
+    // 2. RGB 转 YCbCr (提取 Y 灰度)
+    // =========================================================================
+    wire        tlast_ycbcr;
+    wire        tuser_ycbcr;
+    wire        tvalid_ycbcr;
+    wire [7:0]  y_tdata;
+    wire [7:0]  cb_tdata;
+    wire [7:0]  cr_tdata;      
+
+    RGB888_YCbCr444 #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_RGB888_YCbCr444 (
+        .I_clk          (I_clk),        
+        .I_rst_n        (I_rst_n),      
+        .I_tlast        (I_tlast),      
+        .I_tuser        (I_tuser),      
+        .I_red_tdata    (I_tdata[23:16]),  
+        .I_green_tdata  (I_tdata[15:8]),
+        .I_blue_tdata   (I_tdata[7:0]), 
+        .I_tvalid       (I_tvalid),     
+        .I_tready       (I_tready),     
+        .O_tlast        (tlast_ycbcr),      
+        .O_tuser        (tuser_ycbcr),      
+        .O_y_tdata      (y_tdata),
+        .O_cb_tdata     (cb_tdata),   
+        .O_cr_tdata     (cr_tdata),   
+        .O_tvalid       (tvalid_ycbcr),
+        .O_tready       ()
+    );
+
+    // =========================================================================
+    // 3. 直方图均衡化模块
+    // =========================================================================
+    wire        tlast_hisequ;
+    wire        tuser_hisequ;
+    wire        tvalid_hisequ;
+    wire [7:0]  y_equ_tdata;
+
+    histogram_equ #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_histogram_equ (
+        .I_clk              (I_clk),       
+        .I_rst_n            (I_rst_n),     
+        .I_tlast            (tlast_ycbcr),     
+        .I_tuser            (tuser_ycbcr),     
+        .I_grey_tdata       (y_tdata),
+        .I_tvalid           (tvalid_ycbcr),    
+        .O_tlast            (tlast_hisequ),     
+        .O_tuser            (tuser_hisequ),     
+        .O_grey_tdata       (y_equ_tdata),
+        .O_tvalid           (tvalid_hisequ)     
+    );
+
+    // =========================================================================
+    // 4. Sobel 边缘检测模块 (接 Y 灰度分量)
+    // =========================================================================
+    wire        tlast_sobel;
+    wire        tuser_sobel;
+    wire        tvalid_sobel;
+    wire [7:0]  sobel_tdata;
+
+    Sobel_edge_detection_top #(
+        .IMG_WIDTH       (IMG_WIDTH),
+        .IMG_HEIGHT      (IMG_HEIGHT),
+        .SOBEL_THRESHOLD (SOBEL_THRESHOLD)
+    ) u_Sobel_edge (
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+        .I_tlast        (tlast_ycbcr),
+        .I_tuser        (tuser_ycbcr),
+        .I_grey_tdata   (y_tdata),
+        .I_tvalid       (tvalid_ycbcr),
+        .O_tlast        (tlast_sobel),
+        .O_tuser        (tuser_sobel),
+        .O_grey_tdata   (sobel_tdata),
+        .O_tvalid       (tvalid_sobel)
+    );
+
+    // =========================================================================
+    // 5. 各模式数据统一对齐到 Sobel 路径的 16 拍延迟
+    //    (RGB2Y 3拍 + Sobel 5拍 + 腐蚀 4拍 + 膨胀 4拍 = 16拍):
+    //    原图:   延迟 16 拍             -> raw_rgb_d[15]
+    //    灰度:   y_tdata 已延迟 3 拍, 再补 13 拍 -> raw_y_d[12]
+    //    直方图: 链路见第 6 节 (Y_eq -> 3x3 开运算降噪 -> RGB, 自带对齐控制
+    //             信号, 整体比其它模式晚 2 行 + 4 拍)
+    //    Sobel:  sobel_tdata 与 tvalid_sobel 本身对齐
+    // =========================================================================
+    reg [23:0] raw_rgb_d [0:15];
+    reg [7:0]  raw_y_d   [0:12];
+    integer i;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            for (i = 0; i < 16; i = i + 1)
+                raw_rgb_d[i] <= 24'd0;
+            for (i = 0; i < 13; i = i + 1)
+                raw_y_d[i]   <= 8'd0;
+        end
+        else begin
+            // 两条链随时钟无条件推进, 与 Sobel 控制信号严格同拍
+            raw_rgb_d[0] <= I_tdata;
+            for (i = 0; i < 15; i = i + 1)
+                raw_rgb_d[i+1] <= raw_rgb_d[i];
+
+            raw_y_d[0] <= y_tdata;
+            for (i = 0; i < 12; i = i + 1)
+                raw_y_d[i+1] <= raw_y_d[i];
+        end
+    end
+
+    // =========================================================================
+    // 6. 直方图均衡彩色输出链路 (均衡 Y + 原色度, 恢复彩色):
+    //    y_equ(6拍) 与 Cb/Cr(3拍, 补 3 拍 = 6拍) 对齐
+    //    -> 【3x3 灰度开运算降噪】先腐蚀(最小值)再膨胀(最大值), 去均衡噪点,
+    //       每级延迟 1 行 + 2 拍, 共 2 行 + 4 拍; Cb/Cr 色度在每级滤波模块
+    //       内部旁路延迟相同拍数, 与滤波后的 Y 对齐
+    //    -> YCbCr444_RGB888 (3拍) -> 输出
+    //    模式 2 的流整体比其它模式晚 2 行 + 4 拍, 因此 MUX 中模式 2 直接使用
+    //    转换器自带的 O_tvalid/O_tlast/O_tuser (与 RGB 输出严格对齐)。
+    // =========================================================================
+    wire [7:0]  he_r_tdata;
+    wire [7:0]  he_g_tdata;
+    wire [7:0]  he_b_tdata;
+    wire        he_o_tvalid;
+    wire        he_o_tlast;
+    wire        he_o_tuser;
+
+    reg [7:0]   cb_d [0:2];
+    reg [7:0]   cr_d [0:2];
+    reg         he_tvalid_d [0:2];
+    reg         he_tlast_d  [0:2];
+    reg         he_tuser_d  [0:2];
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            for (i = 0; i < 3; i = i + 1) begin
+                cb_d[i]        <= 8'd0;
+                cr_d[i]        <= 8'd0;
+                he_tvalid_d[i] <= 1'b0;
+                he_tlast_d[i]  <= 1'b0;
+                he_tuser_d[i]  <= 1'b0;
+            end
+        end
+        else begin
+            // Cb/Cr 及控制信号补 3 拍, 与 y_equ (6 拍) 对齐
+            cb_d[0]        <= cb_tdata;
+            cr_d[0]        <= cr_tdata;
+            he_tvalid_d[0] <= tvalid_ycbcr;
+            he_tlast_d[0]  <= tlast_ycbcr;
+            he_tuser_d[0]  <= tuser_ycbcr;
+            for (i = 0; i < 2; i = i + 1) begin
+                cb_d[i+1]        <= cb_d[i];
+                cr_d[i+1]        <= cr_d[i];
+                he_tvalid_d[i+1] <= he_tvalid_d[i];
+                he_tlast_d[i+1]  <= he_tlast_d[i];
+                he_tuser_d[i+1]  <= he_tuser_d[i];
+            end
+        end
+    end
+
+    // ---- 3x3 灰度开运算降噪: 先腐蚀(最小值)再膨胀(最大值) ----
+    wire        mf1_tvalid, mf1_tlast, mf1_tuser;
+    wire [7:0]  mf1_y, mf1_cb, mf1_cr;
+    wire        mf2_tvalid, mf2_tlast, mf2_tuser;
+    wire [7:0]  mf2_y, mf2_cb, mf2_cr;
+
+    morph_filter_3x3 #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .MIN_MODE  (1)                    // 腐蚀
+    ) u_morph_erode (
+        .I_clk     (I_clk),
+        .I_rst_n   (I_rst_n),
+        .I_tvalid  (he_tvalid_d[2]),
+        .I_tlast   (he_tlast_d[2]),
+        .I_tuser   (he_tuser_d[2]),
+        .I_grey    (y_equ_tdata),
+        .I_cb      (cb_d[2]),
+        .I_cr      (cr_d[2]),
+        .O_tvalid  (mf1_tvalid),
+        .O_tlast   (mf1_tlast),
+        .O_tuser   (mf1_tuser),
+        .O_grey    (mf1_y),
+        .O_cb      (mf1_cb),
+        .O_cr      (mf1_cr)
+    );
+
+    morph_filter_3x3 #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .MIN_MODE  (0)                    // 膨胀
+    ) u_morph_dilate (
+        .I_clk     (I_clk),
+        .I_rst_n   (I_rst_n),
+        .I_tvalid  (mf1_tvalid),
+        .I_tlast   (mf1_tlast),
+        .I_tuser   (mf1_tuser),
+        .I_grey    (mf1_y),
+        .I_cb      (mf1_cb),
+        .I_cr      (mf1_cr),
+        .O_tvalid  (mf2_tvalid),
+        .O_tlast   (mf2_tlast),
+        .O_tuser   (mf2_tuser),
+        .O_grey    (mf2_y),
+        .O_cb      (mf2_cb),
+        .O_cr      (mf2_cr)
+    );
+
+    YCbCr444_RGB888 #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_YCbCr444_RGB888 (
+        .I_clk         (I_clk),
+        .I_rst_n       (I_rst_n),
+        .I_tlast       (mf2_tlast),
+        .I_tuser       (mf2_tuser),
+        .I_y_tdata     (mf2_y),
+        .I_cb_tdata    (mf2_cb),
+        .I_cr_tdata    (mf2_cr),
+        .I_tvalid      (mf2_tvalid),
+        .I_tready      (1'b1),
+        .O_tlast       (he_o_tlast),
+        .O_tuser       (he_o_tuser),
+        .O_red_tdata   (he_r_tdata),
+        .O_green_tdata (he_g_tdata),
+        .O_blue_tdata  (he_b_tdata),
+        .O_tvalid      (he_o_tvalid),
+        .O_tready      ()
+    );
+
+    // =========================================================================
+    // 7. 多路模式选择输出
+    // =========================================================================
+    reg [23:0] mux_tdata;
+    reg        mux_tlast;
+    reg        mux_tuser;
+    reg        mux_tvalid;
+
+    always @(*) begin
+        case (display_mode)
+            2'b00: begin // 模式 0: 彩色原图 (16 拍对齐)
+                mux_tdata  = raw_rgb_d[15];
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
+            2'b01: begin // 模式 1: Y 灰度图 (16 拍对齐)
+                mux_tdata  = {raw_y_d[12], raw_y_d[12], raw_y_d[12]};
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
+            2'b10: begin // 模式 2: 直方图均衡化 (3x3 开运算降噪)
+                // 滤波链路比标准窗口晚 2 行 + 4 拍, de 若直接用会溢出到
+                // 垂直消隐期, 破坏 HDMI 时序导致显示器黑屏/失锁。
+                // 与标准有效窗口 (tvalid_sobel) 相与, 把 de 裁剪回有效区:
+                // 顶部约 2 行黑边、底部裁掉约 2 行, 时序与其它模式完全一致。
+                mux_tdata  = {he_r_tdata, he_g_tdata, he_b_tdata};
+                mux_tlast  = he_o_tlast;
+                mux_tuser  = he_o_tuser;
+                mux_tvalid = he_o_tvalid & tvalid_sobel;
+            end
+            2'b11: begin // 模式 3: Sobel 边缘检测图
+                mux_tdata  = {sobel_tdata, sobel_tdata, sobel_tdata};
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
+        endcase
+    end
+
+
+
+     face_track_top #(
+        .IMG_WIDTH      (IMG_WIDTH),
+        .IMG_HEIGHT     (IMG_HEIGHT),
+        .BOX_COLOR      (24'h00_FF_00)
+    ) u_face_track_top (
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+
+        // =====================================================================
+        // 【实验修改】人脸检测输入改为直方图均衡后的 Y
+        // 原接线: 检测器吃原始 Y (y_tdata, 3 拍), 暗场景下对比度低/噪声大,
+        //         LBP 编码不稳定导致上板漏检。
+        // 现接线: 吃直方图均衡后的 Y (y_equ_tdata), 对比度被上一帧 CDF 拉伸,
+        //         暗场信噪比显著改善。控制信号同步换成均衡路径 (比原路径
+        //         晚 3 拍, 帧/行结构不变, 不影响画框对齐)。
+        // 回退方法: 把 I_ycbcr_tvalid/tlast/tuser 换回 tvalid_ycbcr/
+        //         tlast_ycbcr/tuser_ycbcr, I_y_tdata 换回 y_tdata,
+        //         I_cb_tdata/I_cr_tdata 换回 cb_tdata/cr_tdata 即可。
+        // =====================================================================
+        .I_ycbcr_tvalid (tvalid_hisequ),
+        .I_ycbcr_tlast  (tlast_hisequ),
+        .I_ycbcr_tuser  (tuser_hisequ),
+        .I_y_tdata      (y_equ_tdata),
+        .I_cb_tdata     (cb_d[2]),     // 与 y_equ 同拍 (共 6 拍), 检测引擎未使用
+        .I_cr_tdata     (cr_d[2]),
+
+        // 送入 MUX 选中的待显示画面
+        .I_disp_tvalid  (mux_tvalid),
+        .I_disp_tlast   (mux_tlast),
+        .I_disp_tuser   (mux_tuser),
+        .I_disp_tdata   (mux_tdata),
+
+        // 叠加准星后的最终视频流
+        .O_disp_tvalid  (O_tvalid),
+        .O_disp_tlast   (O_tlast),
+        .O_disp_tuser   (O_tuser),
+        .O_disp_tdata   (O_tdata),
+
+        // 输出形心坐标供顶层舵机云台使用
+        .O_face_x       (O_face_x),
+        .O_face_y       (O_face_y),
+        .O_face_valid   (O_face_valid)
+    );
+
+    assign O_tready = 1'b1;
+
+endmodule
