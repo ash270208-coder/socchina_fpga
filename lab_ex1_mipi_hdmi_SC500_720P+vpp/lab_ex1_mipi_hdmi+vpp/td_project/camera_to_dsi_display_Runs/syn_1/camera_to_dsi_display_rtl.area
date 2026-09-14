@@ -8,24 +8,24 @@ IO Statistics
   #inout                   37
 
 Gate Statistics
-#Basic gates            28916
-  #and                   1560
+#Basic gates            28793
+  #and                   1558
   #nand                     0
-  #or                    1208
+  #or                    1207
   #nor                      0
   #xor                     95
   #xnor                     0
   #buf                      0
-  #not                    895
+  #not                    890
   #bufif1                   1
-  #MX21                  3908
+  #MX21                  3944
   #FADD                     0
-  #DFF                  21249
+  #DFF                  21098
   #LATCH                    0
-#MACRO_ADD                597
-#MACRO_EQ                 339
+#MACRO_ADD                575
+#MACRO_EQ                 329
 #MACRO_MULT                27
-#MACRO_MUX               6990
+#MACRO_MUX               6468
 #MACRO_OTHERS              22
 
 LUT Statistics
@@ -40,10 +40,10 @@ Report Hierarchy Area:
 +-----------------------------------------------------------------------------------------------------------------------------------------+
 |Instance                                                         |Module                                         |gates  |seq    |macros |
 +-----------------------------------------------------------------------------------------------------------------------------------------+
-|top                                                              |design_top_wrapper                             |7667   |21249  |985    |
+|top                                                              |design_top_wrapper                             |7695   |21098  |953    |
 |  u_PLL                                                          |PLL                                            |0      |0      |1      |
 |    ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst                       |ph1p_phy_pll_wrapper_25a56e5ce2f9              |0      |0      |0      |
-|  u_ae_set                                                       |ae_set                                         |10     |46     |10     |
+|  u_ae_set                                                       |ae_set                                         |10     |44     |10     |
 |  u_csi_unpacket                                                 |csi_unpacket_2lane                             |10     |88     |6      |
 |  u_hdmi_mixer                                                   |hdmi_mixer                                     |0      |78     |0      |
 |  u_hdmi_tx                                                      |hdmi_tx                                        |389    |1291   |151    |
@@ -174,10 +174,10 @@ Report Hierarchy Area:
 |            byteIdx_1[1]$u_wfifo_sync                            |ph1p_ddr_fifo_dram_sync                        |5      |11     |5      |
 |  u_raw10_unpacket                                               |raw10_unpacket_2lane                           |98     |144    |4      |
 |  u_uial2axis                                                    |uial2axis                                      |18     |28     |8      |
-|  u_uicfgcs500                                                   |uicfgcs500_720p                                |301    |99     |20     |
-|    u_ae_table                                                   |uics500regAE                                   |16     |0      |0      |
+|  u_uicfgcs500                                                   |uicfgcs500_720p                                |352    |99     |20     |
+|    u_ae_table                                                   |uics500regAE                                   |32     |0      |0      |
 |    u_i2c                                                        |uii2c                                          |53     |33     |13     |
-|    u_init_table                                                 |uics500reg_720p60                              |141    |0      |0      |
+|    u_init_table                                                 |uics500reg_720p60                              |163    |0      |0      |
 |  u_video_in                                                     |video_in                                       |61     |268    |13     |
 |    U_w128_d512_fifo                                             |w128_d512_fifo                                 |38     |222    |6      |
 |      soft_fifo_al_4057d6b76aa6_Inst                             |soft_fifo_al_4057d6b76aa6                      |38     |222    |6      |
@@ -190,15 +190,15 @@ Report Hierarchy Area:
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
 |        rd_to_wr_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
 |        wr_to_rd_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
-|  u_vpp_top                                                      |vpp_top                                        |1423   |6087   |247    |
+|  u_vpp_top                                                      |vpp_top                                        |1395   |5938   |215    |
 |    u_RGB888_YCbCr444                                            |RGB888_YCbCr444                                |2      |173    |13     |
 |    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |80     |350    |26     |
 |      u_Dilation                                                 |Bit_Dilation_Detector                          |27     |40     |2      |
 |      u_Erosion                                                  |Bit_Erosion_Detector                           |27     |40     |2      |
 |      u_Sobel_edge                                               |Sobel_edge                                     |26     |270    |22     |
-|    u_YCbCr444_RGB888                                            |YCbCr444_RGB888                                |0      |134    |14     |
-|    u_face_track_top                                             |face_track_top                                 |1217   |4442   |145    |
-|      u_downscaler                                               |downscaler                                     |34     |46     |12     |
+|    u_YCbCr444_RGB888                                            |YCbCr444_RGB888                                |0      |125    |14     |
+|    u_face_track_top                                             |face_track_top                                 |1220   |4442   |145    |
+|      u_downscaler                                               |downscaler                                     |37     |46     |12     |
 |      u_integral_image                                           |integral_image                                 |1      |3874   |5      |
 |      u_lbp_engine                                               |lbp_detector_engine                            |1119   |431    |104    |
 |        u_integral_bram_0                                        |frame_integral_bram                            |0      |0      |1      |
@@ -212,11 +212,9 @@ Report Hierarchy Area:
 |        u_rom_thresh                                             |rom_stage_thresh                               |0      |0      |1      |
 |          rom_02e417c010d2_Inst                                  |rom_02e417c010d2                               |0      |0      |1      |
 |      u_osd_box_drawer                                           |osd_box_drawer                                 |63     |91     |24     |
-|    u_histogram_equ                                              |histogram_equ                                  |21     |111    |13     |
+|    u_histogram_equ                                              |histogram_equ                                  |21     |117    |13     |
 |      u_ram_accumulate                                           |ram_accumulate                                 |0      |0      |1      |
 |        ram_5b7716d404a0_Inst                                    |ram_5b7716d404a0                               |0      |0      |1      |
 |      u_ram_his                                                  |ram_2port                                      |0      |0      |1      |
 |        ram_791ed05040df_Inst                                    |ram_791ed05040df                               |0      |0      |1      |
-|    u_morph_dilate                                               |morph_filter_3x3                               |14     |154    |16     |
-|    u_morph_erode                                                |morph_filter_3x3                               |15     |154    |16     |
 +-----------------------------------------------------------------------------------------------------------------------------------------+

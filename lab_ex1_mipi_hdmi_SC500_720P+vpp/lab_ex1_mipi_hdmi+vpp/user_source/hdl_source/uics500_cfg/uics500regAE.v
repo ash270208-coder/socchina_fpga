@@ -39,7 +39,7 @@ input      [15:0]  I_AE,
 input      [15:0]  I_AG
 );
 
-assign	REG_SIZE = 9'd5;
+assign	REG_SIZE = 9'd6;
 //-----------------------------------------------------------------
 /////////////////////	Config Data REG	  //////////////////////////	
 always@(*)
@@ -47,8 +47,9 @@ always@(*)
 		0:	REG_DATA = {16'h3e00, 4'h0, I_AE[15:12]}; 
 		1:	REG_DATA = {16'h3e01, I_AE[11: 4]}; 
 		2:	REG_DATA = {16'h3e02, I_AE[3:0], 4'h0};
-		3:	REG_DATA = {16'h3e08, I_AG[15:8]};
-		4:	REG_DATA = {16'h3e09, I_AG[7 :0]};
+		3:	REG_DATA = {16'h3e08, 8'h1f}; // VERIFY-1: 15.750x analogue
+		4:	REG_DATA = {16'h3e09, 8'h3f}; // VERIFY-1: 15.750x analogue
+		5:	REG_DATA = {16'h3e03, 8'h0b}; // VERIFY-1: keep AGC path enabled
 		default:REG_DATA    =   {16'h0000, 8'h00};
    endcase
 
