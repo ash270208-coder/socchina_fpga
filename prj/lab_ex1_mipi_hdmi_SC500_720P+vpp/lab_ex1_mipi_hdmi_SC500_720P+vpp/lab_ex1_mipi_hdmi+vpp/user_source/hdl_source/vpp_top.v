@@ -29,9 +29,38 @@ module vpp_top #(
 );
 
     // =========================================================================
+    // 0. 自动曝光 (输入侧全局) — AE 提亮后的 RGB888 作为全部下游分支的统一输入源
+    // =========================================================================
+    /*
+    wire        ae_tlast;
+    wire        ae_tuser;
+    wire [23:0] ae_tdata;
+    wire        ae_tvalid;
+
+    auto_exposure_top #(
+        .IMG_WIDTH  (IMG_WIDTH),
+        .IMG_HEIGHT (IMG_HEIGHT),
+        .TARGET_Y   (128),
+        .GAIN_FRAC  (12)
+    ) u_auto_exposure_top (
+        .I_clk      (I_clk),
+        .I_rst_n    (I_rst_n),
+        .I_tlast    (I_tlast),
+        .I_tuser    (I_tuser),
+        .I_tdata    (I_tdata),
+        .I_tvalid   (I_tvalid),
+        .I_tready   (I_tready),
+        .O_tlast    (ae_tlast),
+        .O_tuser    (ae_tuser),
+        .O_tdata    (ae_tdata),
+        .O_tvalid   (ae_tvalid),
+        .O_tready   ()
+    );
+    */
+    // =========================================================================
     // 1. 按键消抖与模式切换状态机 (0:原图, 1:灰度, 2:直方图均衡, 3:Sobel边缘)
     // =========================================================================
-    reg [1:0]  display_mode;
+    reg [3:0]  display_mode;
     reg [19:0] btn_cnt;
     reg        btn_d0, btn_d1;
 
@@ -40,7 +69,7 @@ module vpp_top #(
             btn_d0       <= 1'b1;
             btn_d1       <= 1'b1;
             btn_cnt      <= 20'd0;
-            display_mode <= 2'b00; // 默认输出原图
+            display_mode <= 4'b0000; // 默认输出原图
         end
         else begin
             btn_d0 <= I_button[0];
@@ -248,6 +277,35 @@ module vpp_top #(
     );
 
     // =========================================================================
+    // 5. 卡通化图像风格化模块 (Cartoon Top)
+    //    输入原图 RGB888，输出卡通化 RGB888 (cycle 8)
+    //    display_mode 模式 4 时通过 MUX 输出
+    // =========================================================================
+    /*
+    wire        cartoon_tlast;
+    wire        cartoon_tuser;
+    wire        cartoon_tvalid;
+    wire [23:0] cartoon_tdata;
+
+    cartoon_top #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_cartoon_top (
+        .I_clk    (I_clk),
+        .I_rst_n  (I_rst_n),
+        .I_tlast  (ae_tlast),
+        .I_tuser  (ae_tuser),
+        .I_tdata  (ae_tdata),
+        .I_tvalid (ae_tvalid),
+        .I_tready (1'b1),
+        .O_tdata  (cartoon_tdata),
+        .O_tlast  (cartoon_tlast),
+        .O_tuser  (cartoon_tuser),
+        .O_tvalid (cartoon_tvalid),
+        .O_tready ()
+    );
+    */
+    // =========================================================================
     // 7. 多路模式选择输出
     // =========================================================================
     reg [23:0] mux_tdata;
@@ -257,23 +315,23 @@ module vpp_top #(
 
     always @(*) begin
         case (display_mode)
-            2'b00: begin // 模式 0: 彩色原图 (16 拍对齐)
-                mux_tdata  = raw_rgb_d[15];
+            2'b00: begin // 模式 0: 彩色原图 (对齐时钟)
+                mux_tdata  = raw_rgb_d[6];
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
             end
-            2'b01: begin // 模式 1: Y 灰度图 (16 拍对齐)
-                mux_tdata  = {raw_y_d[12], raw_y_d[12], raw_y_d[12]};
+            2'b01: begin // 模式 1: Y 灰度图
+                mux_tdata  = {raw_y_d[3], raw_y_d[3], raw_y_d[3]};
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
             end
-            2'b10: begin // 模式 2: 直方图均衡化 (彩色输出, 16 拍对齐)
-                mux_tdata  = he_rgb_d[6];
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+            2'b10: begin // 模式 2: 直方图均衡化
+                mux_tdata  = {y_equ_tdata, y_equ_tdata, y_equ_tdata};
+                mux_tlast  = tlast_hisequ;
+                mux_tuser  = tuser_hisequ;
+                mux_tvalid = tvalid_hisequ;
             end
             2'b11: begin // 模式 3: Sobel 边缘检测图
                 mux_tdata  = {sobel_tdata, sobel_tdata, sobel_tdata};
@@ -281,44 +339,20 @@ module vpp_top #(
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
             end
+      //      4'b0100: begin // 模式 4: 卡通化图像风格化
+           //     mux_tdata  = cartoon_tdata;
+           //     mux_tlast  = cartoon_tlast;
+           //     mux_tuser  = cartoon_tuser;
+           //     mux_tvalid = cartoon_tvalid;
+           // end
+            default: begin // 其余模式默认输出彩色原图
+                mux_tdata  = raw_rgb_d[6];
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
         endcase
     end
-
-
-
-     face_track_top #(
-        .IMG_WIDTH      (IMG_WIDTH),
-        .IMG_HEIGHT     (IMG_HEIGHT),
-        .BOX_COLOR      (24'h00_FF_00)
-    ) u_face_track_top (
-        .I_clk          (I_clk),
-        .I_rst_n        (I_rst_n),
-
-        // 送入 YCbCr 流用于人脸特征提取
-        .I_ycbcr_tvalid (tvalid_ycbcr),
-        .I_ycbcr_tlast  (tlast_ycbcr),
-        .I_ycbcr_tuser  (tuser_ycbcr),
-        .I_y_tdata      (y_tdata),
-        .I_cb_tdata     (cb_tdata),
-        .I_cr_tdata     (cr_tdata),
-
-        // 送入 MUX 选中的待显示画面
-        .I_disp_tvalid  (mux_tvalid),
-        .I_disp_tlast   (mux_tlast),
-        .I_disp_tuser   (mux_tuser),
-        .I_disp_tdata   (mux_tdata),
-
-        // 叠加准星后的最终视频流
-        .O_disp_tvalid  (O_tvalid),
-        .O_disp_tlast   (O_tlast),
-        .O_disp_tuser   (O_tuser),
-        .O_disp_tdata   (O_tdata),
-
-        // 输出形心坐标供顶层舵机云台使用
-        .O_face_x       (O_face_x),
-        .O_face_y       (O_face_y),
-        .O_face_valid   (O_face_valid)
-    );
 
     assign O_tready = 1'b1;
 

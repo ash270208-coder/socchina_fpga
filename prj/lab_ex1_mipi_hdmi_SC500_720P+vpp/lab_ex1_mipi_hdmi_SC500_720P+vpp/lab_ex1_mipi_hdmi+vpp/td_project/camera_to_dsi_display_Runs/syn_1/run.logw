@@ -1,12 +1,12 @@
 ============================================================
    Tang Dynasty, V6.2.168116
    Copyright (c) 2012-2025 Anlogic Inc.
-   Executable = E:/Anlogic/TD_6.2.1_Engineer_6.2.168.116/bin/run.exe
+   Executable = D:/anlu/ruanjian/bin/run.exe
    Built at =   16:32:07 Jun 12 2025
-   Run by =     jingzifu
-   Run Date =   Sat Sep 12 12:18:09 2026
+   Run by =     方俊尧
+   Run Date =   Sun Sep 13 21:28:26 2026
 
-   Run on =     LAPTOP-B8H3OB4U
+   Run on =     只因你太美
 ============================================================
 Copyright (c) 1998-2019 The OpenSSL Project.  All rights reserved.
 This product includes software developed by the OpenSSL Project
@@ -161,10 +161,6 @@ HDL-5007 WARNING: actual bit length ** differs from formal bit length *** for po
 HDL-5369 WARNING: latch inferred for net '**' in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/mc/alc_mc_top_all.enc.sv(2464)
 HDL-5323 WARNING: input port 'apb_psel' remains unconnected for this instance in ../../../user_source/hdl_source/ph1p35_ddr/ph1p35_324_ddr_wrapper.v(78)
 HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47)
 HDL-5007 WARNING: actual bit length ** differs from formal bit length *** for port '**' in ../../../user_source/hdl_source/hdmi_1_4b_transmitter_core_wrapper.enc.v(3307)
 HDL-5317 WARNING: input port 'I_camera_black_level[9]' is not connected on this instance in ../../../user_source/hdl_source/design_top_wrapper.v(526)
 HDL-5323 WARNING: input port 'I_tdest[9]' remains unconnected for this instance in ../../../user_source/hdl_source/design_top_wrapper.v(590)
@@ -174,18 +170,85 @@ HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been re
 HDL-5106 WARNING: Initial value omitted on non-DFF net "scl_r" in ../../../user_source/hdl_source/uics500_cfg/uii2c.v(127) 
 HDL-5106 WARNING: Initial value omitted on non-DFF net "sda_o" in ../../../user_source/hdl_source/uics500_cfg/uii2c.v(135) 
 SYN-5065 WARNING: Register "genCA$op" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/mc/alc_mc_top_all.enc.sv(0) is described with both an asynchronous reset and an asynchronous set. It may have an uncertainty of the timing. Please conside rewriting code.
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_0/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_0/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_1/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_1/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_lut/rom_7b7c1dc52abc_Inst/username_inst" in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_lut/rom_7b7c1dc52abc_Inst/username_inst" in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_thresh/rom_02e417c010d2_Inst/username_inst" in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_thresh/rom_02e417c010d2_Inst/username_inst" in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47) / pin "ecc_sbiterrinj"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_histogram_equ/u_ram_accumulate/ram_5b7716d404a0_Inst/username_inst" in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92) / pin "ecc_dbiterrinj"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_histogram_equ/u_ram_accumulate/ram_5b7716d404a0_Inst/username_inst" in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92) / pin "ecc_sbiterrinj"
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[23]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[23]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[23]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[22]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[22]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[22]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[21]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[21]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[21]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[20]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[20]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[20]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[19]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[19]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[19]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[18]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[18]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[18]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[17]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[17]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[17]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[16]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[16]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[16]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[15]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[15]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[15]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[14]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[14]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[14]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[13]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[13]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[13]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[12]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[12]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[12]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[11]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[11]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[11]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[10]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[10]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[10]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[9]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[9]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[9]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[8]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[8]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[8]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[7]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[7]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[7]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[6]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[6]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[6]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[5]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[5]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[5]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[4]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[4]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[4]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[3]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[3]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[3]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[2]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[2]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[2]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[1]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[1]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[1]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_data[0]" in ../../../user_source/hdl_source/hdmi_tx.v(22)
+		the net's pin: pin "i1[0]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "i0[0]" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/I_video_in_de" in ../../../user_source/hdl_source/hdmi_tx.v(15)
+		the net's pin: pin "I[1]" in ../../../user_source/hdl_source/hdmi_tx.v(90)
+		the net's pin: pin "I" in ../../../user_source/hdl_source/hdmi_tx.v(87)
+		the net's pin: pin "i1" in ../../../user_source/hdl_source/hdmi_tx.v(86)
+		the net's pin: pin "d" in ../../../user_source/hdl_source/hdmi_tx.v(71)
 SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/u_key_remove_shakes/I_rst_n" in ../../../user_source/hdl_source/key_remove_shakes.v(14)
 		the net's pin: pin "I" in ../../../user_source/hdl_source/key_remove_shakes.v(46)
 SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_isp_top/O_tready" in ../../../user_source/hdl_source/isp/isp_top.v(9)
@@ -2015,18 +2078,9 @@ SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_raw10_unpack
 SYN-5025 WARNING: Using 0 for all undriven pins and nets
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_isp_top/u_demosaic/raw_matrix_3x3_buffer_d/two_line_buffer[2]$line_buffer_demosaic_r1/blk_mem_gen_demosaic_r0/ram_c36c2ca3b3a7_Inst/username_inst" in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/RTL/ram_c36c2ca3b3a7.v(91) / pin "bea[0]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_isp_top/u_demosaic/raw_matrix_3x3_buffer_d/two_line_buffer[2]$line_buffer_demosaic_r1/blk_mem_gen_demosaic_r0/ram_c36c2ca3b3a7_Inst/username_inst" in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/RTL/ram_c36c2ca3b3a7.v(91) / pin "beb[0]"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "bea[0]"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "beb[0]"
 SYN-5025 WARNING: Using 0 for all undriven pins and nets
 SYN-5041 WARNING: Ram Inst: u_mc_to_user_interface/U_w155_d512_fifo/soft_fifo_al_f58e8b3e1f3d_Inst/ram_inst/ramread0_syn_22 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_video_in/U_w128_d512_fifo/soft_fifo_al_4057d6b76aa6_Inst/ram_inst/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_video_out/U_w128_d512_fifo/soft_fifo_al_4057d6b76aa6_Inst/ram_inst/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Dilation/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Dilation/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Erosion/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Erosion/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Sobel_edge/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
-SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Sobel_edge/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[7]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[6]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[5]"
