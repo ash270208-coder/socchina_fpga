@@ -4,11 +4,9 @@
 // brightness_stats
 // 自动曝光 - 帧亮度统计模块
 //   - 逐像素累加 Y 亮度电平总和 sum_y 与像素总数 pixel_cnt
-//   - 帧末（tlast && tvalid 且 line_cnt 到达 IMG_HEIGHT-1）输出平均亮度
-//   - 帧同步完全基于 I_tlast 自持行计数，不依赖 I_tuser
-//   - 目标亮度 128 的误差在 exposure_controller 中计算，本模块只负责统计
-// 接口：与工程现有 AXI-Stream + RGB888 模块一致（I_y 为 8bit 灰度分量）
-// 说明：平均亮度除法仅每帧执行一次（frame_end 那拍），占用资源可忽略
+//   - 帧末触发多周期恢复余数除法器, 求平均亮度
+//   - 帧同步基于 I_tlast 自持行计数, I_tuser 强制行计数归零
+//   - 除法器每次 1 bit, 共 YSUM_W 拍, 帧消隐期足够, 无时序压力
 // =============================================================================
 module brightness_stats #(
     parameter IMG_WIDTH   = 1280,
@@ -18,7 +16,7 @@ module brightness_stats #(
     input               I_rst_n,
 
     input               I_tlast,        // 行结束信号 (EOL)
-    input               I_tuser,        // 帧开始信号 (SOF) - 保留端口，不参与帧同步
+    input               I_tuser,        // 帧开始信号 (SOF)
     input      [7:0]    I_y_tdata,      // 输入 Y 灰度分量 (0~255)
     input               I_tvalid,       // 数据有效
 
@@ -26,45 +24,96 @@ module brightness_stats #(
     output reg          O_frame_done    // 帧计算完成脉冲 (持续 1 拍)
 );
 
-    // 平均亮度累加器位宽需覆盖 sum 最大可能值: 255 * IMG_WIDTH * IMG_HEIGHT
     localparam YSUM_W = (IMG_WIDTH * IMG_HEIGHT < (1 << 24)) ? 32 : 40;
 
-    // 行计数: 0 ~ IMG_HEIGHT-1 自持循环，仅依赖 I_tlast + I_tvalid
-    reg [15:0] line_cnt;
-    reg [YSUM_W-1:0] sum_y;        // 本帧 Y 总和
-    reg [YSUM_W-1:0] pixel_cnt;    // 本帧像素计数 (无符号)
+    // ---- 行计数与累加器 ----
+    reg [15:0]       line_cnt;
+    reg [YSUM_W-1:0] sum_y;
+    reg [YSUM_W-1:0] pixel_cnt;
 
     wire [YSUM_W-1:0] sum_next = sum_y + {24'd0, I_y_tdata};
     wire              frame_end = (line_cnt == IMG_HEIGHT - 1) && I_tlast && I_tvalid;
+
+    // 帧末那一拍连同最后一个像素一起算进去
+    wire [YSUM_W-1:0] final_sum = sum_y + {24'd0, I_y_tdata};
+    wire [YSUM_W-1:0] final_cnt = pixel_cnt + 1'b1;
+
+    // =========================================================================
+    // 多周期恢复余数除法器
+    //   算法: 每拍把 {rem, num_msb} 左移, 与除数比较, 够减则 rem 减去除数, 商位=1
+    //   迭代 YSUM_W 次后商在 div_quo 中
+    // =========================================================================
+    localparam S_IDLE = 1'b0;
+    localparam S_DIV  = 1'b1;
+
+    reg              div_state;
+    reg [5:0]        div_cnt;
+    reg [YSUM_W-1:0] div_rem;
+    reg [YSUM_W-1:0] div_quo;
+    reg [YSUM_W-1:0] div_num;   // 被除数 (逐拍左移)
+    reg [YSUM_W-1:0] div_den;   // 除数
+
+    wire [YSUM_W-1:0] shifted_rem = {div_rem[YSUM_W-2:0], div_num[YSUM_W-1]};
+    wire              ge_den      = (shifted_rem >= div_den);
+    wire [YSUM_W-1:0] rem_new     = ge_den ? (shifted_rem - div_den) : shifted_rem;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
             sum_y        <= {YSUM_W{1'b0}};
             pixel_cnt    <= {YSUM_W{1'b0}};
             line_cnt     <= 16'd0;
-            O_avg_y      <= 8'd128;     // 缺省平均亮度
+            O_avg_y      <= 8'd128;
             O_frame_done <= 1'b0;
+            div_state    <= S_IDLE;
+            div_cnt      <= 6'd0;
+            div_rem      <= {YSUM_W{1'b0}};
+            div_quo      <= {YSUM_W{1'b0}};
+            div_num      <= {YSUM_W{1'b0}};
+            div_den      <= {YSUM_W{1'b0}};
         end else begin
-            O_frame_done <= 1'b0;       // 默认清除脉冲
+            O_frame_done <= 1'b0;   // 默认清除
 
-            // ---- 自持行计数: 0 ~ IMG_HEIGHT-1 循环 ----
-            if (I_tvalid && I_tlast) begin
+            // ---- 行计数: I_tuser 优先复位 ----
+            if (I_tuser) begin
+                line_cnt <= 16'd0;
+            end
+            else if (I_tvalid && I_tlast) begin
                 if (line_cnt == IMG_HEIGHT - 1)
                     line_cnt <= 16'd0;
                 else
                     line_cnt <= line_cnt + 16'd1;
             end
 
-            // ---- 帧结束: 计算平均亮度（含最后一个像素），复位累加器 ----
-            if (frame_end) begin
-                O_avg_y      <= (pixel_cnt == {YSUM_W{1'b0}} && sum_y == {YSUM_W{1'b0}})
-                                ? 8'd128
-                                : (sum_y + {24'd0, I_y_tdata}) / (pixel_cnt + 1'b1);
-                O_frame_done <= 1'b1;
-                sum_y        <= {YSUM_W{1'b0}};
-                pixel_cnt    <= {YSUM_W{1'b0}};
+            // ---- 除法迭代 (优先级最高) ----
+            if (div_state == S_DIV) begin
+                div_rem <= rem_new;
+                div_quo <= {div_quo[YSUM_W-2:0], ge_den};
+                div_num <= {div_num[YSUM_W-2:0], 1'b0};
+                div_cnt <= div_cnt - 1'b1;
+                if (div_cnt == 6'd1) begin
+                    div_state    <= S_IDLE;
+                    O_avg_y      <= {div_quo[6:0], ge_den}; // 最终商的低 8 位
+                    O_frame_done <= 1'b1;
+                end
             end
-            // ---- 正常累加: 非帧结束的有效数据拍 ----
+            // ---- 帧末: 触发除法 (或除零直出 128) ----
+            else if (frame_end) begin
+                if (final_cnt == {YSUM_W{1'b0}}) begin
+                    O_avg_y      <= 8'd128;
+                    O_frame_done <= 1'b1;
+                end
+                else begin
+                    div_num   <= final_sum;
+                    div_den   <= final_cnt;
+                    div_rem   <= {YSUM_W{1'b0}};
+                    div_quo   <= {YSUM_W{1'b0}};
+                    div_cnt   <= YSUM_W[5:0];
+                    div_state <= S_DIV;
+                end
+                sum_y     <= {YSUM_W{1'b0}};
+                pixel_cnt <= {YSUM_W{1'b0}};
+            end
+            // ---- 正常累加 ----
             else if (I_tvalid) begin
                 sum_y     <= sum_next;
                 pixel_cnt <= pixel_cnt + 1'b1;

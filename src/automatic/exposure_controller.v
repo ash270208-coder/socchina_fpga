@@ -38,7 +38,7 @@ module exposure_controller #(
 
     always @(*) begin
         if (I_avg_y == 8'd0)
-            target = 32'd0;                 // 全黑, 后续由限幅钳到上限
+            target = GAIN_MAX;                 // 全黑, 后续由限幅钳到上限
         else
             target = ({24'd0, TARGET_Y} << GAIN_FRAC) / {24'd0, I_avg_y};
     end
@@ -60,12 +60,13 @@ module exposure_controller #(
             gain_acc <= $signed(32'd4096);   // 初始增益 1.0 (1 << 12)
             O_gain   <= 24'd4096;
         end else begin
-            if (I_frame_done)
-                gain_acc <= sat_gain;        // 帧间单次更新, 帧内保持恒定
-            else
-                gain_acc <= gain_acc;        // 保持, 防止推断锁存器
-
-            O_gain <= gain_acc[23:0];        // 每帧输出当前增益 (低 24bit)
+            if (I_frame_done) begin
+                gain_acc <= sat_gain;
+                O_gain   <= sat_gain[23:0];
+            end else begin
+                gain_acc <= gain_acc;
+                O_gain   <= O_gain;
+            end
         end
     end
 

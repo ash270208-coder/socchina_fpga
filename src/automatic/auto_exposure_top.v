@@ -122,8 +122,9 @@ module auto_exposure_top #(
             O_tlast  <= gain_tlast;
             O_tuser  <= gain_tuser;
             O_tvalid <= gain_tvalid;
-            O_tready <= I_tready;     // 背压透传
         end
     end
+
+    assign O_tready = I_tready;
 
 endmodule

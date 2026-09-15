@@ -35,15 +35,18 @@ module gain_apply #(
     wire [31:0] g_mult = I_tdata[15:8]  * I_gain;
     wire [31:0] b_mult = I_tdata[7:0]   * I_gain;
 
-    // 右移 GAIN_FRAC 得到整数部分
-    wire [7:0] r_gained = r_mult[GAIN_FRAC + 7 : GAIN_FRAC];
-    wire [7:0] g_gained = g_mult[GAIN_FRAC + 7 : GAIN_FRAC];
-    wire [7:0] b_gained = b_mult[GAIN_FRAC + 7 : GAIN_FRAC];
+    // ---- 逐通道乘法: 8bit * 24bit(q12.12) = 32bit ----
+    wire [31:0] r_mult = I_tdata[23:16] * I_gain;
+    wire [31:0] g_mult = I_tdata[15:8]  * I_gain;
+    wire [31:0] b_mult = I_tdata[7:0]   * I_gain;
 
-    // ---- Clamp 到 [0,255] ----
-    wire [7:0] r_clamp = (r_gained > 8'd255) ? 8'd255 : r_gained;
-    wire [7:0] g_clamp = (g_gained > 8'd255) ? 8'd255 : g_gained;
-    wire [7:0] b_clamp = (b_gained > 8'd255) ? 8'd255 : b_gained;
+    // ---- 饱和阈值: 255 << GAIN_FRAC ----
+    localparam [31:0] SAT_THRESH = 32'd255 << GAIN_FRAC;
+
+    // ---- 用完整 32bit 结果与阈值比较后再截位 ----
+    wire [7:0] r_clamp = (r_mult >= SAT_THRESH) ? 8'd255 : r_mult[GAIN_FRAC + 7 : GAIN_FRAC];
+    wire [7:0] g_clamp = (g_mult >= SAT_THRESH) ? 8'd255 : g_mult[GAIN_FRAC + 7 : GAIN_FRAC];
+    wire [7:0] b_clamp = (b_mult >= SAT_THRESH) ? 8'd255 : b_mult[GAIN_FRAC + 7 : GAIN_FRAC];
 
     // ---- 数据打 1 拍, 控制信号同拍对齐 ----
     always @(posedge I_clk or negedge I_rst_n) begin
