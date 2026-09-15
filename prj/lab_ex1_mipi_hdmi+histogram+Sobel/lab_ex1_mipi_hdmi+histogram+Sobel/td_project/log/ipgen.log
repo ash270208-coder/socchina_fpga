@@ -1,5 +1,0 @@
-ipgen_gui_set_spin_box_text IP_Generator PH1P_REF_CLK 100.00
-ipgen_gui_set_spin_box_text IP_Generator PH1P_DDR_SPEED 800.00
-ipgen_gui_set_spin_box_text IP_Generator PH1P_DDR_SPEED 1066.00
-ipgen_gui_select_window IP_Generator
-ipgen_gui_click_push_button IP_Generator Cancel

@@ -1,7 +1,0 @@
-Sending 96x64 Frame...
-=========================================
-Simulation Finished!
-Total Pixels Captured:        6144 (Expected:                 6144)
-=========================================
-PASS
-sim/cartoon_top_tb.v:119: $finish called at 127290000 (1ps)
