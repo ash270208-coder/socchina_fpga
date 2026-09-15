@@ -10,8 +10,8 @@
 // 时序：输出打 1 拍对齐, 控制信号 tlast/tuser/tvalid 同步打拍
 // =============================================================================
 module gain_apply #(
-    parameter IMG_WIDTH  = 1024,
-    parameter IMG_HEIGHT = 600,
+    parameter IMG_WIDTH  = 1280,
+    parameter IMG_HEIGHT = 720,
     parameter GAIN_FRAC  = 12     // 增益小数位 (12.12 格式)
 )(
     input               I_clk,

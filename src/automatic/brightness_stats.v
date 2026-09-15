@@ -11,8 +11,8 @@
 // 说明：平均亮度除法仅每帧执行一次（frame_end 那拍），占用资源可忽略
 // =============================================================================
 module brightness_stats #(
-    parameter IMG_WIDTH   = 1024,
-    parameter IMG_HEIGHT  = 600
+    parameter IMG_WIDTH   = 1280,
+    parameter IMG_HEIGHT  = 720
 )(
     input               I_clk,
     input               I_rst_n,

@@ -15,8 +15,8 @@
 //   - gain_apply 输出打 1 拍, 故控制信号同步打拍对齐
 // =============================================================================
 module auto_exposure_top #(
-    parameter IMG_WIDTH   = 1024,
-    parameter IMG_HEIGHT  = 600,
+    parameter IMG_WIDTH   = 1280,
+    parameter IMG_HEIGHT  = 720,
     parameter TARGET_Y    = 128,
     parameter GAIN_FRAC   = 12
 )(
