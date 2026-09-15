@@ -8,7 +8,7 @@ IO Statistics
   #inout                   37
 
 Gate Statistics
-#Basic gates            29126
+#Basic gates            29153
   #and                   1562
   #nand                     0
   #or                    1208
@@ -16,16 +16,16 @@ Gate Statistics
   #xor                     95
   #xnor                     0
   #buf                      0
-  #not                    899
+  #not                    902
   #bufif1                   1
   #MX21                  3904
   #FADD                     0
-  #DFF                  21457
+  #DFF                  21481
   #LATCH                    0
-#MACRO_ADD                605
+#MACRO_ADD                627
 #MACRO_EQ                 332
 #MACRO_MULT                30
-#MACRO_MUX               6570
+#MACRO_MUX               6618
 #MACRO_OTHERS              22
 
 LUT Statistics
@@ -40,7 +40,7 @@ Report Hierarchy Area:
 +-----------------------------------------------------------------------------------------------------------------------------------------+
 |Instance                                                         |Module                                         |gates  |seq    |macros |
 +-----------------------------------------------------------------------------------------------------------------------------------------+
-|top                                                              |design_top_wrapper                             |7669   |21457  |989    |
+|top                                                              |design_top_wrapper                             |7672   |21481  |1011   |
 |  u_PLL                                                          |PLL                                            |0      |0      |1      |
 |    ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst                       |ph1p_phy_pll_wrapper_25a56e5ce2f9              |0      |0      |0      |
 |  u_ae_set                                                       |ae_set                                         |10     |44     |10     |
@@ -190,7 +190,7 @@ Report Hierarchy Area:
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
 |        rd_to_wr_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
 |        wr_to_rd_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
-|  u_vpp_top                                                      |vpp_top                                        |1369   |6297   |251    |
+|  u_vpp_top                                                      |vpp_top                                        |1372   |6321   |273    |
 |    u_RGB888_YCbCr444                                            |RGB888_YCbCr444                                |5      |173    |13     |
 |    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |79     |349    |26     |
 |      u_Dilation                                                 |Bit_Dilation_Detector                          |27     |40     |2      |
@@ -202,6 +202,7 @@ Report Hierarchy Area:
 |      u_RGB888_YCbCr444                                          |RGB888_YCbCr444                                |0      |65     |5      |
 |      u_Sobel_edge                                               |Sobel_edge                                     |26     |268    |22     |
 |      u_Color_Quantize                                           |Color_Quantize                                 |0      |24     |0      |
+|    u_chroma_nr                                                  |chroma_nr                                      |3      |24     |22     |
 |    u_face_track_top                                             |face_track_top                                 |1219   |4443   |145    |
 |      u_downscaler                                               |downscaler                                     |36     |46     |12     |
 |      u_integral_image                                           |integral_image                                 |1      |3875   |5      |

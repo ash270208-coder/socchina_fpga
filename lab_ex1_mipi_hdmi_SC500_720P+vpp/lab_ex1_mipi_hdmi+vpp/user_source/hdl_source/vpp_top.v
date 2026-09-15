@@ -341,6 +341,21 @@ module vpp_top #(
     wire [7:0] gray_gam = gray_sum[9:2];   // /4
 
     // =========================================================================
+    // 6e. 色度降噪 (只动色度, 亮度保持锐利, 原理见 chroma_nr.v)
+    //     模块内部 3 拍, 所以从 raw_rgb_d[12] (第 13 拍) 抽输入: 13 + 3 = 16 拍 ✓
+    //     只作用于【原图】和兜底档;
+    //     灰度档由亮度算出, 而本模块亮度严格不变 -> 数学上不受影响, 保持原样;
+    //     卡通档走 raw_rgb_d[6] (第 7 拍), 不动它, 否则会破坏 16 拍时序。
+    // =========================================================================
+    wire [23:0] nr_rgb;
+    chroma_nr u_chroma_nr (
+        .I_clk   (I_clk),
+        .I_rst_n (I_rst_n),
+        .I_rgb   (raw_rgb_d[12]),
+        .O_rgb   (nr_rgb)
+    );
+
+    // =========================================================================
     // 7. 多路模式选择输出
     // =========================================================================
     reg [23:0] mux_tdata;
@@ -351,7 +366,7 @@ module vpp_top #(
     always @(*) begin
         case (display_mode)
             3'b000: begin // 模式 0: 彩色原图 (伽马校正后, 16 拍对齐)
-                mux_tdata  = raw_rgb_d[15];
+                mux_tdata  = nr_rgb;
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
@@ -381,7 +396,7 @@ module vpp_top #(
                 mux_tvalid = cartoon_tvalid;
             end
             default: begin // 兜底: 彩色原图 (伽马校正后)
-                mux_tdata  = raw_rgb_d[15];
+                mux_tdata  = nr_rgb;
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
