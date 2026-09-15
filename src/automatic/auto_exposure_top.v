@@ -116,7 +116,6 @@ module auto_exposure_top #(
             O_tlast  <= 1'b0;
             O_tuser  <= 1'b0;
             O_tvalid <= 1'b0;
-            O_tready <= 1'b0;
         end else begin
             O_tdata  <= gain_tdata;
             O_tlast  <= gain_tlast;
@@ -125,6 +124,6 @@ module auto_exposure_top #(
         end
     end
 
-    assign O_tready = I_tready;
+    assingn O_tready = I_tready;   // 透传 (本模块无背压)
 
 endmodule

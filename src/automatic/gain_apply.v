@@ -29,12 +29,6 @@ module gain_apply #(
     output reg          O_tvalid
 );
 
-    // ---- 逐通道乘法: 8bit * 24bit(q12.12) = 32bit, 右移 GAIN_FRAC 恢复整数 ----
-    // R = I_tdata[23:16], G = I_tdata[15:8], B = I_tdata[7:0]
-    wire [31:0] r_mult = I_tdata[23:16] * I_gain;
-    wire [31:0] g_mult = I_tdata[15:8]  * I_gain;
-    wire [31:0] b_mult = I_tdata[7:0]   * I_gain;
-
     // ---- 逐通道乘法: 8bit * 24bit(q12.12) = 32bit ----
     wire [31:0] r_mult = I_tdata[23:16] * I_gain;
     wire [31:0] g_mult = I_tdata[15:8]  * I_gain;

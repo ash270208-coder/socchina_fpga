@@ -114,7 +114,7 @@ module brightness_stats #(
                 pixel_cnt <= {YSUM_W{1'b0}};
             end
             // ---- 正常累加 ----
-            else if (I_tvalid) begin
+            else if (I_tvalid && I_tready) begin
                 sum_y     <= sum_next;
                 pixel_cnt <= pixel_cnt + 1'b1;
             end
