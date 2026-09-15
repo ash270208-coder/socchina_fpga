@@ -25,7 +25,7 @@
                 <ipxact:configurableElementValue referenceId="OUTREG_DISB">1</ipxact:configurableElementValue>
                 <ipxact:configurableElementValue referenceId="Load_Init_File">1</ipxact:configurableElementValue>
                 <ipxact:configurableElementValue referenceId="INIT_FILE">&quot;../feature_rects.dath&quot;</ipxact:configurableElementValue>
-                <ipxact:configurableElementValue referenceId="Mif_File">&quot;D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/feature_rects.dath&quot;</ipxact:configurableElementValue>
+                <ipxact:configurableElementValue referenceId="Mif_File">&quot;D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/feature_rects.dath&quot;</ipxact:configurableElementValue>
                 <ipxact:configurableElementValue referenceId="Fill_Memory_Initialization_Values">0</ipxact:configurableElementValue>
                 <ipxact:configurableElementValue referenceId="EMB20K">1</ipxact:configurableElementValue>
                 <ipxact:configurableElementValue referenceId="EMB20K_FAST">0</ipxact:configurableElementValue>

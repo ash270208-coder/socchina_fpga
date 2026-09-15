@@ -13,32 +13,32 @@ caused by the use of their own products.
 @Author      :   XiaoQingquan 
 @Time        :   2025/01 
 version:     :   1.1
-@Description :   ¸ÃÄ£¿éÖ÷ÒªÊÇÓÃÓÚ3x3¾ØÕóµÄÐÎ³É£¬ÒÔ¼°¶ÔÍ¼Ïñ±ß½çÏñËØµÄ´¦Àí
-                 ÔÚÔ­»ù´¡ÉÏÓÅ»¯ÁËÊ±Ðò£¬°ÑÔ­À´µÄÒ»Ð©Î´ÍêÈ«¶ÔÆëµÄÐÅºÅ½øÐÐ¶ÔÆë¡£
+@Description :   ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½3x3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î³É£ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ØµÄ´ï¿½ï¿½ï¿½
+                 ï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ï¿½ï¿½Ê±ï¿½ò£¬°ï¿½Ô­ï¿½ï¿½ï¿½ï¿½Ò»Ð©Î´ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ½ï¿½ï¿½Ð¶ï¿½ï¿½ë¡£
 *****************************************************************/
 
 module demosaic #(
-    parameter IMG_HEIGHT          = 1080,  // Í¼Ïñ¸ß¶È
-    parameter IMG_WIDTH           = 1920,   // Í¼Ïñ¿í¶È
+    parameter IMG_HEIGHT          = 1080,  // Í¼ï¿½ï¿½ï¿½ß¶ï¿½
+    parameter IMG_WIDTH           = 1920,   // Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     parameter data_complete_delay = 50  ,
     parameter BAYER_MODE          = "BGGR"
 )
 (
-    input           I_clk   ,   // Ê±ÖÓÐÅºÅ
-    input           I_rst_n ,   // ¸´Î»ÐÅºÅ£¬µÍÓÐÐ§
+    input           I_clk   ,   // Ê±ï¿½ï¿½ï¿½Åºï¿½
+    input           I_rst_n ,   // ï¿½ï¿½Î»ï¿½ÅºÅ£ï¿½ï¿½ï¿½ï¿½ï¿½Ð§
 
-    input [39:0]            axi4s_video_tdata ,  // AXI4-StreamÊÓÆµÊý¾Ý
+    input [39:0]            axi4s_video_tdata ,  // AXI4-Streamï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½
     input [9:0]             axi4s_video_tdest ,
-    input                   axi4s_video_tlast ,  // ÐÐ½áÊøÐÅºÅ
-    input                   axi4s_video_tvalid,  // Êý¾ÝÓÐÐ§ÐÅºÅ
-    input                   axi4s_video_tuser ,  // Ö¡¿ªÊ¼ÐÅºÅ
-    output                  axi4s_video_tready,  // ´ÓÄ£¿é×¼±¸ºÃ½ÓÊÜÊý¾Ý
+    input                   axi4s_video_tlast ,  // ï¿½Ð½ï¿½ï¿½ï¿½ï¿½Åºï¿½
+    input                   axi4s_video_tvalid,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Åºï¿½
+    input                   axi4s_video_tuser ,  // Ö¡ï¿½ï¿½Ê¼ï¿½Åºï¿½
+    output                  axi4s_video_tready,  // ï¿½ï¿½Ä£ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    output                  O_tlast  ,  // Êä³öÐÐ½áÊøÐÅºÅ
-    output                  O_tuser  ,  // Êä³öÖ¡¿ªÊ¼ÐÅºÅ
-    output [127:0]          O_tdata  ,  // Êä³öÊý¾Ý
-    output                  O_tvalid ,  // Êä³öÊý¾ÝÓÐÐ§ÐÅºÅ
-    input                   O_tready    // Êä³öÊý¾Ý×¼±¸ºÃÐÅºÅ
+    output                  O_tlast  ,  // ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½Åºï¿½
+    output                  O_tuser  ,  // ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½ï¿½Ê¼ï¿½Åºï¿½
+    output [127:0]          O_tdata  ,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    output                  O_tvalid ,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Åºï¿½
+    input                   O_tready    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½
 );
 
 
@@ -53,30 +53,30 @@ wire [95:0] matrix_cur_line ;
 wire [95:0] matrix_next_line;
 
 raw_matrix_3x3_buffer #(
-    .IMG_HEIGHT         (IMG_HEIGHT         ),  // Í¼Ïñ¸ß¶È
-    .IMG_WIDTH          (IMG_WIDTH          ),   // Í¼Ïñ¿í¶È
+    .IMG_HEIGHT         (IMG_HEIGHT         ),  // Í¼ï¿½ï¿½ï¿½ß¶ï¿½
+    .IMG_WIDTH          (IMG_WIDTH          ),   // Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     .data_complete_delay(data_complete_delay)
 )raw_matrix_3x3_buffer_d
 (
-    /*input           */.I_clk    (I_clk   ),   // Ê±ÖÓÐÅºÅ
-    /*input           */.I_rst_n  (I_rst_n ),   // ¸´Î»ÐÅºÅ£¬µÍÓÐÐ§
+    /*input           */.I_clk    (I_clk   ),   // Ê±ï¿½ï¿½ï¿½Åºï¿½
+    /*input           */.I_rst_n  (I_rst_n ),   // ï¿½ï¿½Î»ï¿½ÅºÅ£ï¿½ï¿½ï¿½ï¿½ï¿½Ð§
 
-   /*input [39:0]    */.axi4s_video_tdata (axi4s_video_tdata ),  // AXI4-StreamÊÓÆµÊý¾Ý
+   /*input [39:0]    */.axi4s_video_tdata (axi4s_video_tdata ),  // AXI4-Streamï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½
    /*input [9:0]     */.axi4s_video_tdest (axi4s_video_tdest ),
-   /*input           */.axi4s_video_tlast (axi4s_video_tlast ),  // ÐÐ½áÊøÐÅºÅ
-   /*input           */.axi4s_video_tvalid(axi4s_video_tvalid),  // Êý¾ÝÓÐÐ§ÐÅºÅ
-   /*input           */.axi4s_video_tuser (axi4s_video_tuser ),  // Ö¡¿ªÊ¼ÐÅºÅ
-   /*output          */.axi4s_video_tready(axi4s_video_tready),  // ´ÓÄ£¿é×¼±¸ºÃ½ÓÊÜÊý¾Ý
+   /*input           */.axi4s_video_tlast (axi4s_video_tlast ),  // ï¿½Ð½ï¿½ï¿½ï¿½ï¿½Åºï¿½
+   /*input           */.axi4s_video_tvalid(axi4s_video_tvalid),  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Åºï¿½
+   /*input           */.axi4s_video_tuser (axi4s_video_tuser ),  // Ö¡ï¿½ï¿½Ê¼ï¿½Åºï¿½
+   /*output          */.axi4s_video_tready(axi4s_video_tready),  // ï¿½ï¿½Ä£ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-   /*output          */.O_tlast         (demosaic_tlast ),   // ÐÐ½áÊøÐÅºÅÊä³ö
-   /*output          */.O_tuser         (demosaic_tuser ),   // Ö¡¿ªÊ¼ÐÅºÅÊä³ö
-   /*output          */.O_tvalid        (demosaic_tvalid),   // Êý¾ÝÓÐÐ§ÐÅºÅÊä³ö
-   /*input           */.O_tready        (demosaic_tready),   // ÉÏÒ»¼¶Ä£¿é×¼±¸ºÃ½ÓÊÜÊý¾Ý
+   /*output          */.O_tlast         (demosaic_tlast ),   // ï¿½Ð½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½
+   /*output          */.O_tuser         (demosaic_tuser ),   // Ö¡ï¿½ï¿½Ê¼ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½
+   /*output          */.O_tvalid        (demosaic_tvalid),   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½
+   /*input           */.O_tready        (demosaic_tready),   // ï¿½ï¿½Ò»ï¿½ï¿½Ä£ï¿½ï¿½×¼ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-   /*output          */.bayer_ypos      (bayer_ypos      ),   // BayerÂË²¨Æ÷ÐÐÎ»ÖÃ
-   /*output  [95:0]  */.matrix_last_line(matrix_last_line),   // ÉÏÒ»ÐÐ3x3¾ØÕóÊý¾Ý
-   /*output  [95:0]  */.matrix_cur_line (matrix_cur_line ),   // µ±Ç°ÐÐ3x3¾ØÕóÊý¾Ý
-   /*output  [95:0]  */.matrix_next_line(matrix_next_line)    // ÏÂÒ»ÐÐ3x3¾ØÕóÊý¾Ý
+   /*output          */.bayer_ypos      (bayer_ypos      ),   // Bayerï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+   /*output  [95:0]  */.matrix_last_line(matrix_last_line),   // ï¿½ï¿½Ò»ï¿½ï¿½3x3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+   /*output  [95:0]  */.matrix_cur_line (matrix_cur_line ),   // ï¿½ï¿½Ç°ï¿½ï¿½3x3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+   /*output  [95:0]  */.matrix_next_line(matrix_next_line)    // ï¿½ï¿½Ò»ï¿½ï¿½3x3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 );
 
 bilinear_interpolation #(

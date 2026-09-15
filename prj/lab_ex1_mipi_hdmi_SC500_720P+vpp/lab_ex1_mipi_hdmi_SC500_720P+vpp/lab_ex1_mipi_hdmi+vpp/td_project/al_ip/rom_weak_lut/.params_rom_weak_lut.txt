@@ -16,7 +16,7 @@ OUTREG_WITHOUT_OCEB : 0 : G : En :  :  :
 OUTREG_DISB : 1 : G : En :  :  : 
 Load_Init_File : 1 : U : En :  :  : 
 INIT_FILE : ../weak_lut.dath : G : En :  :  : 
-Mif_File : D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/weak_lut.dath : U : En :  :  : 
+Mif_File : D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/weak_lut.dath : U : En :  :  : 
 Fill_Memory_Initialization_Values : 0 : U : En :  :  : 
 EMB20K : 1 : U : En :  :  : 
 EMB20K_FAST : 0 : U : En :  :  : 

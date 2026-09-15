@@ -53,7 +53,7 @@ always @(posedge I_clk) begin
             2'd0: begin
                 iic_req <= 1'b0;
                 if (!O_cfg_done) begin
-                    if ((reg_index == 9'd115) && (delay_cnt < POST_STREAM_DELAY)) begin
+                    if ((reg_index == 9'd118) && (delay_cnt < POST_STREAM_DELAY)) begin // VERIFY-2: stream-on at 117, 0x302d at 118
                         // Factory file requests 10 ms between 0x0100=1 and 0x302d=0.
                         delay_cnt <= delay_cnt + 1'b1;
                     end else if (reg_index == init_size) begin

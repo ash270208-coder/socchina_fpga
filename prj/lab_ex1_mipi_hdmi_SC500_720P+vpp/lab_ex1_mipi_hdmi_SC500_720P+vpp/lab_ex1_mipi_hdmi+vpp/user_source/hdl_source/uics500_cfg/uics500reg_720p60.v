@@ -18,7 +18,7 @@ module uics500reg_720p60(
     output reg [31:0] REG_DATA,
     output     [8:0]  REG_SIZE
 );
-assign REG_SIZE = 9'd116;
+assign REG_SIZE = 9'd119;
 always @(*) begin
     case (REG_INDEX)
         0: REG_DATA={16'h0103,8'h01}; 1: REG_DATA={16'h0100,8'h00};
@@ -77,11 +77,15 @@ always @(*) begin
         106: REG_DATA={16'h4009,8'hc8}; 107: REG_DATA={16'h440e,8'h02};
         108: REG_DATA={16'h4509,8'h28}; 109: REG_DATA={16'h4837,8'h42}; // 480 Mbps/lane
         110: REG_DATA={16'h5000,8'h4e}; 111: REG_DATA={16'h5901,8'h04};
-        // The factory file leaves gain at its reset default.  Program a
-        // 4x analogue gain for the 60 fps mode's shorter exposure time.
-        112: REG_DATA={16'h3e08,8'h0f}; 113: REG_DATA={16'h3e09,8'h20};
-        114: REG_DATA={16'h0100,8'h01}; // stream on
-        115: REG_DATA={16'h302d,8'h00}; // after 10 ms delay
+        // VERIFY-1: enable the manual AGC gain path first. Datasheet 2.2.3
+        // requires 0x3e03[3:0]=0xb before 0x3e08/0x3e09 take effect.
+        112: REG_DATA={16'h3e03,8'h0b};
+        // VERIFY-1: maximum analogue gain 0x1f3f = 15.750x (23.95 dB).
+        113: REG_DATA={16'h3e08,8'h1f}; 114: REG_DATA={16'h3e09,8'h3f};
+        // VERIFY-2: digital gain 0x00c0 = 1.500x, closes the last gap.
+        115: REG_DATA={16'h3e06,8'h00}; 116: REG_DATA={16'h3e07,8'hc0};
+        117: REG_DATA={16'h0100,8'h01}; // stream on
+        118: REG_DATA={16'h302d,8'h00}; // after 10 ms delay
         default: REG_DATA={16'h0000,8'h00};
     endcase
 end
