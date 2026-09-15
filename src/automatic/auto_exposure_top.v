@@ -61,6 +61,7 @@ module auto_exposure_top #(
         .I_tuser       (I_tuser),
         .I_y_tdata     (y_pix),
         .I_tvalid      (I_tvalid),
+        .I_tready      (I_tready),
         .O_avg_y       (avg_y),
         .O_frame_done  (frame_done)
     );
@@ -116,14 +117,14 @@ module auto_exposure_top #(
             O_tlast  <= 1'b0;
             O_tuser  <= 1'b0;
             O_tvalid <= 1'b0;
+            O_tready <= 1'b0;
         end else begin
             O_tdata  <= gain_tdata;
             O_tlast  <= gain_tlast;
             O_tuser  <= gain_tuser;
             O_tvalid <= gain_tvalid;
+            O_tready <= I_tready
         end
     end
-
-    assingn O_tready = I_tready;   // 透传 (本模块无背压)
 
 endmodule

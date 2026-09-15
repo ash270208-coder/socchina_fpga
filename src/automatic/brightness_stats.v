@@ -19,6 +19,7 @@ module brightness_stats #(
     input               I_tuser,        // 帧开始信号 (SOF)
     input      [7:0]    I_y_tdata,      // 输入 Y 灰度分量 (0~255)
     input               I_tvalid,       // 数据有效
+    input               I_tready, 
 
     output reg [7:0]    O_avg_y,        // 当前帧平均亮度 (0~255)
     output reg          O_frame_done    // 帧计算完成脉冲 (持续 1 拍)
