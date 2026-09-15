@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module cartoon_top #(
-    parameter IMG_WIDTH        = 1024,
-    parameter IMG_HEIGHT       = 600,
+    parameter IMG_WIDTH        = 1280,
+    parameter IMG_HEIGHT       = 720,
     parameter SOBEL_THRESHOLD  = 60,
     parameter QUANT_BITS       = 4
 )(

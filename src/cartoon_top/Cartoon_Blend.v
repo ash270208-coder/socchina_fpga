@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module Cartoon_Blend #(
-    parameter IMG_WIDTH  = 1024,
-    parameter IMG_HEIGHT = 600
+    parameter IMG_WIDTH  = 1280,
+    parameter IMG_HEIGHT = 720
 )(
     input               I_clk,
     input               I_rst_n,
