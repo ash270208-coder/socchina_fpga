@@ -1,0 +1,10 @@
+`define DP_RAM_0650755a1bae
+`define CEA_EN_0650755a1bae
+`define OUTREG_DISA_0650755a1bae
+`define OREGSET_A_0650755a1bae
+`define ASYNC_RELEASE_A_0650755a1bae
+`define CEB_EN_0650755a1bae
+`define OUTREG_DISB_0650755a1bae
+`define OREGSET_B_0650755a1bae
+`define WEA_EN_0650755a1bae
+`define PH1P_0650755a1bae

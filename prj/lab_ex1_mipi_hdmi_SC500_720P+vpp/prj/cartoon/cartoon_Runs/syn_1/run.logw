@@ -1,0 +1,24 @@
+============================================================
+   Tang Dynasty, V6.2.168116
+   Copyright (c) 2012-2025 Anlogic Inc.
+   Executable = D:/anlu/ruanjian/bin/run.exe
+   Built at =   16:32:07 Jun 12 2025
+   Run by =     方俊尧
+   Run Date =   Thu Sep  3 22:51:18 2026
+
+   Run on =     只因你太美
+============================================================
+SYN-5025 WARNING: Using 0 for all undriven pins and nets
+SYN-6021 CRITICAL-WARNING: 58 out of 58 logical ports has no user assigned specific location constraint.
+                           This may affect performance or in some cases cause damage to the device!
+                           Bitgen will abort. If insist on bitgen with risk, please 'set_param bitgen unconstr_io on' to avoid bitgen error.
+                           No ADC ports: I_clk, I_rst_n, I_tdata[23:0], I_tlast, I_tready, I_tuser, I_tvalid, O_tdata[23:0], O_tlast, O_tready, (the first 10 of the 58).
+                           No ADC ports will be assigned to random location as below:
+                           I_clk:K5, I_rst_n:C12, I_tdata[23]:V12, I_tdata[22]:P3, I_tdata[21]:B12, I_tdata[20]:V11, I_tdata[19]:J1, I_tdata[18]:A7, I_tdata[17]:V8, I_tdata[16]:K2, 
+                           I_tdata[15]:D8, I_tdata[14]:U10, I_tdata[13]:L3, I_tdata[12]:C9, I_tdata[11]:R12, I_tdata[10]:K3, I_tdata[9]:B11, I_tdata[8]:R11, I_tdata[7]:N4, I_tdata[6]:E6, 
+                           I_tdata[5]:U9, I_tdata[4]:M2, I_tdata[3]:B7, I_tdata[2]:T8, I_tdata[1]:P1, I_tdata[0]:D5, I_tlast:N9, I_tready:R2, I_tuser:B9, I_tvalid:R8, 
+                           O_tdata[23]:N2, O_tdata[22]:C8, O_tdata[21]:V7, O_tdata[20]:P5, O_tdata[19]:B10, O_tdata[18]:P10, O_tdata[17]:T3, O_tdata[16]:B4, O_tdata[15]:V6, O_tdata[14]:P6, 
+                           O_tdata[13]:D11, O_tdata[12]:R6, O_tdata[11]:L4, O_tdata[10]:E10, O_tdata[9]:U5, O_tdata[8]:U2, O_tdata[7]:D6, O_tdata[6]:V4, O_tdata[5]:V1, O_tdata[4]:B5, 
+                           O_tdata[3]:J14, O_tdata[2]:L16, O_tdata[1]:K13, O_tdata[0]:K17, O_tlast:K15, O_tready:H18, O_tuser:J16, O_tvalid:G17.
+SYN-5041 WARNING: Ram Inst: u_Sobel_edge/ramread0_syn_9 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
+SYN-5041 WARNING: Ram Inst: u_Sobel_edge/ramread1_syn_9 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference

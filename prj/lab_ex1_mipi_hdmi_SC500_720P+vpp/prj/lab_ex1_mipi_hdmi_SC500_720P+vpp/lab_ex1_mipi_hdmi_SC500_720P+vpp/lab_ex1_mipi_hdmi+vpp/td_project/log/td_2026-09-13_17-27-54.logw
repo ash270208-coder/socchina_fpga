@@ -1,0 +1,36 @@
+============================================================
+   Tang Dynasty, V6.2.168116
+   Copyright (c) 2012-2025 Anlogic Inc.
+   Executable = D:/anlu/ruanjian/bin/td.exe
+   Built at =   16:32:07 Jun 12 2025
+   Run by =     方俊尧
+   Run Date =   Sun Sep 13 17:27:54 2026
+
+   Run on =     只因你太美
+============================================================
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-7201 CRITICAL-WARNING: overwrite current module 'RGB888_YCbCr444' in ../../../../../src/cartoon_top/RGB88_YCbCr444.v(1)
+HDL-7307 CRITICAL-WARNING: previous definition of design element module 'RGB888_YCbCr444' is here. This is because multiple modules(values) with the same name are defined. Please consider rewriting code in ../user_source/hdl_source/RGB888_YCbCr444.v(1)
+HDL-7201 CRITICAL-WARNING: overwrite current module 'Sobel_edge' in ../../../../../src/cartoon_top/Sobel_edge.v(3)
+HDL-7307 CRITICAL-WARNING: previous definition of design element module 'Sobel_edge' is here. This is because multiple modules(values) with the same name are defined. Please consider rewriting code in ../user_source/hdl_source/Sobel_edge.v(6)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-7201 CRITICAL-WARNING: overwrite current module 'Sobel_edge' in ../../../../../src/cartoon_top/Sobel_edge.v(3)
+HDL-7307 CRITICAL-WARNING: previous definition of design element module 'Sobel_edge' is here. This is because multiple modules(values) with the same name are defined. Please consider rewriting code in ../user_source/hdl_source/Sobel_edge.v(6)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-8007 ERROR: */ is outside a comment in ../user_source/hdl_source/vpp_top.v(306)
+HDL-8007 ERROR: ignore module module due to previous errors in ../user_source/hdl_source/vpp_top.v(3)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)

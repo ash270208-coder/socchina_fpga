@@ -1,8 +1,0 @@
-ipgen_gui_set_spin_box_text IP_Generator DATA_WIDTH_A 16
-ipgen_gui_set_spin_box_text IP_Generator DATA_DEPTH_A 512
-ipgen_gui_click_radio_button IP_Generator Fill_Memory_Initialization_Values unchecked
-ipgen_gui_set_spin_box_text IP_Generator DATA_WIDTH_A 296
-ipgen_gui_set_spin_box_text IP_Generator DATA_DEPTH_A 256
-ipgen_gui_select_window IP_Generator
-ipgen_gui_resize_window_central IP_Generator 1056 768
-ipgen_gui_click_push_button IP_Generator Cancel

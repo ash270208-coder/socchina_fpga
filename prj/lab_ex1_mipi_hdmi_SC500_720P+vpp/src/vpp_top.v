@@ -24,9 +24,37 @@ module vpp_top #(
 );
 
     // =========================================================================
+    // 0. 自动曝光 (输入侧全局) — AE 提亮后的 RGB888 作为全部下游分支的统一输入源
+    // =========================================================================
+    wire        ae_tlast;
+    wire        ae_tuser;
+    wire [23:0] ae_tdata;
+    wire        ae_tvalid;
+
+    auto_exposure_top #(
+        .IMG_WIDTH  (IMG_WIDTH),
+        .IMG_HEIGHT (IMG_HEIGHT),
+        .TARGET_Y   (128),
+        .GAIN_FRAC  (12)
+    ) u_auto_exposure_top (
+        .I_clk      (I_clk),
+        .I_rst_n    (I_rst_n),
+        .I_tlast    (I_tlast),
+        .I_tuser    (I_tuser),
+        .I_tdata    (I_tdata),
+        .I_tvalid   (I_tvalid),
+        .I_tready   (I_tready),
+        .O_tlast    (ae_tlast),
+        .O_tuser    (ae_tuser),
+        .O_tdata    (ae_tdata),
+        .O_tvalid   (ae_tvalid),
+        .O_tready   ()
+    );
+
+    // =========================================================================
     // 1. 按键消抖与模式切换状态机 (0:原图, 1:灰度, 2:直方图均衡, 3:Sobel边缘)
     // =========================================================================
-    reg [1:0]  display_mode;
+    reg [3:0]  display_mode;
     reg [19:0] btn_cnt;
     reg        btn_d0, btn_d1;
 
@@ -35,7 +63,7 @@ module vpp_top #(
             btn_d0       <= 1'b1;
             btn_d1       <= 1'b1;
             btn_cnt      <= 20'd0;
-            display_mode <= 2'b00; // 默认输出原图
+            display_mode <= 4'b0000; // 默认输出原图
         end
         else begin
             btn_d0 <= I_button[0];
@@ -72,20 +100,20 @@ module vpp_top #(
         .IMG_WIDTH (IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
     ) u_RGB888_YCbCr444 (
-        .I_clk          (I_clk),        
-        .I_rst_n        (I_rst_n),      
-        .I_tlast        (I_tlast),      
-        .I_tuser        (I_tuser),      
-        .I_red_tdata    (I_tdata[23:16]),  
-        .I_green_tdata  (I_tdata[15:8]),
-        .I_blue_tdata   (I_tdata[7:0]), 
-        .I_tvalid       (I_tvalid),     
-        .I_tready       (I_tready),     
-        .O_tlast        (tlast_ycbcr),      
-        .O_tuser        (tuser_ycbcr),      
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+        .I_tlast        (ae_tlast),
+        .I_tuser        (ae_tuser),
+        .I_red_tdata    (ae_tdata[23:16]),
+        .I_green_tdata  (ae_tdata[15:8]),
+        .I_blue_tdata   (ae_tdata[7:0]),
+        .I_tvalid       (ae_tvalid),
+        .I_tready       (1'b1),
+        .O_tlast        (tlast_ycbcr),
+        .O_tuser        (tuser_ycbcr),
         .O_y_tdata      (y_tdata),
-        .O_cb_tdata     (cb_tdata),   
-        .O_cr_tdata     (cr_tdata),   
+        .O_cb_tdata     (cb_tdata),
+        .O_cr_tdata     (cr_tdata),
         .O_tvalid       (tvalid_ycbcr),
         .O_tready       ()
     );
@@ -140,7 +168,35 @@ module vpp_top #(
     );
 
     // =========================================================================
-    // 5. 对原图与灰度图做延时对齐 (与 Sobel 对齐约 4 拍，防止切换撕裂)
+    // 5. 卡通化图像风格化模块 (Cartoon Top)
+    //    输入原图 RGB888，输出卡通化 RGB888 (cycle 8)
+    //    display_mode 模式 4 时通过 MUX 输出
+    // =========================================================================
+    wire        cartoon_tlast;
+    wire        cartoon_tuser;
+    wire        cartoon_tvalid;
+    wire [23:0] cartoon_tdata;
+
+    cartoon_top #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_cartoon_top (
+        .I_clk    (I_clk),
+        .I_rst_n  (I_rst_n),
+        .I_tlast  (ae_tlast),
+        .I_tuser  (ae_tuser),
+        .I_tdata  (ae_tdata),
+        .I_tvalid (ae_tvalid),
+        .I_tready (1'b1),
+        .O_tdata  (cartoon_tdata),
+        .O_tlast  (cartoon_tlast),
+        .O_tuser  (cartoon_tuser),
+        .O_tvalid (cartoon_tvalid),
+        .O_tready ()
+    );
+
+    // =========================================================================
+    // 6. 对原图与灰度图做延时对齐 (与 Sobel 对齐约 4 拍，防止切换撕裂)
     // =========================================================================
     reg [23:0] raw_rgb_d [0:7];
     reg [7:0]  raw_y_d   [0:7];
@@ -155,7 +211,7 @@ module vpp_top #(
         end
         else begin
             // 原图随时钟无条件推进（RGB2Y 3拍 + Sobel 4拍 = 总共对齐 7 拍）
-            raw_rgb_d[0] <= I_tdata;
+            raw_rgb_d[0] <= ae_tdata;
             for (i = 0; i < 7; i = i + 1)
                 raw_rgb_d[i+1] <= raw_rgb_d[i];
 
@@ -196,6 +252,18 @@ module vpp_top #(
             end
             2'b11: begin // 模式 3: Sobel 边缘检测图
                 mux_tdata  = {sobel_tdata, sobel_tdata, sobel_tdata};
+                mux_tlast  = tlast_sobel;
+                mux_tuser  = tuser_sobel;
+                mux_tvalid = tvalid_sobel;
+            end
+            4'b0100: begin // 模式 4: 卡通化图像风格化
+                mux_tdata  = cartoon_tdata;
+                mux_tlast  = cartoon_tlast;
+                mux_tuser  = cartoon_tuser;
+                mux_tvalid = cartoon_tvalid;
+            end
+            default: begin // 其余模式默认输出彩色原图
+                mux_tdata  = raw_rgb_d[6];
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;

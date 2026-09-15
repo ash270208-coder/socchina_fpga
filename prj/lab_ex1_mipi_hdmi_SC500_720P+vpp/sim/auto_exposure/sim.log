@@ -1,0 +1,30 @@
+Sending 96x64 Frame x 12 (target luminance 128)...
+  [int] avg_y=49 frame_done=1 gain=0x001000
+Frame 0: avg max-channel = 50 (pixels=6144), sum=307200
+  [int] avg_y=49 frame_done=1 gain=0x001800
+Frame 1: avg max-channel = 74 (pixels=6144), sum=460775
+  [int] avg_y=49 frame_done=1 gain=0x002000
+Frame 2: avg max-channel = 99 (pixels=6144), sum=614375
+  [int] avg_y=49 frame_done=1 gain=0x002800
+Frame 3: avg max-channel = 124 (pixels=6144), sum=767975
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 4: avg max-channel = 129 (pixels=6144), sum=798715
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 5: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 6: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 7: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 8: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 9: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 10: avg max-channel = 130 (pixels=6144), sum=798720
+  [int] avg_y=49 frame_done=1 gain=0x0029cb
+Frame 11: avg max-channel = 130 (pixels=6144), sum=798720
+=========================================
+Auto Exposure Simulation Finished!
+Expected Total Pixels: 73728
+=========================================
+auto_exposure_tb.v:129: $finish called at 1479200000 (1ps)

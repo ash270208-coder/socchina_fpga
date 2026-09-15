@@ -1,0 +1,44 @@
+DIV_CLOCK_SRC : INTERNAL : G : En :  :  : 
+DATA_DIRECTION : OUTPUT : U : En : INPUT;;OUTPUT;;BIDIRECTIONAL :  : 
+SERDES_MODE : DDRX1 : G : En :  :  : 
+CLOCK_FORWARD : 0 : G : En :  :  : 
+DIFF_N_EN : 0 : G : En :  :  : 
+ODELAY : 0 : G : En :  :  : 
+IDELAY : 0 : G : En :  :  : 
+protocol_internal : 1 : U : En :  :  : 
+data_input : 0 : G : En :  :  : 
+data_output : 1 : G : En :  :  : 
+bypass : 0 : G : En :  :  : 
+sdr : 0 : G : En :  :  : 
+DDRX1 : 1 : G : En :  :  : 
+DDRX1_PIPE : 0 : G : En :  :  : 
+DDRX2 : 0 : G : En :  :  : 
+DDRX3P5 : 0 : G : En :  :  : 
+DDRX4 : 0 : G : En :  :  : 
+DDRX5 : 0 : G : En :  :  : 
+data_biod : 0 : G : En :  :  : 
+DEVICE_WIDTH : 2 : G : En :  :  : 
+SERDES_MODE_dis : 1:2 : U : En : BYPASS;;SDR;;1:2 :  : 
+ODELAY_dis : 0 : U : En :  :  : 
+IDELAY_dis : 0 : U : Dis :  :  : 
+CLOCK_FORWARD_dis : 0 : U : En :  :  : 
+DIFF_N_EN_dis : 0 : U : Dis :  :  : 
+internal : 1 : G : En :  :  : 
+external : 0 : G : En :  :  : 
+PH1P100 : 0 : G : En :  :  : 
+PH1P35 : 1 : G : En :  :  : 
+HRIO : 0 : G : En :  :  : 
+HDIO : 1 : G : En :  :  : 
+in_cas_limited : 1 : G : En :  :  : 
+IO_WIDTH : 1 : U : En :  : 1 : 16
+IDLY_CASCADE_NUM : 1 : G : Dis :  :  : 
+ODLY_CASCADE_NUM : 1 : G : Dis :  :  : 
+IDDR_MODE : OPPOSITE_EDGE : U : Dis : SAME_EDGE_PIPE;;SAME_EDGE;;OPPOSITE_EDGE :  : 
+IO_TYPE : HDIO : U : En : HRIO;;HDIO :  : 
+DLY_WIDTH : 5 : G : En :  :  : 
+INDLY_WIDTH : 4 : G : En :  :  : 
+protocol_external : 0 : U : En :  :  : 
+IDLY_CASCADE_NUM_dis : 1 : U : Dis : 1 :  : 
+ODLY_CASCADE_NUM_dis : 1 : U : Dis : 1;;2;;4;;6;;8;;10;;12;;14;;16;;18;;20;;22;;24;;26;;28;;30;;32;;34 :  : 
+INPUT_DATA_PIPE : 0 : U : Dis :  :  : 
+PH1P50 : 0 : G : En :  :  : 

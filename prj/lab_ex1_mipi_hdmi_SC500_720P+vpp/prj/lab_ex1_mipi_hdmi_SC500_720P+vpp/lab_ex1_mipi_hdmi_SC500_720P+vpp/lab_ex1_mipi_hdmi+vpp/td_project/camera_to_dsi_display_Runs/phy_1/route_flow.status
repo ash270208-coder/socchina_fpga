@@ -1,0 +1,23 @@
+Location         : D:\Project\socchina_fpga\prj\lab_ex1_mipi_hdmi_SC500_720P+vpp\lab_ex1_mipi_hdmi_SC500_720P+vpp\lab_ex1_mipi_hdmi+vpp\td_project\camera_to_dsi_display_Runs\phy_1
+Running with     : Tang Dynasty v6.2.168116
+                   Copyright (c) 2012-2025 Anlogic Inc.
+Top Model        : design_top_wrapper
+Device           : PH1P35MDG324
+Speed            : 3
+
+Timing Mode      : final
+Setup            : WNS  1036ps  TNS        0ps  NUM_FEPS     0
+Hold             : WNS    20ps  TNS        0ps  NUM_FEPS     0
+
+Flow Statistics  :
+---------------------------------------------------------------------------------------------------
+     command     |  #calls  |  wall time   |  cpu time(s)  |  used memory(mb)  |  peak memory(mb)  
+---------------------------------------------------------------------------------------------------
+      place      |    1     |  1m36s(63%)  |   217(74%)    |       1099        |       1099        
+      route      |    1     |   47s(30%)   |    68(23%)    |       1770        |       1770        
+    fix_hold     |    1     |    8s(5%)    |     7(2%)     |       1769        |       1769        
+  import_device  |    1     |    1s(0%)    |     1(0%)     |        323        |        323        
+    import_db    |    1     |    0s(0%)    |     0(0%)     |        515        |        515        
+---------------------------------------------------------------------------------------------------
+      total      |    5     |    2m32s     |      293      |       1770        |       1770        
+---------------------------------------------------------------------------------------------------

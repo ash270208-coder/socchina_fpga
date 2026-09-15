@@ -1,0 +1,1013 @@
+Created by          : Tang Dynasty v6.2.168116
+                    : Copyright (c) 2012-2025 Anlogic Inc.
+Generated           : Thu Sep  3 22:51:22 2026
+
+Top Model           : cartoon_top
+Device              : PH1P35MDG324
+Speed               : 3
+STA coverage        : 72.31%
+Constraint File     : 
+Confidence          : Synthesized
+Check Corner        : Both (Slow and Fast)
+CRPR Enabled        : Yes
+Report Scheme       : 10 end point(s) per path group, 1 path(s) per end point
+
+
+Check Status
+-------------
+
+Corner   | Max      Min     
+------------------------------------
+Slow     | yes      yes     
+Fast     | yes      yes     
+
+
+Timing Status
+--------------------
+	SWNS: 15.382ns, STNS: 0.000ns
+	HWNS: 0.502ns, HTNS: 0.000ns
+	Period Check WNS: 17.200ns
+
+
+Clock Summary
+--------------------
+
+       Clock-Id:       C-Freq       Fanout   Clock-Name
+--------------------------------------------------------------------------------
+           clk0:       50.000          511   DeriveClock
+--------------------------------------------------------------------------------
+
+       Name            Type         Rise(ns)   Fall(ns)          C-Period(ns)     C-Freq(MHz)          R-Period(ns)     R-Freq(MHz)         SWNS(ns)   STNS(ns)         HWNS(ns)   HTNS(ns)         Skew(ns)           Fanout        Max-Level        CC-From    CC-To
+       clk0           local            0.000     10.000                20.000          50.000                 4.618         216.544           15.382      0.000            0.502      0.000            0.000              511                5             no       no
+
+Notes
+----------
+C-Period  :  constraint period
+C-Freq    :  constraint freq
+R-Period  :  report min period
+R-Freq    :  report fmax
+CC-From   :  has path(s) from cross-domain clock
+CC-To     :  has path(s) to cross-domain clock
+
+
+*   Clock R-Period data only takes intra-clock timing. SWNS/STNS/HWNS/HTNS take both intra-clock and inter-clock timing.
+*   If there is mismatch between R-Period and SWNS, check inter-clock timing of this clock as capture clock.
+*   SWNS/STNS/HWNS/HTNS of timing exception (SMCP/SMD) only counted in global Timing Status, not counted in Clock Summary.
+
+Intra clock domain timing
+--------------------------------------------------
+
+----------------------------------------------------------------------------------------------------
+Path Group     :     DeriveClock -> DeriveClock
+Type           :     Self
+From Clock     :     DeriveClock
+To Clock       :     DeriveClock
+Min Period     :     4.618ns
+Fmax           :     216.544MHz
+
+Statistics:
+Max            : SWNS     15.382ns, STNS      0.000ns,         0 Viol Endpoints,       810 Total Endpoints,      3661 Paths Analyzed
+Min            : HWNS      0.502ns, HTNS      0.000ns,         0 Viol Endpoints,       810 Total Endpoints,      3661 Paths Analyzed
+----------------------------------------------------------------------------------------------------
+
+Max Paths
+----------------------------------------------------------------------------------------------------
+Slack               : 15.382ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[7].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.554ns (cell 1.977ns (43%), net 2.577ns (57%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.052    r     3.741          pin: u_Sobel_edge/add8_syn_63.fco
+net (fo=1)                              0.000          3.741          net: u_Sobel_edge/add8_syn_52,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci
+ADDER                                   0.052    r     3.793          pin: u_Sobel_edge/add8_syn_64.fco
+net (fo=1)                              0.000          3.793          net: u_Sobel_edge/add8_syn_53,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_65.fci
+ADDER                                   0.052    r     3.845          pin: u_Sobel_edge/add8_syn_65.fco
+net (fo=1)                              0.000          3.845          net: u_Sobel_edge/add8_syn_54,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_66.fci
+ADDER                                   0.220    r     4.065       5  pin: u_Sobel_edge/add8_syn_66.ofb
+net (fo=1)                              0.448          4.513          net: u_Sobel_edge/mag_b1[7],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[7].d
+SEQ (reg)                               0.041    f     4.554               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.554               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.382               
+
+Slack               : 15.412ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[9].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.524ns (cell 1.873ns (41%), net 2.651ns (59%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_63.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_73,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_64.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_74,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_65.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_65.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_75,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_66.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_66.fco_f
+net (fo=1)                              0.074          3.763          net: u_Sobel_edge/add8_syn_76,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_67.fci_f
+ADDER                                   0.052    r     3.815          pin: u_Sobel_edge/add8_syn_67.fco
+net (fo=1)                              0.000          3.815          net: u_Sobel_edge/add8_syn_56,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_68.fci
+ADDER                                   0.220    r     4.035       5  pin: u_Sobel_edge/add8_syn_68.ofb
+net (fo=1)                              0.448          4.483          net: u_Sobel_edge/mag_b1[9],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[9].d
+SEQ (reg)                               0.041    f     4.524               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.524               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.412               
+
+Slack               : 15.434ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[6].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.502ns (cell 1.925ns (42%), net 2.577ns (58%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.052    r     3.741          pin: u_Sobel_edge/add8_syn_63.fco
+net (fo=1)                              0.000          3.741          net: u_Sobel_edge/add8_syn_52,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci
+ADDER                                   0.052    r     3.793          pin: u_Sobel_edge/add8_syn_64.fco
+net (fo=1)                              0.000          3.793          net: u_Sobel_edge/add8_syn_53,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_65.fci
+ADDER                                   0.220    r     4.013       5  pin: u_Sobel_edge/add8_syn_65.ofb
+net (fo=1)                              0.448          4.461          net: u_Sobel_edge/mag_b1[6],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[6].d
+SEQ (reg)                               0.041    f     4.502               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.502               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.434               
+
+Slack               : 15.464ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[8].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.472ns (cell 1.821ns (40%), net 2.651ns (60%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_63.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_73,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_64.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_74,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_65.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_65.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_75,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_66.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_66.fco_f
+net (fo=1)                              0.074          3.763          net: u_Sobel_edge/add8_syn_76,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_67.fci_f
+ADDER                                   0.220    r     3.983       5  pin: u_Sobel_edge/add8_syn_67.ofb
+net (fo=1)                              0.448          4.431          net: u_Sobel_edge/mag_b1[8],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[8].d
+SEQ (reg)                               0.041    f     4.472               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.472               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.464               
+
+Slack               : 15.486ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[5].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.450ns (cell 1.873ns (42%), net 2.577ns (58%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.052    r     3.741          pin: u_Sobel_edge/add8_syn_63.fco
+net (fo=1)                              0.000          3.741          net: u_Sobel_edge/add8_syn_52,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci
+ADDER                                   0.220    r     3.961       5  pin: u_Sobel_edge/add8_syn_64.ofb
+net (fo=1)                              0.448          4.409          net: u_Sobel_edge/mag_b1[5],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[5].d
+SEQ (reg)                               0.041    f     4.450               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.450               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.486               
+
+Slack               : 15.517ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[10].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.419ns (cell 1.768ns (40%), net 2.651ns (60%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_63.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_73,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_64.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_64.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_74,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_65.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_65.fco_f
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_75,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_66.fci_f
+ADDER                                   0.000    f     3.689          pin: u_Sobel_edge/add8_syn_66.fco_f
+net (fo=1)                              0.074          3.763          net: u_Sobel_edge/add8_syn_76,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_67.fci_f
+ADDER                                   0.052    r     3.815          pin: u_Sobel_edge/add8_syn_67.fco
+net (fo=1)                              0.000          3.815          net: u_Sobel_edge/add8_syn_56,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_68.fci
+ADDER                                   0.115    f     3.930       5  pin: u_Sobel_edge/add8_syn_68.ofa
+net (fo=1)                              0.448          4.378          net: u_Sobel_edge/mag_b1[10],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[10].d
+SEQ (reg)                               0.041    f     4.419               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.419               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.517               
+
+Slack               : 15.538ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[4].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.398ns (cell 1.821ns (41%), net 2.577ns (59%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.052    r     3.689          pin: u_Sobel_edge/add8_syn_62.fco
+net (fo=1)                              0.000          3.689          net: u_Sobel_edge/add8_syn_51,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_63.fci
+ADDER                                   0.220    r     3.909       5  pin: u_Sobel_edge/add8_syn_63.ofb
+net (fo=1)                              0.448          4.357          net: u_Sobel_edge/mag_b1[4],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[4].d
+SEQ (reg)                               0.041    f     4.398               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.398               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.538               
+
+Slack               : 15.590ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[3].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.346ns (cell 1.769ns (40%), net 2.577ns (60%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.052    r     3.637          pin: u_Sobel_edge/add8_syn_61.fco
+net (fo=1)                              0.000          3.637          net: u_Sobel_edge/add8_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_62.fci
+ADDER                                   0.220    r     3.857       5  pin: u_Sobel_edge/add8_syn_62.ofb
+net (fo=1)                              0.448          4.305          net: u_Sobel_edge/mag_b1[3],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[3].d
+SEQ (reg)                               0.041    f     4.346               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.346               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.590               
+
+Slack               : 15.642ns
+Begin Point         : u_Sobel_edge/gy_n_reg[2].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/mag_reg[2].d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.294ns (cell 1.717ns (39%), net 2.577ns (61%))
+Clock Skew          : 0.000ns
+Logic Level         : 5 ( LUT6=3  ADDER=2 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/gy_n_reg[2].q
+net (fo=4)                              0.556          0.632          net: u_Sobel_edge/gy_n[2],  ../../../../rtl/cartoon_top/Sobel_edge.v(107)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_1.c
+LUT6                                    0.315    f     0.947       1  pin: u_Sobel_edge/mag_b4[7]_syn_1.o
+net (fo=1)                              0.448          1.395          net: u_Sobel_edge/mag_b4[7]_syn_2,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[7]_syn_5.a
+LUT6                                    0.315    f     1.710       2  pin: u_Sobel_edge/mag_b4[7]_syn_5.o
+net (fo=9)                              0.677          2.387          net: u_Sobel_edge/mag_b4[7]_syn_6,  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_b4[1]_syn_1.a
+LUT6                                    0.315    f     2.702       3  pin: u_Sobel_edge/mag_b4[1]_syn_1.o
+net (fo=1)                              0.448          3.150          net: u_Sobel_edge/mag_b4[1],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/add8_syn_60.ic
+ADDER                                   0.435    r     3.585       4  pin: u_Sobel_edge/add8_syn_60.fco
+net (fo=1)                              0.000          3.585          net: u_Sobel_edge/add8_syn_49,  ../../../../rtl/cartoon_top/Sobel_edge.v(133)
+                                                                      pin: u_Sobel_edge/add8_syn_61.fci
+ADDER                                   0.220    r     3.805       5  pin: u_Sobel_edge/add8_syn_61.ofb
+net (fo=1)                              0.448          4.253          net: u_Sobel_edge/mag_b1[2],  NOFILE(0)
+                                                                      pin: u_Sobel_edge/mag_reg[2].d
+SEQ (reg)                               0.041    f     4.294               
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.294               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                       0.000         19.936               
+clock pessimism                         0.000         19.936               
+--------------------------------------------------------------------  ---------------
+Required                                              19.936               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.642               
+
+Slack               : 16.148ns
+Begin Point         : u_Sobel_edge/col_cnt_reg[1].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/row_cnt_reg[0].ce (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_125c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 3.785ns (cell 0.895ns (23%), net 2.890ns (77%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( LUT5=1  LUT4=1  LUT3=1 )
+Max Fanout          : 151
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.076    f     0.076          pin: u_Sobel_edge/col_cnt_reg[1].q
+net (fo=151)                            1.092          1.168          net: u_Sobel_edge/col_cnt[1],  ../../../../rtl/cartoon_top/Sobel_edge.v(25)
+                                                                      pin: u_Sobel_edge/col_cnt_b1[9]_syn_1.b
+LUT5                                    0.273    f     1.441       1  pin: u_Sobel_edge/col_cnt_b1[9]_syn_1.o
+net (fo=3)                              0.520          1.961          net: u_Sobel_edge/add10_syn_42,  ../../../../rtl/cartoon_top/Sobel_edge.v(46)
+                                                                      pin: u_Sobel_edge/col_cnt_b1[9]_syn_2.a
+LUT3                                    0.273    f     2.234       2  pin: u_Sobel_edge/col_cnt_b1[9]_syn_2.o
+net (fo=4)                              0.556          2.790          net: u_Sobel_edge/add10_syn_50,  ../../../../rtl/cartoon_top/Sobel_edge.v(46)
+                                                                      pin: u_Sobel_edge/mux23_syn_33.a
+LUT4                                    0.273    f     3.063       3  pin: u_Sobel_edge/mux23_syn_33.o
+net (fo=12)                             0.722          3.785          net: u_Sobel_edge/mux23_syn_2[10],  ../../../../rtl/cartoon_top/Sobel_edge.v(33)
+                                                                      pin: u_Sobel_edge/row_cnt_reg[0].ce
+SEQ (reg)                               0.000    f     3.785               
+--------------------------------------------------------------------  ---------------
+Arrival                                                3.785               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.067         19.933               
+clock uncertainty                       0.000         19.933               
+clock pessimism                         0.000         19.933               
+--------------------------------------------------------------------  ---------------
+Required                                              19.933               
+--------------------------------------------------------------------  ---------------
+Slack                                                 16.148               
+
+
+Period Check
+----------------------------------------------------------------------------------------------------
+    Type       Setting(ns)      Required(ns)         Slack(ns)   Point
+--------------------------------------------------------------------------------
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_609.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_309.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_329.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_349.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_369.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_389.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_409.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_429.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_449.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_469.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_489.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_509.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_529.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_549.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_569.wclk
+    DRAM            20.000             2.800            17.200   u_Sobel_edge/ramread1_syn_589.wclk
+
+Min Paths
+----------------------------------------------------------------------------------------------------
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/O_tlast_reg.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : O_tlast_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/O_tlast_reg.q
+net (fo=1)                              0.448          0.501          net: tlast_blend,  ../../../../rtl/cartoon_top/cartoon_top.v(160)
+                                                                      pin: O_tlast_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/O_tuser_reg.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : O_tuser_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/O_tuser_reg.q
+net (fo=1)                              0.448          0.501          net: tuser_blend,  ../../../../rtl/cartoon_top/cartoon_top.v(161)
+                                                                      pin: O_tuser_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/O_tvalid_reg.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : O_tvalid_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/O_tvalid_reg.q
+net (fo=1)                              0.448          0.501          net: tvalid_blend,  ../../../../rtl/cartoon_top/cartoon_top.v(162)
+                                                                      pin: O_tvalid_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : quant_rgb_d[0][4]_syn_4.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : quant_rgb_d[0][4]_syn_6.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: quant_rgb_d[0][4]_syn_4.q
+net (fo=1)                              0.448          0.501          net: quant_rgb_d[0][4]_syn_5,  ../../../../rtl/cartoon_top/cartoon_top.v(134)
+                                                                      pin: quant_rgb_d[0][4]_syn_6.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : quant_rgb_d[0][4]_syn_6.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : quant_rgb_d[0][4]_syn_8.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: quant_rgb_d[0][4]_syn_6.q
+net (fo=1)                              0.448          0.501          net: quant_rgb_d[0][4]_syn_7,  ../../../../rtl/cartoon_top/cartoon_top.v(134)
+                                                                      pin: quant_rgb_d[0][4]_syn_8.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_RGB888_YCbCr444/tlast_dly_reg[1].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_RGB888_YCbCr444/O_tlast_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_RGB888_YCbCr444/tlast_dly_reg[1].q
+net (fo=1)                              0.448          0.501          net: u_RGB888_YCbCr444/tlast_dly[1],  ../../../../rtl/cartoon_top/RGB88_YCbCr444.v(42)
+                                                                      pin: u_RGB888_YCbCr444/O_tlast_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_RGB888_YCbCr444/tuser_dly_reg[1].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_RGB888_YCbCr444/O_tuser_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_RGB888_YCbCr444/tuser_dly_reg[1].q
+net (fo=1)                              0.448          0.501          net: u_RGB888_YCbCr444/tuser_dly[1],  ../../../../rtl/cartoon_top/RGB88_YCbCr444.v(43)
+                                                                      pin: u_RGB888_YCbCr444/O_tuser_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/tlast_shift_reg[3].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/O_tlast_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/tlast_shift_reg[3].q
+net (fo=1)                              0.448          0.501          net: u_Sobel_edge/tlast_shift[3],  ../../../../rtl/cartoon_top/Sobel_edge.v(177)
+                                                                      pin: u_Sobel_edge/O_tlast_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/tuser_shift_reg[3].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/O_tuser_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/tuser_shift_reg[3].q
+net (fo=1)                              0.448          0.501          net: u_Sobel_edge/tuser_shift[3],  ../../../../rtl/cartoon_top/Sobel_edge.v(178)
+                                                                      pin: u_Sobel_edge/O_tuser_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+Slack               : 0.502ns
+Begin Point         : u_Sobel_edge/tvalid_shift_reg[3].clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_Sobel_edge/O_tvalid_reg.d (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_125c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.516ns (cell 0.068ns (13%), net 0.448ns (87%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+SEQ (clk2q)                             0.053    f     0.053          pin: u_Sobel_edge/tvalid_shift_reg[3].q
+net (fo=1)                              0.448          0.501          net: u_Sobel_edge/tvalid_shift[3],  ../../../../rtl/cartoon_top/Sobel_edge.v(176)
+                                                                      pin: u_Sobel_edge/O_tvalid_reg.d
+SEQ (reg)                               0.015    f     0.516               
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.516               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.014          0.014               
+clock uncertainty                       0.000          0.014               
+clock pessimism                         0.000          0.014               
+--------------------------------------------------------------------  ---------------
+Required                                               0.014               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.502               
+
+
+Inter clock domain timing
+--------------------------------------------------
+
+IP timing
+--------------------------------------------------
