@@ -52,6 +52,19 @@ module design_top_wrapper (
     wire 			S_cam_cfg_done;
     wire 			S_ae_cfg_done;
     wire 			S_ae_req; 
+
+        // ---- 手动 AE 输出 ----
+    wire [15:0] S_ae_manual;
+    wire [15:0] S_ag_manual;
+    wire        S_ae_req_manual;
+
+    // ---- 自动 AE 输出 ----
+    wire [15:0] S_ae_auto;
+    wire [15:0] S_ag_auto;
+    wire        S_ae_req_auto;
+
+    // ---- 模式: 0=自动(默认), 1=手动 ----
+    reg         S_ae_manual_mode;
 	
 	wire        	S_csi_rx_clk;  
     wire        	S_hs_rx_valid;  
@@ -432,7 +445,40 @@ module design_top_wrapper (
     );
 
 
-	
+	    // =========================================================================
+    // AE 手动/自动 模式切换按键 (I_button[3])
+    //   20ms 去抖 + 下降沿翻转 S_ae_manual_mode
+    //   0 = 自动 (默认), 1 = 手动
+    // =========================================================================
+    localparam [19:0] BTN_DEB_MAX = 20'd479_999;   // 20ms @ 24MHz
+
+    reg  [19:0] btn_deb_cnt;
+    reg         btn_deb_state;
+    reg         btn_deb_prev;
+
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            btn_deb_cnt      <= 20'd0;
+            btn_deb_state    <= 1'b1;      // 按键低有效, 空闲为高
+            btn_deb_prev     <= 1'b1;
+            S_ae_manual_mode <= 1'b0;      // 上电默认自动
+        end else begin
+            // ---- 去抖 ----
+            if (I_button[3] == btn_deb_state) begin
+                btn_deb_cnt <= 20'd0;
+            end else if (btn_deb_cnt == BTN_DEB_MAX) begin
+                btn_deb_cnt   <= 20'd0;
+                btn_deb_state <= I_button[3];
+            end else begin
+                btn_deb_cnt <= btn_deb_cnt + 1'b1;
+            end
+
+            // ---- 下降沿 (= 按下) 翻转模式 ----
+            btn_deb_prev <= btn_deb_state;
+            if (btn_deb_prev && !btn_deb_state)
+                S_ae_manual_mode <= ~S_ae_manual_mode;
+        end
+    end
 
   
   ae_set u_ae_set (
@@ -441,11 +487,15 @@ module design_top_wrapper (
       .I_btn({2'b11, I_button[1], I_button[0]}),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
-      .O_ae_req(S_ae_req),
-      .O_ae(S_ae),
-      .O_ag(S_ag)
+      .O_ae_req( S_ae_req_manual),
+      .O_ae( S_ae_manual),
+      .O_ag( S_ag_manual)
   );
   
+    assign S_ae     = S_ae_manual_mode ? S_ae_manual     : S_ae_auto;
+    assign S_ag     = S_ae_manual_mode ? S_ag_manual     : S_ag_auto;
+    assign S_ae_req = S_ae_manual_mode ? S_ae_req_manual : S_ae_req_auto;
+
     // SC500CS factory HD mode: 1280x720@60, RAW10, 2-Lane, 480 Mbps/Lane.
     uicfgcs500_720p #(
       .CLK_DIV(24000000 / 100000 - 1)
@@ -793,6 +843,86 @@ isp_top u_isp_top (
         end
     end
 
+        // ---- 从 hdmi_mixer 输出提取 Y ----
+    wire [17:0] S_y_sum = S_hdmi_out_data[23:16] * 8'd54
+                        + S_hdmi_out_data[15:8]  * 8'd183
+                        + S_hdmi_out_data[7:0]   * 8'd18;
+    wire [7:0]  S_y_pix = S_y_sum[15:8];
+
+    wire [7:0]  S_avg_y_pix;
+    wire        S_frame_done_pix;
+
+    brightness_stats #(
+        .IMG_WIDTH  (1280),
+        .IMG_HEIGHT (720)
+    ) u_brightness_stats (
+        .I_clk         (S_hdmi_pixel_clk),
+        .I_rst_n       (S_hdmi_rst_n),
+        .I_tlast       (S_vpp_last_d3),
+        .I_tuser       (S_vpp_user_d3),
+        .I_y_tdata     (S_y_pix),
+        .I_tvalid      (S_hdmi_out_de),
+        .I_tready      (1'b1),
+        .O_avg_y       (S_avg_y_pix),
+        .O_frame_done  (S_frame_done_pix)
+    );
+
+    // ---- avg_y 两级同步到 24M 域 ----
+    reg [7:0] S_avg_y_s1, S_avg_y_s2;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_avg_y_s1 <= 8'd0;
+            S_avg_y_s2 <= 8'd0;
+        end else begin
+            S_avg_y_s1 <= S_avg_y_pix;
+            S_avg_y_s2 <= S_avg_y_s1;
+        end
+    end
+
+    // ---- frame_done 展宽 + 同步 + 边沿还原 ----
+    reg [7:0] S_fd_ext;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)         S_fd_ext <= 8'd0;
+        else if (S_frame_done_pix) S_fd_ext <= 8'hFF;
+        else if (S_fd_ext != 8'd0) S_fd_ext <= S_fd_ext - 1'b1;
+    end
+    wire S_fd_wide = |S_fd_ext;
+
+    reg S_fd_s1, S_fd_s2, S_fd_s3;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_fd_s1 <= 1'b0;
+            S_fd_s2 <= 1'b0;
+            S_fd_s3 <= 1'b0;
+        end else begin
+            S_fd_s1 <= S_fd_wide;
+            S_fd_s2 <= S_fd_s1;
+            S_fd_s3 <= S_fd_s2;
+        end
+    end
+    wire S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
+    
+        ae_auto #(
+        .TARGET_Y (100),
+        .AE_MAX   (1990),
+        .AE_MIN   (4),
+        .AE_INIT  (1990),
+        .HYST     (3),
+        .AG_VALUE (16)
+    ) u_ae_auto (
+        .I_clk        ( S_24m_clk           ),
+        .I_rst_n      ( S_rst_n             ),
+        .I_enable     ( ~S_ae_manual_mode   ),   // ← 手动模式时禁用
+        .I_avg_y      ( S_avg_y_s2          ),
+        .I_frame_done ( S_frame_done_24m    ),
+        .I_cfg_done   ( S_cam_cfg_done & S_ae_cfg_done ),
+        .O_ae         ( S_ae_auto           ),
+        .O_ag         ( S_ag_auto           ),
+        .O_ae_req     ( S_ae_req_auto       )
+    );
+
+    
+
     // -------------------------------------------------------------------------
     // vs 延迟 17 拍: vpp 流水线给 de/data 增加 17 拍 (16 拍算法 + 1 拍 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
@@ -815,7 +945,7 @@ isp_top u_isp_top (
         .SOBEL_THRESHOLD ( 60   ),
         .MIN_FACE_AREA   ( 2000 )
     ) u_vpp_top (
-        .I_button        ( {I_button[3], I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
+        .I_button        ( {1'b1, I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
         .I_clk           ( S_hdmi_pixel_clk ),
         .I_rst_n         ( S_hdmi_rst_n     ),
         .I_tlast         ( S_vpp_last_d3    ),
