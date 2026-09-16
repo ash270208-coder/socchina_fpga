@@ -33,7 +33,7 @@ module brightness_stats #(
     reg [YSUM_W-1:0] pixel_cnt;
 
     wire [YSUM_W-1:0] sum_next = sum_y + {24'd0, I_y_tdata};
-    wire              frame_end = (line_cnt == IMG_HEIGHT - 1) && I_tlast && I_tvalid;
+    wire              frame_end = (line_cnt == IMG_HEIGHT - 1) && I_tlast && I_tvalid && I_tready;
 
     // 帧末那一拍连同最后一个像素一起算进去
     wire [YSUM_W-1:0] final_sum = sum_y + {24'd0, I_y_tdata};
