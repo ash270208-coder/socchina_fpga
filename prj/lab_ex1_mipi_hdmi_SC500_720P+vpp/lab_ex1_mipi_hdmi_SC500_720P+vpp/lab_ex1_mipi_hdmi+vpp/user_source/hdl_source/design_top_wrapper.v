@@ -903,12 +903,14 @@ isp_top u_isp_top (
     wire S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
     
         ae_auto #(
-        .TARGET_Y (100),
-        .AE_MAX   (1990),
-        .AE_MIN   (4),
-        .AE_INIT  (1990),
-        .HYST     (3),
-        .AG_VALUE (16)
+            .TARGET_Y (50),
+            .AE_MAX   (1990),
+            .AE_MIN   (4),
+            .AE_INIT  (500),
+            .HYST     (20),
+            .KP       (1),
+            .STEP_MAX (50),
+            .AG_VALUE (80)
     ) u_ae_auto (
         .I_clk        ( S_24m_clk           ),
         .I_rst_n      ( S_rst_n             ),

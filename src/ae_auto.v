@@ -1,17 +1,19 @@
 `timescale 1ns / 1ps
 // =============================================================================
-// ae_auto (抗拍屏闪烁版)
-//   - 对 avg_y 做 4 帧滑动平均, 抑制屏幕刷新引起的帧间波动
-//   - 死区增大到 8, 收敛后完全冻结曝光
-//   - 步长减半, 避免过冲振荡
+// ae_auto (抗拍屏震荡版)
+//   - avg_y 8 帧滑动平均, 抑制拍屏引起的帧间大幅波动
+//   - 死区 HYST = 20, 波动在死区内完全不动
+//   - 每帧曝光变化限速 ±50 行, 防止极限环
 // =============================================================================
 module ae_auto #(
-    parameter TARGET_Y = 100,
+    parameter TARGET_Y = 50,
     parameter AE_MAX   = 1990,
     parameter AE_MIN   = 4,
-    parameter AE_INIT  = 1990,
-    parameter HYST     = 8,          // ← 3 改 8
-    parameter AG_VALUE = 16
+    parameter AE_INIT  = 500,
+    parameter HYST     = 20,
+    parameter KP       = 1,
+    parameter STEP_MAX = 50,     // 每帧最大变化量
+    parameter AG_VALUE = 80
 )(
     input  wire        I_clk,
     input  wire        I_rst_n,
@@ -26,30 +28,7 @@ module ae_auto #(
 
     reg [15:0] ae_cur;
 
-    // ---- 对 avg_y 做 4 帧滑动平均 ----
-    reg [7:0]  avg_y_p0, avg_y_p1, avg_y_p2, avg_y_p3;
-    reg [7:0]  avg_y_filt;
-    reg [9:0]  avg_y_sum4;
-
-    always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            avg_y_p0   <= 8'd100;
-            avg_y_p1   <= 8'd100;
-            avg_y_p2   <= 8'd100;
-            avg_y_p3   <= 8'd100;
-            avg_y_filt <= 8'd100;
-            avg_y_sum4 <= 10'd400;
-        end else if (I_frame_done && I_enable) begin
-            avg_y_p0 <= I_avg_y;
-            avg_y_p1 <= avg_y_p0;
-            avg_y_p2 <= avg_y_p1;
-            avg_y_p3 <= avg_y_p2;
-            avg_y_sum4 <= I_avg_y + avg_y_p0 + avg_y_p1 + avg_y_p2;
-            avg_y_filt <= (I_avg_y + avg_y_p0 + avg_y_p1 + avg_y_p2) >> 2;
-        end
-    end
-
-    // ---- 使能边沿检测 ----
+    // ---- 使能边沿 ----
     reg enable_d;
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) enable_d <= 1'b0;
@@ -57,44 +36,50 @@ module ae_auto #(
     end
     wire enable_rise = I_enable & ~enable_d;
 
-    // ---- 理想目标曝光 (用滤波后的 avg_y) ----
-    reg [23:0] ae_target;
-    always @(*) begin
-        if (avg_y_filt == 8'd0)
-            ae_target = AE_MAX[23:0];
-        else begin
-            ae_target = (ae_cur * TARGET_Y) / avg_y_filt;
-            if (ae_target > AE_MAX[23:0])
-                ae_target = AE_MAX[23:0];
+    // ---- 8 帧滑动平均 ----
+    reg [7:0]  y_p0, y_p1, y_p2, y_p3, y_p4, y_p5, y_p6, y_p7;
+    reg [7:0]  y_filt;
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            y_p0 <= 8'd50; y_p1 <= 8'd50; y_p2 <= 8'd50; y_p3 <= 8'd50;
+            y_p4 <= 8'd50; y_p5 <= 8'd50; y_p6 <= 8'd50; y_p7 <= 8'd50;
+            y_filt <= 8'd50;
+        end else if (I_frame_done && I_enable) begin
+            y_p0 <= I_avg_y;
+            y_p1 <= y_p0; y_p2 <= y_p1; y_p3 <= y_p2; y_p4 <= y_p3;
+            y_p5 <= y_p4; y_p6 <= y_p5; y_p7 <= y_p6;
+            y_filt <= (I_avg_y + y_p0 + y_p1 + y_p2
+                     + y_p3 + y_p4 + y_p5 + y_p6) >> 3;   // 8 帧平均
         end
     end
 
-    // ---- 每帧最大步进: 收敛后步伐更小 ----
-    reg [15:0] max_step;
+    // ---- 误差 ----
+    wire [8:0] err_abs = (y_filt > TARGET_Y) ? (y_filt - TARGET_Y)
+                                              : (TARGET_Y - y_filt);
+    wire       too_dark  = (y_filt < TARGET_Y - HYST);
+    wire       too_bright= (y_filt > TARGET_Y + HYST);
+
+    // ---- 一帧的曝光增量: 用滤波后的 y, 按误差方向算 ----
+    // delta 越大步进越大, 但每帧限速 ±STEP_MAX
+    reg [15:0] step_now;
     always @(*) begin
-        if      (ae_cur < 16'd32)   max_step = 16'd4;      // 极短曝光, 微调
-        else if (ae_cur > 16'd2000) max_step = 16'd200;    // 长曝光, 快收敛
-        else                        max_step = ae_cur >> 4; // ← >>2 改 >>4
+        if (too_dark || too_bright) begin
+            // 步长 = 误差 * KP, 但不超过 STEP_MAX
+            step_now = err_abs * KP;
+            if (step_now > STEP_MAX) step_now = STEP_MAX;
+        end else
+            step_now = 16'd0;   // 死区内不动
     end
 
-    // ---- 步长限速 + 死区 ----
+    // ---- 新曝光 ----
+    wire [15:0] ae_up   = (ae_cur + step_now > AE_MAX) ? AE_MAX : (ae_cur + step_now);
+    wire [15:0] ae_down = (ae_cur < step_now + AE_MIN) ? AE_MIN : (ae_cur - step_now);
+
     reg [15:0] ae_next;
-    reg [8:0]  diff_abs;
     always @(*) begin
-        diff_abs = (avg_y_filt > TARGET_Y) ? (avg_y_filt - TARGET_Y)
-                                            : (TARGET_Y - avg_y_filt);
-
-        if (diff_abs <= HYST)
-            ae_next = ae_cur;                     // 死区: 冻结曝光
-        else if (ae_target > (ae_cur + max_step))
-            ae_next = ae_cur + max_step;
-        else if ((ae_target < (ae_cur - max_step)) && (ae_cur > max_step))
-            ae_next = ae_cur - max_step;
-        else
-            ae_next = ae_target[15:0];
-
-        if      (ae_next > AE_MAX) ae_next = AE_MAX;
-        else if (ae_next < AE_MIN) ae_next = AE_MIN;
+        if      (!too_dark && !too_bright) ae_next = ae_cur;    // 死区内冻结
+        else if (too_dark)                 ae_next = ae_up;     // 太暗, 加曝光
+        else                               ae_next = ae_down;   // 太亮, 减曝光
     end
 
     // ---- 输出 ----
