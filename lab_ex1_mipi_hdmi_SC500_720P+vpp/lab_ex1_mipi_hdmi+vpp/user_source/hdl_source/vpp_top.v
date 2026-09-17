@@ -415,22 +415,22 @@ module vpp_top #(
         .I_rst_n        (I_rst_n),
 
         // =====================================================================
-        // 【实验修改】人脸检测输入改为直方图均衡后的 Y
-        // 原接线: 检测器吃原始 Y (y_tdata, 3 拍), 暗场景下对比度低/噪声大,
-        //         LBP 编码不稳定导致上板漏检。
-        // 现接线: 吃直方图均衡后的 Y (y_equ_tdata), 对比度被上一帧 CDF 拉伸,
-        //         暗场信噪比显著改善。控制信号同步换成均衡路径 (比原路径
-        //         晚 3 拍, 帧/行结构不变, 不影响画框对齐)。
-        // 回退方法: 把 I_ycbcr_tvalid/tlast/tuser 换回 tvalid_ycbcr/
-        //         tlast_ycbcr/tuser_ycbcr, I_y_tdata 换回 y_tdata,
-        //         I_cb_tdata/I_cr_tdata 换回 cb_tdata/cr_tdata 即可。
+        // 人脸检测输入: 线性 Y (RGB2Y 后 3 拍, 与 tvalid_ycbcr 同拍)
+        // 原因: 级联在 OpenCV 原始灰度图上训练; LBP 码对全局增益/亮度缩放
+        //       天然不变, 但对 HE 这类强非线性映射不保持 —— HE 会直接改变
+        //       LBP 码的统计分布 (且这里用的是上一帧 CDF, 逐帧漂移), 暗部
+        //       噪声被拉伸成随机纹理, 造成上板漏检 + 噪点区域误检。
+        //       降噪改在低分辨率路径用 lp_filter_3x3 均值滤波解决。
+        // 如需回退到直方图均衡输入: 把 I_ycbcr_tvalid/tlast/tuser 换回
+        // tvalid_hisequ/tlast_hisequ/tuser_hisequ, I_y_tdata 换回
+        // y_equ_tdata, I_cb_tdata/I_cr_tdata 换回 cb_d[2]/cr_d[2] 即可。
         // =====================================================================
-        .I_ycbcr_tvalid (tvalid_hisequ),
-        .I_ycbcr_tlast  (tlast_hisequ),
-        .I_ycbcr_tuser  (tuser_hisequ),
-        .I_y_tdata      (y_equ_tdata),
-        .I_cb_tdata     (cb_d[2]),     // 与 y_equ 同拍 (共 6 拍), 检测引擎未使用
-        .I_cr_tdata     (cr_d[2]),
+        .I_ycbcr_tvalid (tvalid_ycbcr),
+        .I_ycbcr_tlast  (tlast_ycbcr),
+        .I_ycbcr_tuser  (tuser_ycbcr),
+        .I_y_tdata      (y_tdata),
+        .I_cb_tdata     (cb_tdata),     // 检测引擎未使用, 保留接线
+        .I_cr_tdata     (cr_tdata),
 
         // 送入 MUX 选中的待显示画面
         .I_disp_tvalid  (mux_tvalid),

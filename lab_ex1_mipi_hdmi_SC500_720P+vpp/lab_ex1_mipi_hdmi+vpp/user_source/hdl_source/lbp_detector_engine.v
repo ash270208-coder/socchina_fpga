@@ -20,11 +20,17 @@
 //          扫描量约为原 170x100 的 1.5 倍, @74.25MHz 像素时钟下仍在
 //          一帧周期 (16.7ms) 内完成, 画框滞后一帧呈现。
 //          如需检测其它大小的人脸, 调整 SCALE_MIN_S16/SCALE_MAX_S16/SCALE_STEP_S16。
-//  [FIX-4] 输出坐标锚点校准: 本级联早期特征锁定"左眼+鼻梁/嘴", 检测窗左锚定,
-//          其右缘 ≈ 人脸水平中心 (鼻梁/嘴)。固定 24x24 框的右缘 = 窗口右缘
-//          + BOX_OFFSET_X, 使框中心对准两眼之间/鼻梁, 垂直保持窗口居中。
+//  [FIX-4] 输出整窗矩形: O_face_x/y = 检测窗左上角, O_face_w/h = win_w,
+//          画框覆盖完整检测窗 (原固定 24x24 框只盖住人脸的一小部分)。
 //  [FIX-5] 积分 RAM X 态消除: frame_integral_bram 的 FILL_ALL 置为全 0
 //          (第 0 列/第 0 行降采样后本就为 0), 波形不再有 X 态。
+//  [FIX-6] 检测结果卫生 (消除噪点误检乱框):
+//          每帧收集所有全 20 级通过的窗口, 扫描结束时只输出总分最高的
+//          1 个候选 (等效 OpenCV minNeighbors/NMS 的轻量替代)。噪点区域的
+//          误报通常是"压线过关", 总分远低于真实人脸, 会被最高分机制压掉。
+//  [FIX-7] 乒乓切换保护: frame_end 仅在引擎空闲 (S_IDLE) 时才交换读写
+//          bank; 扫描未完成时丢弃当前帧并告警, 避免扫描后半段读到新一帧
+//          数据造成混帧。
 // ============================================================================
 
 module lbp_detector_engine #(
@@ -35,11 +41,7 @@ module lbp_detector_engine #(
     // 多尺度金字塔: 定点 scale = s16/16 (16 = 1.0 倍, 46 = 2.875 倍)
     parameter SCALE_MIN_S16 = 36, // 最小尺度 (窗 54)
     parameter SCALE_MAX_S16 = 46, // 最大尺度 (窗 69)
-    parameter SCALE_STEP_S16= 10, // 尺度步进
-    // 画框锚点校准: 本级联的早期特征锁定"左眼+鼻梁/嘴", 检测窗右缘 ≈ 鼻子/嘴
-    // (人脸水平中心)。固定 24x24 框的右缘应落在窗口右缘再向右 BOX_OFFSET_X 个
-    // 低分辨率像素处, 使框中心对准人脸中心 (两眼之间/鼻梁)。
-    parameter BOX_OFFSET_X  = 10  // 框右缘相对检测窗右缘的右移量 (低分辨率像素)
+    parameter SCALE_STEP_S16= 10  // 尺度步进
 )(
     input  wire        I_clk,          
     input  wire        I_rst_n,        
@@ -334,6 +336,11 @@ module lbp_detector_engine #(
     reg [1:0] rom_wait_cnt;
     reg signed [19:0] stage_score;
 
+    // [FIX-6] 每帧最优候选 (全 20 级通过且总分最高), 扫描结束时一次性输出
+    reg          best_valid;
+    reg signed [19:0] best_score;
+    reg  [7:0]   best_x, best_y, best_w;
+
     // 乒乓缓存握手核心逻辑
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -342,17 +349,15 @@ module lbp_detector_engine #(
             frame_pending <= 1'b0;
             O_frame_drop  <= 1'b0;
         end else begin
-            // 写入完成时：翻转写端口，准备交接
-            if (frame_end) begin
-                if (state != S_IDLE) begin
-                    // 警报：上一次检测还没做完，新一帧又到了，发生掉帧
-                    O_frame_drop <= 1'b1; 
-                end else begin
-                    O_frame_drop <= 1'b0;
-                end
+            // [FIX-7] 写入完成且引擎空闲时才交换 bank;
+            //         引擎仍在扫描时保持两 bank 不动, 丢弃当前帧并告警
+            if (frame_end && (state == S_IDLE)) begin
+                O_frame_drop  <= 1'b0;
                 rd_bank       <= wr_bank;  // 让读端口锁定刚刚写满的这块 Bank
                 wr_bank       <= ~wr_bank; // 写端口去写另外一块 Bank
                 frame_pending <= 1'b1;     // 发出检测申请
+            end else if (frame_end) begin
+                O_frame_drop <= 1'b1;      // 上一轮扫描未完成, 本帧丢弃
             end else begin
                 O_frame_drop <= 1'b0;
                 if (state == S_IDLE && frame_pending) begin
@@ -382,6 +387,11 @@ module lbp_detector_engine #(
             O_face_y     <= 8'd0;
             O_face_w     <= 8'd24;
             O_face_h     <= 8'd24;
+            best_valid   <= 1'b0;
+            best_score   <= 20'sh80000;   // 最负, 保证首个候选必被采纳
+            best_x       <= 8'd0;
+            best_y       <= 8'd0;
+            best_w       <= 8'd0;
         end else begin
             case (state)
                 S_IDLE: begin
@@ -391,6 +401,8 @@ module lbp_detector_engine #(
                         scan_x    <= 8'd0;
                         scan_y    <= 8'd0;
                         scale_s16 <= SCALE_MIN_S16;   // [FIX-3] 金字塔从最小尺度开始
+                        best_valid  <= 1'b0;          // [FIX-6] 新一轮扫描, 清空候选
+                        best_score  <= 20'sh80000;
                         state     <= S_INIT_WIN;
                     end else begin
                         O_busy <= 1'b0;
@@ -443,16 +455,16 @@ module lbp_detector_engine #(
                     if (weak_idx == get_stage_end_idx(stage_idx)) begin
                         if (stage_score >= curr_stage_thresh) begin
                             if (stage_idx == 5'd19) begin
-                                // 20 关全通，检出人脸！
-                                // 坐标输出: 级联把"左眼+鼻梁/嘴"锚定在检测窗右缘
-                                // (即人脸水平中心), 故框的右缘 = 窗口右缘 + BOX_OFFSET_X,
-                                // 使 24x24 框中心落在两眼之间/鼻梁上; 垂直方向窗口居中。
-                                O_face_valid <= 1'b1;
-                                O_face_x     <= scan_x + win_w - WIN_SIZE + BOX_OFFSET_X;
-                                O_face_y     <= scan_y + ((win_w - WIN_SIZE) >> 1);
-                                O_face_w     <= 8'd24;
-                                O_face_h     <= 8'd24;
-                                state        <= S_NEXT_WIN;
+                                // [FIX-6] 20 关全通: 记录候选, 本帧结束后
+                                // 只输出总分最高者, 不在此处立即出框
+                                if (stage_score > best_score) begin
+                                    best_score <= stage_score;
+                                    best_valid <= 1'b1;
+                                    best_x     <= scan_x;   // [FIX-4] 整窗矩形
+                                    best_y     <= scan_y;
+                                    best_w     <= win_w;
+                                end
+                                state <= S_NEXT_WIN;
                             end else begin
                                 stage_idx    <= stage_idx + 1'b1;
                                 weak_idx     <= weak_idx + 1'b1;
@@ -487,7 +499,15 @@ module lbp_detector_engine #(
                                 scale_s16 <= scale_s16 + SCALE_STEP_S16;
                                 state     <= S_INIT_WIN;
                             end else begin
-                                // 全部尺度扫描完成，回归 IDLE，等待下一帧
+                                // [FIX-6] 全部尺度扫描完成: 输出本帧最优候选
+                                // (1 拍脉冲, 下一拍回 S_IDLE 时自动拉低)
+                                if (best_valid) begin
+                                    O_face_valid <= 1'b1;
+                                    O_face_x     <= best_x;
+                                    O_face_y     <= best_y;
+                                    O_face_w     <= best_w;
+                                    O_face_h     <= best_w;
+                                end
                                 state <= S_IDLE;
                             end
                         end

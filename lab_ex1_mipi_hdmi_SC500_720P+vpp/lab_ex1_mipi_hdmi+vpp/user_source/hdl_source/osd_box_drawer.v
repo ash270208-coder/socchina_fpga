@@ -68,8 +68,9 @@ module osd_box_drawer #(
     // 移位相加实现乘以 6: (val << 2) + (val << 1)
     wire [10:0] scaled_x = {3'b000, I_face_x, 2'b00} + {4'b0000, I_face_x, 1'b0};
     wire [9:0]  scaled_y = {2'b00,  I_face_y, 2'b00} + {3'b000,  I_face_y, 1'b0};
-    wire [10:0] scaled_w = 11'd144; // 24 * 6 = 144
-    wire [9:0]  scaled_h = 10'd144;
+    // 框尺寸跟随检测窗宽 (引擎输出整窗矩形, 54/69 低分像素 ×6 = 324/414)
+    wire [10:0] scaled_w = {3'b000, I_face_w, 2'b00} + {4'b0000, I_face_w, 1'b0};
+    wire [9:0]  scaled_h = {2'b00,  I_face_h, 2'b00} + {3'b000,  I_face_h, 1'b0};
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
