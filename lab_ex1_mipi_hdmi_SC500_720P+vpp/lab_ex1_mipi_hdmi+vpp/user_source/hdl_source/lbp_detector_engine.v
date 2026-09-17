@@ -14,12 +14,13 @@
 //          原引擎只扫 24x24 固定窗, 测试图人脸约 50~70 低分辨率像素,
 //          必须按 OpenCV detectMultiScale 的方式多尺度检测。
 //          采用定点坐标缩放 (scale = s16/16), 直接从全分辨率积分图取块和,
-//          无需额外存储。18-bit 积分 RAM 对 block 和 < 2^18 足够 (s16<=46)。
-//  扫描带宽与耗时: SCALE_MIN_S16=36 .. SCALE_MAX_S16=46, 步进 10/16,
-//          共 2 级 (窗 54/69)。1280x720 下低分辨率网格为 213x120,
-//          扫描量约为原 170x100 的 1.5 倍, @74.25MHz 像素时钟下仍在
-//          一帧周期 (16.7ms) 内完成, 画框滞后一帧呈现。
-//          如需检测其它大小的人脸, 调整 SCALE_MIN_S16/SCALE_MAX_S16/SCALE_STEP_S16。
+//          无需额外存储。
+//  扫描范围与耗时: SCALE_MIN_S16=36 .. SCALE_MAX_S16=76, 步进 10/16,
+//          共 5 级 (窗 54/69/84/99/114 低分px = 720p 中 324~684px),
+//          覆盖镜头前约 0.25~0.55 m (人脸占画面 1/4~1/2)。
+//          SCAN_STEP=3, 每帧约 3100 窗 ≈ 7 ms @74.25MHz, 一帧周期内完成。
+//          注意: 大窗特征块和需配合积分输入右移 1 位 (见 integral_image.v),
+//          使块和 < 2^18 (38^2 * 127 ≈ 18.3 万), 18-bit 积分 RAM 不失真。
 //  [FIX-4] 输出整窗矩形: O_face_x/y = 检测窗左上角, O_face_w/h = win_w,
 //          画框覆盖完整检测窗 (原固定 24x24 框只盖住人脸的一小部分)。
 //  [FIX-5] 积分 RAM X 态消除: frame_integral_bram 的 FILL_ALL 置为全 0
@@ -31,16 +32,22 @@
 //  [FIX-7] 乒乓切换保护: frame_end 仅在引擎空闲 (S_IDLE) 时才交换读写
 //          bank; 扫描未完成时丢弃当前帧并告警, 避免扫描后半段读到新一帧
 //          数据造成混帧。
+//  [FIX-8] 时域确认: 候选与上一帧确认位置邻近 (±12 低分px = 72px@720p) 才
+//          输出脉冲; 首帧/位置跳变仅静默锁存, 连续 15 帧无候选才撤销确认
+//          位置 (与 OSD 保持帧数一致) —— 消除"噪点单帧误报"与绿框闪跳,
+//          同时保证级联偶发通过时框也能持续刷新。
 // ============================================================================
 
 module lbp_detector_engine #(
     parameter IMG_WIDTH  = 213,   
     parameter IMG_HEIGHT = 120,   
     parameter WIN_SIZE   = 24,
-    parameter SCAN_STEP  = 2,     // 滑窗步长
-    // 多尺度金字塔: 定点 scale = s16/16 (16 = 1.0 倍, 46 = 2.875 倍)
+    parameter SCAN_STEP  = 3,     // 滑窗步长 (3 低分px = 18px@720p)
+    // 多尺度金字塔: 定点 scale = s16/16 (16 = 1.0 倍, 76 = 4.75 倍)
+    // 5 级: 窗 54/69/84/99/114 低分px = 720p 中 324~684px,
+    //       覆盖镜头前约 0.25~0.55m (人脸占画面 1/4~1/2)
     parameter SCALE_MIN_S16 = 36, // 最小尺度 (窗 54)
-    parameter SCALE_MAX_S16 = 46, // 最大尺度 (窗 69)
+    parameter SCALE_MAX_S16 = 76, // 最大尺度 (窗 114)
     parameter SCALE_STEP_S16= 10  // 尺度步进
 )(
     input  wire        I_clk,          
@@ -152,10 +159,10 @@ module lbp_detector_engine #(
     // 3. 自主滑窗采样生成器 (多尺度定点坐标)
     // =========================================================================
     reg [7:0] scan_x, scan_y; 
-    reg [5:0] scale_s16;         // 当前尺度 (定点 4.4: 值/16 = 实际倍数)
+    reg [6:0] scale_s16;         // 当前尺度 (定点 4.4: 值/16 = 实际倍数)
 
     // 当前尺度窗口宽/高 (低分辨率像素) 与扫描边界
-    wire [10:0] win_w_pre = WIN_SIZE * scale_s16;      // 24*46=1104 -> 11 bit
+    wire [10:0] win_w_pre = WIN_SIZE * scale_s16;      // 24*76=1824 -> 11 bit
     wire [7:0]  win_w     = win_w_pre >> 4;
     wire [7:0]  max_scan_x = IMG_WIDTH  - win_w;
     wire [7:0]  max_scan_y = IMG_HEIGHT - win_w;
@@ -166,15 +173,15 @@ module lbp_detector_engine #(
     wire [4:0] fh = curr_rect_raw[7:0];
 
     // 定点缩放: 特征矩形顶点坐标 = (scan + f*scale)/16 (与 OpenCV 一致)
-    wire [13:0] sx_sc = scan_x * scale_s16;   // 8 bit * 6 bit = 14 bit
+    wire [13:0] sx_sc = scan_x * scale_s16;   // 8 bit * 7 bit, 最大 99*76=7524 -> 14 bit
     wire [13:0] sy_sc = scan_y * scale_s16;
-    wire [10:0] fx_sc = fx * scale_s16;       // 5 bit * 6 bit = 11 bit
-    wire [10:0] fy_sc = fy * scale_s16;
-    wire [10:0] fw_sc = fw * scale_s16;
-    wire [10:0] fh_sc = fh * scale_s16;
+    wire [11:0] fx_sc = fx * scale_s16;       // 5 bit * 7 bit, 最大 31*76=2356 -> 12 bit
+    wire [11:0] fy_sc = fy * scale_s16;
+    wire [11:0] fw_sc = fw * scale_s16;
+    wire [11:0] fh_sc = fh * scale_s16;
 
-    wire [10:0] dw = fw_sc >> 4;      // 缩放后块宽 (<=23)
-    wire [10:0] dh = fh_sc >> 4;      // 缩放后块高 (<=23)
+    wire [10:0] dw = fw_sc >> 4;      // 缩放后块宽 (<=38)
+    wire [10:0] dh = fh_sc >> 4;      // 缩放后块高 (<=38)
 
     wire [7:0] abs_x0 = (sx_sc + fx_sc) >> 4;
     wire [7:0] abs_x1 = abs_x0 + dw[7:0];
@@ -341,6 +348,17 @@ module lbp_detector_engine #(
     reg signed [19:0] best_score;
     reg  [7:0]   best_x, best_y, best_w;
 
+    // [FIX-8] 时域确认: 候选与上一帧确认位置邻近 (±12 低分px = 72px@720p)
+    //         才输出脉冲; 首帧/位置跳变仅静默锁存, 连续 15 帧无候选才撤销
+    //         确认位置 (与 OSD 保持帧数一致) —— 消除"噪点单帧误报"与绿框
+    //         闪跳, 同时保证级联偶发通过时框也能持续刷新。
+    reg        prev_valid;
+    reg  [7:0] prev_x, prev_y;
+    reg  [3:0] miss_cnt;
+    wire [7:0] diff_x = (best_x >= prev_x) ? (best_x - prev_x) : (prev_x - best_x);
+    wire [7:0] diff_y = (best_y >= prev_y) ? (best_y - prev_y) : (prev_y - best_y);
+    wire       candidate_stable = prev_valid && (diff_x <= 8'd12) && (diff_y <= 8'd12);
+
     // 乒乓缓存握手核心逻辑
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -392,6 +410,10 @@ module lbp_detector_engine #(
             best_x       <= 8'd0;
             best_y       <= 8'd0;
             best_w       <= 8'd0;
+            prev_valid   <= 1'b0;
+            prev_x       <= 8'd0;
+            prev_y       <= 8'd0;
+            miss_cnt     <= 4'd0;
         end else begin
             case (state)
                 S_IDLE: begin
@@ -499,14 +521,33 @@ module lbp_detector_engine #(
                                 scale_s16 <= scale_s16 + SCALE_STEP_S16;
                                 state     <= S_INIT_WIN;
                             end else begin
-                                // [FIX-6] 全部尺度扫描完成: 输出本帧最优候选
-                                // (1 拍脉冲, 下一拍回 S_IDLE 时自动拉低)
+                                // [FIX-6][FIX-8] 全部尺度扫描完成:
+                                // 时域确认后输出本帧最优候选 (1 拍脉冲)
                                 if (best_valid) begin
-                                    O_face_valid <= 1'b1;
-                                    O_face_x     <= best_x;
-                                    O_face_y     <= best_y;
-                                    O_face_w     <= best_w;
-                                    O_face_h     <= best_w;
+                                    miss_cnt <= 4'd0;
+                                    if (candidate_stable) begin
+                                        O_face_valid <= 1'b1;
+                                        O_face_x     <= best_x;
+                                        O_face_y     <= best_y;
+                                        O_face_w     <= best_w;
+                                        O_face_h     <= best_w;
+                                        prev_x       <= best_x;
+                                        prev_y       <= best_y;
+                                        prev_valid   <= 1'b1;
+                                    end else begin
+                                        // 首帧或位置跳变: 静默锁存, 不出框
+                                        // (下一帧位置邻近时才开始连续出框)
+                                        prev_x     <= best_x;
+                                        prev_y     <= best_y;
+                                        prev_valid <= 1'b1;
+                                    end
+                                end else begin
+                                    // 连续 15 帧无候选才撤销确认位置 (与 OSD 保持帧数一致)
+                                    if (miss_cnt == 4'd15) begin
+                                        prev_valid <= 1'b0;
+                                    end else begin
+                                        miss_cnt <= miss_cnt + 1'b1;
+                                    end
                                 end
                                 state <= S_IDLE;
                             end

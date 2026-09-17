@@ -89,8 +89,9 @@ module osd_box_drawer #(
                 box_y2     <= (scaled_y + scaled_h >= IN_HEIGHT) ? (IN_HEIGHT - 1) : (scaled_y + scaled_h);
                 hold_cnt   <= HOLD_FRAMES;
                 box_enable <= 1'b1;
-            end else if (I_tuser) begin
-                // 每过一帧，保持倒计时减 1
+            end else if (I_tvalid && I_tuser) begin
+                // 每过一帧，保持倒计时减 1。门控 I_tvalid，避免 tuser
+                // 在流水线空泡中滞留时被提前倒计时。
                 if (hold_cnt > 0) begin
                     hold_cnt <= hold_cnt - 1'b1;
                 end else begin

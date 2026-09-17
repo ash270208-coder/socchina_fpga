@@ -154,6 +154,19 @@ module design_top_wrapper (
     // VPP 输出信号
     wire [23:0] S_vpp_out_data;
     wire        S_vpp_out_de;
+    wire        S_vpp_out_last;
+    wire        S_vpp_out_user;
+    wire [2:0]  S_vpp_display_mode;
+
+    // 集成 OSD 链: VPP -> Logo/模式 OSD -> 延迟 OSD -> HDMI
+    wire [23:0] S_osd_overlay_data;
+    wire        S_osd_overlay_de;
+    wire        S_osd_overlay_last;
+    wire        S_osd_overlay_user;
+    wire [23:0] S_delay_osd_data;
+    wire        S_delay_osd_de;
+    wire        S_delay_osd_last;
+    wire        S_delay_osd_user;
 
     wire[23:0]  S_video_rd_data;
     reg         S_dbg_raw_seen;
@@ -794,16 +807,17 @@ isp_top u_isp_top (
     end
 
     // -------------------------------------------------------------------------
-    // vs 延迟 17 拍: vpp 流水线给 de/data 增加 17 拍 (16 拍算法 + 1 拍 OSD),
+    // vs 延迟 21 拍: vpp 流水线给 de/data 增加 21 拍
+    // (16 拍算法 + 1 拍画框 OSD + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
-    // 将 vs 同步延迟 17 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    // 将 vs 同步延迟 21 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
     // -------------------------------------------------------------------------
-    reg [16:0] S_vsync_dly;
+    reg [20:0] S_vsync_dly;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n)
-            S_vsync_dly <= 17'd0;
+            S_vsync_dly <= 21'd0;
         else
-            S_vsync_dly <= {S_vsync_dly[15:0], S_hdmi_out_vsync};
+            S_vsync_dly <= {S_vsync_dly[19:0], S_hdmi_out_vsync};
     end
 
     // =========================================================================
@@ -826,14 +840,60 @@ isp_top u_isp_top (
         .I_tready        ( 1'b1             ),
 
         .O_tdata         ( S_vpp_out_data   ),
-        .O_tlast         (                  ),
-        .O_tuser         (                  ),
+        .O_tlast         ( S_vpp_out_last   ),
+        .O_tuser         ( S_vpp_out_user   ),
         .O_tvalid        ( S_vpp_out_de     ),
         .O_tready        (                  ),
+        .O_display_mode  ( S_vpp_display_mode ),
 
         .O_face_x        (                  ),
         .O_face_y        (                  ),
         .O_face_valid    (                  )
+    );
+
+    osd_overlay #(
+        .IMG_WIDTH      ( 1280 ),
+        .IMG_HEIGHT     ( 720  ),
+        .LOGO_X         ( 8    ),
+        .LOGO_Y         ( 8    ),
+        .LOGO_W         ( 160  ),
+        .LOGO_H         ( 160  ),
+        .TXT_X          ( 16   ),
+        .TXT_Y          ( 682  ),
+        .CN_X           ( 64   ),
+        .CN_Y           ( 172  )
+    ) u_osd_overlay (
+        .I_clk          ( S_hdmi_pixel_clk ),
+        .I_rst_n        ( S_hdmi_rst_n     ),
+        .I_mode         ( S_vpp_display_mode ),
+        .I_tuser        ( S_vpp_out_user   ),
+        .I_tlast        ( S_vpp_out_last   ),
+        .I_tvalid       ( S_vpp_out_de     ),
+        .I_tdata        ( S_vpp_out_data   ),
+        .O_tuser        ( S_osd_overlay_user ),
+        .O_tlast        ( S_osd_overlay_last ),
+        .O_tvalid       ( S_osd_overlay_de   ),
+        .O_tdata        ( S_osd_overlay_data )
+    );
+
+    delay_osd #(
+        .IMG_WIDTH        ( 1280 ),
+        .IMG_HEIGHT       ( 720  ),
+        .CLK_FREQ_HZ      ( 75000000 )
+    ) u_delay_osd (
+        .I_clk             ( S_hdmi_pixel_clk ),
+        .I_rst_n           ( S_hdmi_rst_n     ),
+        .I_cap_clk         ( S_csi_rx_clk     ),
+        .I_cap_rst_n       ( S_rst_n          ),
+        .I_cap_frame_start ( S_csi_frame_start ),
+        .I_tuser           ( S_osd_overlay_user ),
+        .I_tlast           ( S_osd_overlay_last ),
+        .I_tvalid          ( S_osd_overlay_de   ),
+        .I_tdata           ( S_osd_overlay_data ),
+        .O_tuser           ( S_delay_osd_user ),
+        .O_tlast           ( S_delay_osd_last ),
+        .O_tvalid          ( S_delay_osd_de   ),
+        .O_tdata           ( S_delay_osd_data )
     );
 
     hdmi_tx u_hdmi_tx(
@@ -845,13 +905,13 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync_dly[16]   ), // 与 VPP 输出 de 同相位 (延迟 17 拍)
-        .I_video_in_de      ( S_vpp_out_de      ), // VPP 处理后的数据有效使能
+        .I_video_in_vs      ( S_vsync_dly[20]   ), // 与 OSD 输出 de 同相位 (延迟 21 拍)
+        .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),
         .I_video_in_last    ( 1'b0              ),
         .O_video_in_ready   (                   ),
-        .I_video_in_data    ( S_vpp_out_data    ), // VPP 处理/叠加后的 24 位像素
+        .I_video_in_data    ( S_delay_osd_data  ), // VPP/OSD 处理后的 24 位像素
         .I_audio_valid      ( 1'b0              ),
         .I_audio_left_data  ( 24'd0             ),
         .I_audio_right_data ( 24'd0             ),

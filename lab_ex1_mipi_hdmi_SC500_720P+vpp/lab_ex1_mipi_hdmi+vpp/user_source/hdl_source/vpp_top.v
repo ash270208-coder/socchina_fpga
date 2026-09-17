@@ -25,7 +25,10 @@ module vpp_top #(
     //输出给云台控制模块的信号
     output [11:0]  O_face_x        ,
     output [11:0]  O_face_y        ,
-    output         O_face_valid     
+    output         O_face_valid    ,
+    // 当前已消抖显示模式 (0=RGB 1=GRAY 2=HIST 3=SOBEL 4=CART),
+    // 供下游 OSD 文字层锁定视频 MUX 同步显示
+    output [2:0]   O_display_mode  
 );
 
     // =========================================================================
@@ -451,5 +454,6 @@ module vpp_top #(
     );
 
     assign O_tready = 1'b1;
+    assign O_display_mode = display_mode;
 
 endmodule

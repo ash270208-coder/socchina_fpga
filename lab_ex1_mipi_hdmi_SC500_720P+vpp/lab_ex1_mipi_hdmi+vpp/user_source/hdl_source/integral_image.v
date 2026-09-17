@@ -27,8 +27,13 @@ module integral_image #(
     reg  [23:0] prev_row_integral [0:IMG_WIDTH-1];
     integer k;
 
+    // 输入右移 1 位 (7bit 有效灰度):
+    // 大检测窗 (s16 达 76, 窗 114) 下特征块和 = (8*76/16)^2 * 127 ≈ 18.3 万,
+    // 仍在 18-bit 积分 RAM 的 2^18 上限内; 均匀减半不改变 LBP 块和比较结果。
+    wire [7:0] grey_half = I_grey_tdata[7:1];
+
     // 水平方向累加 (每行起始 x=0 时直接取当前像素，否则累加)
-    wire [15:0] current_row_sum = (I_x == 8'd0) ? {8'd0, I_grey_tdata} : (row_sum + I_grey_tdata);
+    wire [15:0] current_row_sum = (I_x == 8'd0) ? {8'd0, grey_half} : (row_sum + grey_half);
 
     // 二维积分核心公式: II(x,y) = II(x, y-1) + sum(I(0..x, y))
     // 第一行 (y=0) 时上一行积分为 0，直接等于当前行累加和

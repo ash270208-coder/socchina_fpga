@@ -152,11 +152,11 @@ module Bit_Dilation_Detector#(
             
             tvalid_shift <= {tvalid_shift[2:0], I_tvalid};
 
-            
-            if (I_tvalid) begin
-                tlast_shift <= {tlast_shift[2:0], I_tlast};
-                tuser_shift <= {tuser_shift[2:0], I_tuser};
-            end
+            // tlast/tuser 与 tvalid 一样按时钟移位，必须保留行间空泡。
+            // 只在 I_tvalid 时移位会把行尾标志滞留到下一行，导致后级
+            // 坐标计数和 OSD 在不同模式下漂移。
+            tlast_shift <= {tlast_shift[2:0], I_tlast};
+            tuser_shift <= {tuser_shift[2:0], I_tuser};
         end
     end
 
