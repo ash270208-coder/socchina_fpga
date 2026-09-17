@@ -440,7 +440,7 @@
                     <Attr Name="CompileOrder" Val="75"/>
                 </FileInfo>
             </File>
-            <File Path="../../../../../src/ae_auto.v">
+            <File Path="../../../../../src/automatic/brightness_stats.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
@@ -448,7 +448,7 @@
                     <Attr Name="CompileOrder" Val="76"/>
                 </FileInfo>
             </File>
-            <File Path="../../../../../src/automatic/brightness_stats.v">
+            <File Path="../../../../../src/ae_auto.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>

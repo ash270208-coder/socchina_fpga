@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Project Version="3" Minor="2" RunTime="2026-09-16T22:34:42">
+<Project Version="3" Minor="2" RunTime="2026-09-17T19:32:06">
     <Project_Created_Time></Project_Created_Time>
     <TD_Encoding>UTF-8</TD_Encoding>
     <TD_Version>6.2.168116</TD_Version>
@@ -437,7 +437,7 @@
                     <Attr Name="CompileOrder" Val="75"/>
                 </FileInfo>
             </File>
-            <File Path="../../../../../../../src/ae_auto.v">
+            <File Path="../../../../../../../src/automatic/brightness_stats.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
@@ -445,7 +445,7 @@
                     <Attr Name="CompileOrder" Val="76"/>
                 </FileInfo>
             </File>
-            <File Path="../../../../../../../src/automatic/brightness_stats.v">
+            <File Path="../../../../../../../src/ae_auto.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
