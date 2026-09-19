@@ -8,3 +8,14 @@
 
    Run on =     LAPTOP-B8H3OB4U
 ============================================================
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-8007 ERROR: cannot find port 'O_display_mode' on this module in ../user_source/hdl_source/design_top_wrapper.v(847)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
+HDL-5007 WARNING: /* is inside a comment in ../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)

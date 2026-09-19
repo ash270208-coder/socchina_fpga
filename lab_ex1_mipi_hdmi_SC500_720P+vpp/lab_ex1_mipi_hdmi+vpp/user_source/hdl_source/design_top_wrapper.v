@@ -52,6 +52,19 @@ module design_top_wrapper (
     wire 			S_cam_cfg_done;
     wire 			S_ae_cfg_done;
     wire 			S_ae_req; 
+
+    // ---- 自动曝光 (fang 分支合并): 手动/自动 双路 + MUX ----
+    reg          S_ae_manual_mode;    // 0=自动(默认) 1=手动, 按键4 切换
+    wire [15:0]  S_ae_manual;
+    wire [15:0]  S_ag_manual;
+    wire         S_ae_req_manual;
+    wire [15:0]  S_ae_auto;
+    wire [15:0]  S_ag_auto;
+    wire         S_ae_req_auto;
+    wire [7:0]   S_avg_y_pix;         // 帧平均亮度 (HDMI 域统计)
+    wire         S_frame_done_pix;    // 帧统计完成脉冲 (HDMI 域)
+    wire [7:0]   S_avg_y_s2;          // avg_y 两级同步到 24M 域
+    wire         S_frame_done_24m;    // frame_done 展宽同步边沿还原 (24M 域)
 	
 	wire        	S_csi_rx_clk;  
     wire        	S_hs_rx_valid;  
@@ -448,16 +461,146 @@ module design_top_wrapper (
 	
 
   
+    // =========================================================================
+    // AE 手动/自动 模式切换按键 (I_button[3], 物理按键4)
+    //   20ms 去抖 + 下降沿翻转 S_ae_manual_mode
+    //   0 = 自动 (上电默认), 1 = 手动
+    // =========================================================================
+    localparam [19:0] BTN_DEB_MAX = 20'd479_999;   // 20ms @ 24MHz
+
+    reg  [19:0] btn_deb_cnt;
+    reg         btn_deb_state;
+    reg         btn_deb_prev;
+
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            btn_deb_cnt      <= 20'd0;
+            btn_deb_state    <= 1'b1;      // 按键低有效, 空闲为高
+            btn_deb_prev     <= 1'b1;
+            S_ae_manual_mode <= 1'b0;      // 上电默认自动
+        end else begin
+            // ---- 去抖 ----
+            if (I_button[3] == btn_deb_state) begin
+                btn_deb_cnt <= 20'd0;
+            end else if (btn_deb_cnt == BTN_DEB_MAX) begin
+                btn_deb_cnt   <= 20'd0;
+                btn_deb_state <= I_button[3];
+            end else begin
+                btn_deb_cnt <= btn_deb_cnt + 1'b1;
+            end
+
+            // ---- 下降沿 (= 按下) 翻转模式 ----
+            btn_deb_prev <= btn_deb_state;
+            if (btn_deb_prev && !btn_deb_state)
+                S_ae_manual_mode <= ~S_ae_manual_mode;
+        end
+    end
+
   ae_set u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
       .I_btn({2'b11, I_button[1], I_button[0]}),
       .I_cam_cfg_done(S_cam_cfg_done),
       .I_ae_cfg_done(S_ae_cfg_done),
-      .O_ae_req(S_ae_req),
-      .O_ae(S_ae),
-      .O_ag(S_ag)
+      .O_ae_req( S_ae_req_manual),
+      .O_ae( S_ae_manual),
+      .O_ag( S_ag_manual)
   );
+
+    assign S_ae     = S_ae_manual_mode ? S_ae_manual     : S_ae_auto;
+    assign S_ag     = S_ae_manual_mode ? S_ag_manual     : S_ag_auto;
+    assign S_ae_req = S_ae_manual_mode ? S_ae_req_manual : S_ae_req_auto;
+
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // user/last 延迟链寄存器 (声明提前, 供亮度统计与 VPP 共用;
+    // 原声明位置在本模块靠后处, 移到这里避免先使用后声明的隐式网冲突)
+    reg S_vpp_user_d1, S_vpp_user_d2, S_vpp_user_d3;
+    reg S_vpp_last_d1, S_vpp_last_d2, S_vpp_last_d3;
+
+    wire [17:0] S_y_sum = S_hdmi_out_data[23:16] * 8'd54
+                        + S_hdmi_out_data[15:8]  * 8'd183
+                        + S_hdmi_out_data[7:0]   * 8'd18;
+    wire [7:0]  S_y_pix = S_y_sum[15:8];
+
+    brightness_stats #(
+        .IMG_WIDTH  (1280),
+        .IMG_HEIGHT (720)
+    ) u_brightness_stats (
+        .I_clk         (S_hdmi_pixel_clk),
+        .I_rst_n       (S_hdmi_rst_n),
+        .I_tlast       (S_vpp_last_d3),
+        .I_tuser       (S_vpp_user_d3),
+        .I_y_tdata     (S_y_pix),
+        .I_tvalid      (S_hdmi_out_de),
+        .I_tready      (1'b1),
+        .O_avg_y       (S_avg_y_pix),
+        .O_frame_done  (S_frame_done_pix)
+    );
+
+    // ---- avg_y 两级同步到 24M 域 ----
+    reg [7:0] S_avg_y_s1, S_avg_y_s2_r;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_avg_y_s1  <= 8'd0;
+            S_avg_y_s2_r<= 8'd0;
+        end else begin
+            S_avg_y_s1  <= S_avg_y_pix;
+            S_avg_y_s2_r<= S_avg_y_s1;
+        end
+    end
+    assign S_avg_y_s2 = S_avg_y_s2_r;
+
+    // ---- frame_done 展宽 + 同步 + 边沿还原 ----
+    reg [7:0] S_fd_ext;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)         S_fd_ext <= 8'd0;
+        else if (S_frame_done_pix) S_fd_ext <= 8'hFF;
+        else if (S_fd_ext != 8'd0) S_fd_ext <= S_fd_ext - 1'b1;
+    end
+    wire S_fd_wide = |S_fd_ext;
+
+    reg S_fd_s1, S_fd_s2, S_fd_s3;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_fd_s1 <= 1'b0;
+            S_fd_s2 <= 1'b0;
+            S_fd_s3 <= 1'b0;
+        end else begin
+            S_fd_s1 <= S_fd_wide;
+            S_fd_s2 <= S_fd_s1;
+            S_fd_s3 <= S_fd_s2;
+        end
+    end
+    assign S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
+
+    // =========================================================================
+    // 自动曝光: 传感器曝光时间闭环控制 (24M 域, 迟滞+限速防闪烁)
+    // =========================================================================
+    ae_auto #(
+        .TARGET_Y (70),
+        .AE_MAX   (1990),
+        .AE_MIN   (4),
+        .AE_INIT  (500),
+        .HYST     (20),
+        .KP       (1),
+        .STEP_MAX (30),       // 限速 ±30 行/次 (抗极限环)
+        .AG_VALUE (80),
+        .UPDATE_HOLD (3)      // 每 4 帧最多变更一次, 等待传感器环回延迟
+    ) u_ae_auto (
+        .I_clk        ( S_24m_clk           ),
+        .I_rst_n      ( S_rst_n             ),
+        .I_enable     ( ~S_ae_manual_mode   ),   // 手动模式时禁用
+        .I_avg_y      ( S_avg_y_s2          ),
+        .I_frame_done ( S_frame_done_24m    ),
+        .I_cfg_done   ( S_cam_cfg_done & S_ae_cfg_done ),
+        .O_ae         ( S_ae_auto           ),
+        .O_ag         ( S_ag_auto           ),
+        .O_ae_req     ( S_ae_req_auto       )
+    );
   
     // SC500CS factory HD mode: 1280x720@60, RAW10, 2-Lane, 480 Mbps/Lane.
     uicfgcs500_720p #(
@@ -785,9 +928,8 @@ isp_top u_isp_top (
     // user/last 延迟 3 拍: hdmi_mixer 输出 de/data 是 VTC 的 +3 拍
     // (S_video_de_1d -> S_video_de_2d -> O_hdmi_de 三级寄存), 而 VTC 的
     // user/last 与 VTC de_valid(+2拍) 对齐, 因此需延迟 3 拍与 mixer 输出对齐。
+    // (寄存器声明已提前到自动曝光亮度统计块之前)
     // -------------------------------------------------------------------------
-    reg S_vpp_user_d1, S_vpp_user_d2, S_vpp_user_d3;
-    reg S_vpp_last_d1, S_vpp_last_d2, S_vpp_last_d3;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_vpp_user_d1 <= 1'b0;
