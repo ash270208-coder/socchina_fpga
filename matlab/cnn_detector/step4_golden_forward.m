@@ -48,7 +48,7 @@ dumpDir = fullfile(root, 'out', 'golden');
 if dumpGolden && ~exist(dumpDir, 'dir'), mkdir(dumpDir); end
 
 x = double(imgSmall);                          % 0..255，sIn = 1
-if dumpGolden, dumpMat(fullfile(dumpDir, 'x0_input.txt'), x); end
+if dumpGolden, dumpBoth(dumpDir, 'x0_input', x); end
 for k = 1:numel(P.params)
     p = P.params(k);
     fprintf('[定点] 层 %d %s: X=%s, W=%s, bInt=%s\n', k, p.name, ...
@@ -58,17 +58,17 @@ for k = 1:numel(P.params)
     if k < numel(P.params)
         x = min(max(round(realV), 0), 255);    % ReLU + 8-bit 无符号量化
         if dumpGolden
-            dumpMat(fullfile(dumpDir, sprintf('x%d_%s.txt', k, p.name)), x);
+            dumpBoth(dumpDir, sprintf('x%d_%s', k, p.name), x);
         end
     else
         head = realV;                          % 检测头保持实域，送 LUT 解码
         if dumpGolden
-            dumpMat(fullfile(dumpDir, 'head_real.txt'), int32(round(head * 4096)));  % Q12
+            dumpBoth(dumpDir, 'head_real', int32(round(head * 4096)));  % Q12
         end
     end
 end
 if dumpGolden
-    fprintf('金标准已导出到 %s（ModelSim 逐层对照用，head 为 Q12 定点）\n', dumpDir);
+    fprintf('金标准已导出到 %s（.txt 带尺寸表头供人看；.hex 无表头，供 Verilog $readmemh）\n', dumpDir);
 end
 [boxes, scores] = decode_boxes(head, P.anchors, S.inputH, S.inputW, false, P.lut_exp);
 if isempty(boxes)
@@ -115,9 +115,26 @@ if dumpGolden
 end
 
 %% ---- 导出辅助 ----
+function dumpBoth(d, name, X)
+% 同时导出两种格式：.txt 带尺寸表头（人看）；.hex 无表头（Verilog $readmemh 直接读）
+    dumpMat(fullfile(d, [name '.txt']), X);
+    dumpHex(fullfile(d, [name '.hex']), X);
+end
+
 function dumpMat(f, X)
     fid = fopen(f, 'w');
     fprintf(fid, '%s\n', mat2str(size(X)));      % 第 1 行：尺寸
     fprintf(fid, '%d\n', int32(X(:)));           % 之后每行一个值（列主序）
+    fclose(fid);
+end
+
+function dumpHex(f, X)
+    v = int32(X(:));
+    fid = fopen(f, 'w');
+    if all(v(:) >= 0 & v(:) <= 255)
+        fprintf(fid, '%02X\n', uint8(v));        % 激活值：2 位十六进制
+    else
+        fprintf(fid, '%08X\n', typecast(v, 'uint32'));   % 实数域(head)：8 位补码
+    end
     fclose(fid);
 end

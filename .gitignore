@@ -15,7 +15,7 @@
 *.vstf
 transcript
 vsim.wlf
-work/
+work*/
 *.wlf
 
 # ---- MATLAB 自动保存 ----
