@@ -36,6 +36,7 @@ module conv1_pixel_tb;
 
     reg [7:0] img  [0:IMG_N-1];
     reg [7:0] gold [0:X1_N-1];
+    reg [31:0] bmem [0:7];                             // 偏置 .mem（做零输入自检用）
 
     // ---- DUT ----
     conv1_pixel #(
@@ -57,6 +58,7 @@ module conv1_pixel_tb;
     initial begin
         $readmemh("sim/cnn_data/x0_input.hex", img);
         $readmemh("sim/cnn_data/x1_conv1.hex", gold);
+        $readmemh("sim/cnn_data/b_conv1.mem", bmem);
     end
 
     //-------------------------------------------------------------------------
@@ -110,6 +112,8 @@ module conv1_pixel_tb;
     //-------------------------------------------------------------------------
     // 主流程
     //-------------------------------------------------------------------------
+    integer k;
+    reg signed [63:0] exp0;
     initial begin
         rst_n = 1'b0;
         start = 1'b0;
@@ -120,9 +124,24 @@ module conv1_pixel_tb;
         $display("=========================================================");
         $display(" conv1 single-pixel check   (golden: out/golden/x1_conv1.txt)");
         $display("---------------------------------------------------------");
-        $display(" weight ROM self-test (first 4 entries of w_conv1.mem):");
-        $display("   w[0..3] = %0d %0d %0d %0d", dut.w_rom[0], dut.w_rom[1], dut.w_rom[2], dut.w_rom[3]);
-        $display("   b[0..3] = %0d %0d %0d %0d", dut.b_rom[0], dut.b_rom[1], dut.b_rom[2], dut.b_rom[3]);
+
+        // 零输入自检：patch 全 0 时，channel 0 输出应 = clamp(b[0] x MOUT_Q16 >> 16)
+        for (k = 0; k < TAPS; k = k + 1) patch[k] = 9'd0;
+        for (k = 0; k < TAPS; k = k + 1) patch_flat[k*9 +: 9] = patch[k];
+        cout_idx = 4'd0;
+        @(posedge clk); start = 1'b1; @(posedge clk); start = 1'b0;
+        while (done !== 1'b1) @(posedge clk);
+        @(posedge clk);
+        exp0 = (($signed(bmem[0]) * 64'sd238) + 64'sd32768) >>> 16;
+        if (exp0 < 0) exp0 = 0;
+        else if (exp0 > 255) exp0 = 255;
+        checks = checks + 1;
+        $display(" bias ROM self-test: b[0] = %0d -> y = %0d (expect %0d)",
+                 $signed(bmem[0]), y_out, exp0);
+        if (y_out !== exp0[8:0]) begin
+            errs = errs + 1;
+            $display("   FAIL (bias/scale path)");
+        end
         $display("---------------------------------------------------------");
 
         check_pixel(0, 0);        // 左上角（含 padding）
