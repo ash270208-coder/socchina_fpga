@@ -4,7 +4,7 @@
    Executable = E:/Anlogic/TD_6.2.1_Engineer_6.2.168.116/bin/run.exe
    Built at =   16:32:07 Jun 12 2025
    Run by =     jingzifu
-   Run Date =   Sat Sep 19 20:28:42 2026
+   Run Date =   Mon Sep 21 23:22:02 2026
 
    Run on =     LAPTOP-B8H3OB4U
 ============================================================
@@ -24,6 +24,9 @@ HDL-5373 WARNING: identifier 'target_b' is used before its declaration in ../../
 HDL-5373 WARNING: identifier 'target_b' is used before its declaration in ../../../user_source/hdl_source/awb.v(165)
 HDL-5007 WARNING: /* is inside a comment in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(89)
 HDL-5007 WARNING: /* is inside a comment in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/demosaic.v(100)
+HDL-5007 WARNING: literal value 'd4096 truncated to fit in 12 bits in ../../../user_source/hdl_source/cnn/cnn_head_dec.v(63)
+HDL-5007 WARNING: literal value 'd4096 truncated to fit in 12 bits in ../../../user_source/hdl_source/cnn/cnn_head_dec.v(64)
+HDL-5007 WARNING: literal value 'd4096 truncated to fit in 12 bits in ../../../user_source/hdl_source/cnn/cnn_head_dec.v(65)
 HDL-5007 WARNING: actual bit length 24 differs from formal bit length 32 for port 'REG_DATA' in ../../../user_source/hdl_source/uics500_cfg/uicfgcs500_720p.v(122)
 HDL-5007 WARNING: actual bit length 32 differs from formal bit length 7 for port 'I' in ../../../user_source/hdl_source/uics500_cfg/uicfgcs500_720p.v(130)
 HDL-5007 WARNING: actual bit length 24 differs from formal bit length 32 for port 'REG_DATA' in ../../../user_source/hdl_source/uics500_cfg/uicfgcs500_720p.v(136)
@@ -168,10 +171,72 @@ HDL-5007 WARNING: actual bit length ** differs from formal bit length *** for po
 HDL-5369 WARNING: latch inferred for net '**' in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/mc/alc_mc_top_all.enc.sv(2464)
 HDL-5323 WARNING: input port 'apb_psel' remains unconnected for this instance in ../../../user_source/hdl_source/ph1p35_ddr/ph1p35_324_ddr_wrapper.v(78)
 HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47)
-HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47)
+HDL-5105 CRITICAL-WARNING: "sim/cnn_data/b_conv1_packed.mem" used in readmemh/b statement is not found in ../../../user_source/hdl_source/cnn/conv1_frame.v(13). This file is expected to be used like this:
+    1. Use absolute path. For example, /work/src/<file name>
+    2. Use relative path. For example, ../<file name>. When using relative path, the tool defines the current directory in the following order:
+    i. The directory of the source file which is calling the readmemh/b statement.
+    ii. The directory of the .al file (project mode run)
+    iii. If it is a non-project mode run, which means there is no .al file, the current directory is the one where you launch TD. Below are some examples.
+    Windows:
+    C:\work\testcase\al_run> <TD installation directory>\bin\td_command_prompt.exe run.tcl
+    In this example, the current directory is "C:\work\testcase\al_run".
+    Linux:
+    /work/testcase/al_run > <TD installation directory>/bin/td.sh run.tcl
+    In this example, the current directory is "/work/testcase/al_run".
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_w1/RTL/rom_27f1d317274d.v(47)
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47)
+HDL-5105 CRITICAL-WARNING: "sim/cnn_data/b_conv2.mem" used in readmemh/b statement is not found in ../../../user_source/hdl_source/cnn/conv_frame.v(27). This file is expected to be used like this:
+    1. Use absolute path. For example, /work/src/<file name>
+    2. Use relative path. For example, ../<file name>. When using relative path, the tool defines the current directory in the following order:
+    i. The directory of the source file which is calling the readmemh/b statement.
+    ii. The directory of the .al file (project mode run)
+    iii. If it is a non-project mode run, which means there is no .al file, the current directory is the one where you launch TD. Below are some examples.
+    Windows:
+    C:\work\testcase\al_run> <TD installation directory>\bin\td_command_prompt.exe run.tcl
+    In this example, the current directory is "C:\work\testcase\al_run".
+    Linux:
+    /work/testcase/al_run > <TD installation directory>/bin/td.sh run.tcl
+    In this example, the current directory is "/work/testcase/al_run".
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47)
+HDL-5105 CRITICAL-WARNING: "sim/cnn_data/b_conv3.mem" used in readmemh/b statement is not found in ../../../user_source/hdl_source/cnn/conv_frame.v(27). This file is expected to be used like this:
+    1. Use absolute path. For example, /work/src/<file name>
+    2. Use relative path. For example, ../<file name>. When using relative path, the tool defines the current directory in the following order:
+    i. The directory of the source file which is calling the readmemh/b statement.
+    ii. The directory of the .al file (project mode run)
+    iii. If it is a non-project mode run, which means there is no .al file, the current directory is the one where you launch TD. Below are some examples.
+    Windows:
+    C:\work\testcase\al_run> <TD installation directory>\bin\td_command_prompt.exe run.tcl
+    In this example, the current directory is "C:\work\testcase\al_run".
+    Linux:
+    /work/testcase/al_run > <TD installation directory>/bin/td.sh run.tcl
+    In this example, the current directory is "/work/testcase/al_run".
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47)
+HDL-5105 CRITICAL-WARNING: "sim/cnn_data/b_conv4.mem" used in readmemh/b statement is not found in ../../../user_source/hdl_source/cnn/conv_frame.v(27). This file is expected to be used like this:
+    1. Use absolute path. For example, /work/src/<file name>
+    2. Use relative path. For example, ../<file name>. When using relative path, the tool defines the current directory in the following order:
+    i. The directory of the source file which is calling the readmemh/b statement.
+    ii. The directory of the .al file (project mode run)
+    iii. If it is a non-project mode run, which means there is no .al file, the current directory is the one where you launch TD. Below are some examples.
+    Windows:
+    C:\work\testcase\al_run> <TD installation directory>\bin\td_command_prompt.exe run.tcl
+    In this example, the current directory is "C:\work\testcase\al_run".
+    Linux:
+    /work/testcase/al_run > <TD installation directory>/bin/td.sh run.tcl
+    In this example, the current directory is "/work/testcase/al_run".
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_wh/RTL/rom_3e141b8a518d.v(47)
+HDL-5105 CRITICAL-WARNING: "sim/cnn_data/b_head.mem" used in readmemh/b statement is not found in ../../../user_source/hdl_source/cnn/head_frame.v(14). This file is expected to be used like this:
+    1. Use absolute path. For example, /work/src/<file name>
+    2. Use relative path. For example, ../<file name>. When using relative path, the tool defines the current directory in the following order:
+    i. The directory of the source file which is calling the readmemh/b statement.
+    ii. The directory of the .al file (project mode run)
+    iii. If it is a non-project mode run, which means there is no .al file, the current directory is the one where you launch TD. Below are some examples.
+    Windows:
+    C:\work\testcase\al_run> <TD installation directory>\bin\td_command_prompt.exe run.tcl
+    In this example, the current directory is "C:\work\testcase\al_run".
+    Linux:
+    /work/testcase/al_run > <TD installation directory>/bin/td.sh run.tcl
+    In this example, the current directory is "/work/testcase/al_run".
+HDL-5317 WARNING: input port 'ecc_sbiterrinj' is not connected on this instance in ../../al_ip/cnn_rom_exp/RTL/rom_3f699db8ffa6.v(47)
 HDL-5007 WARNING: actual bit length ** differs from formal bit length *** for port '**' in ../../../user_source/hdl_source/hdmi_1_4b_transmitter_core_wrapper.enc.v(3307)
 HDL-5317 WARNING: input port 'I_camera_black_level[9]' is not connected on this instance in ../../../user_source/hdl_source/design_top_wrapper.v(682)
 HDL-5323 WARNING: input port 'I_tdest[9]' remains unconnected for this instance in ../../../user_source/hdl_source/design_top_wrapper.v(746)
@@ -179,19 +244,32 @@ HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been re
 HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
 HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
 HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
+HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
+HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
+HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
+HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
+HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed
 HDL-5106 WARNING: Initial value omitted on non-DFF net "scl_r" in ../../../user_source/hdl_source/uics500_cfg/uii2c.v(127) 
 HDL-5106 WARNING: Initial value omitted on non-DFF net "sda_o" in ../../../user_source/hdl_source/uics500_cfg/uii2c.v(135) 
 SYN-5065 WARNING: Register "genCA$op" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/mc/alc_mc_top_all.enc.sv(0) is described with both an asynchronous reset and an asynchronous set. It may have an uncertainty of the timing. Please conside rewriting code.
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_0/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_0/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_1/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_integral_bram_1/ram_5e6f4a9feab8_Inst/username_inst" in ../../al_ip/frame_integral_bram/RTL/ram_5e6f4a9feab8.v(88) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_lut/rom_7b7c1dc52abc_Inst/username_inst" in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_lut/rom_7b7c1dc52abc_Inst/username_inst" in ../../al_ip/rom_weak_lut/RTL/rom_7b7c1dc52abc.v(47) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "ecc_sbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_thresh/rom_02e417c010d2_Inst/username_inst" in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47) / pin "ecc_dbiterrinj"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_thresh/rom_02e417c010d2_Inst/username_inst" in ../../al_ip/rom_stage_thresh/RTL/rom_02e417c010d2.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_conv1/u_rom/rom_27f1d317274d_Inst/username_inst" in ../../al_ip/cnn_rom_w1/RTL/rom_27f1d317274d.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_conv1/u_rom/rom_27f1d317274d_Inst/username_inst" in ../../al_ip/cnn_rom_w1/RTL/rom_27f1d317274d.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_dec/u_lut/rom_3f699db8ffa6_Inst/username_inst" in ../../al_ip/cnn_rom_exp/RTL/rom_3f699db8ffa6.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_dec/u_lut/rom_3f699db8ffa6_Inst/username_inst" in ../../al_ip/cnn_rom_exp/RTL/rom_3f699db8ffa6.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2e/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2e/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2o/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2o/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3e/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3e/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3o/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3o/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4e/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4e/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4o/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4o/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "ecc_sbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_wh/rom_3e141b8a518d_Inst/username_inst" in ../../al_ip/cnn_rom_wh/RTL/rom_3e141b8a518d.v(47) / pin "ecc_dbiterrinj"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_wh/rom_3e141b8a518d_Inst/username_inst" in ../../al_ip/cnn_rom_wh/RTL/rom_3e141b8a518d.v(47) / pin "ecc_sbiterrinj"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_histogram_equ/u_ram_accumulate/ram_5b7716d404a0_Inst/username_inst" in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92) / pin "ecc_dbiterrinj"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_histogram_equ/u_ram_accumulate/ram_5b7716d404a0_Inst/username_inst" in ../../al_ip/ram_accumulate/RTL/ram_5b7716d404a0.v(92) / pin "ecc_sbiterrinj"
 SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_hdmi_tx/u_key_remove_shakes/I_rst_n" in ../../../user_source/hdl_source/key_remove_shakes.v(14)
@@ -1827,8 +1905,18 @@ SYN-5013 WARNING: Undriven net: model "design_top_wrapper" / net "u_raw10_unpack
 SYN-5025 WARNING: Using 0 for all undriven pins and nets
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_isp_top/u_demosaic/raw_matrix_3x3_buffer_d/two_line_buffer[2]$line_buffer_demosaic_r1/blk_mem_gen_demosaic_r0/ram_c36c2ca3b3a7_Inst/username_inst" in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/RTL/ram_c36c2ca3b3a7.v(91) / pin "bea[0]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_isp_top/u_demosaic/raw_matrix_3x3_buffer_d/two_line_buffer[2]$line_buffer_demosaic_r1/blk_mem_gen_demosaic_r0/ram_c36c2ca3b3a7_Inst/username_inst" in ../../../user_source/hdl_source/isp/demosaic_4x_2_0/blk_mem_gen_demosaic/RTL/ram_c36c2ca3b3a7.v(91) / pin "beb[0]"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "bea[0]"
-SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_lbp_engine/u_rom_rect/rom_0f833efb5013_Inst/username_inst" in ../../al_ip/rom_feature_rects/RTL/rom_0f833efb5013.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2e/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2e/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2o/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w2o/rom_6e782a15cc7e_Inst/username_inst" in ../../al_ip/cnn_rom_w2/RTL/rom_6e782a15cc7e.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3e/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3e/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3o/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w3o/rom_0a2b16d92680_Inst/username_inst" in ../../al_ip/cnn_rom_w3/RTL/rom_0a2b16d92680.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4e/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4e/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "beb[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4o/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "bea[0]"
+SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_vpp_top/u_face_track_top/u_cnn_top/u_w4o/rom_91c42686cce7_Inst/username_inst" in ../../al_ip/cnn_rom_w4/RTL/rom_91c42686cce7.v(47) / pin "beb[0]"
 SYN-5025 WARNING: Using 0 for all undriven pins and nets
 SYN-5041 WARNING: Ram Inst: u_mc_to_user_interface/U_w155_d512_fifo/soft_fifo_al_f58e8b3e1f3d_Inst/ram_inst/ramread0_syn_22 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_video_in/U_w128_d512_fifo/soft_fifo_al_4057d6b76aa6_Inst/ram_inst/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
