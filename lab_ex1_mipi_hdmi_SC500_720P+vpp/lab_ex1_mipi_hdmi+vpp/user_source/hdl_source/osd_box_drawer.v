@@ -65,12 +65,12 @@ module osd_box_drawer #(
     reg [5:0]  hold_cnt;
     reg        box_enable;
 
-    // 移位相加实现乘以 6: (val << 2) + (val << 1)
-    wire [10:0] scaled_x = {3'b000, I_face_x, 2'b00} + {4'b0000, I_face_x, 1'b0};
-    wire [9:0]  scaled_y = {2'b00,  I_face_y, 2'b00} + {3'b000,  I_face_y, 1'b0};
-    // 框尺寸跟随检测窗宽 (引擎输出整窗矩形, 54/69 低分像素 ×6 = 324/414)
-    wire [10:0] scaled_w = {3'b000, I_face_w, 2'b00} + {4'b0000, I_face_w, 1'b0};
-    wire [9:0]  scaled_h = {2'b00,  I_face_h, 2'b00} + {3'b000,  I_face_h, 1'b0};
+    // 移位相加实现缩放: 原硬编码 ×6（LBP 时代 ÷6 遗留），改为参数化
+    // SCALE_FACTOR=6 → 213x120 空间（LBP）；SCALE_FACTOR=10 → 128x72 空间（CNN）
+    wire [10:0] scaled_x = I_face_x * SCALE_FACTOR;
+    wire [9:0]  scaled_y = I_face_y * SCALE_FACTOR;
+    wire [10:0] scaled_w = I_face_w * SCALE_FACTOR;
+    wire [9:0]  scaled_h = I_face_h * SCALE_FACTOR;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin

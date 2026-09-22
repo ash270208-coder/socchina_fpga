@@ -135,6 +135,61 @@ write_u16(fullfile(outDir, 'lut_exp.mem'),    lut_exp);
 save(fullfile(outDir, 'net_params.mat'), 'params', 'anchors', 'lut_sig', 'lut_exp', 'maxAbsHead');
 fprintf('已导出权重/偏置/LUT 到 %s\n', outDir);
 
+%% 6b) FPGA 专用导出：高精度定点常数 + 打包权重（方案 A：综合用官方 ROM IP）
+% 每层 mOut 的 Q32 常数（硬件公式 real = (acc*Q32 + 2^31) >>> 32）
+vhFile = fullfile(outDir, 'cnn_params.vh');
+fid = fopen(vhFile, 'w');
+fprintf(fid, '// 由 step3_quantize_export.m 自动生成 —— Verilog 定点常数，勿手改\n');
+fprintf(fid, '// 用法：real = (acc * `MOUT_Q32_xxx + 32''sd2147483648) >>> 32\n');
+fprintf(fid, '`ifndef CNN_PARAMS_VH\n`define CNN_PARAMS_VH\n\n');
+for k = 1:nLayer
+    q32 = round(params(k).mOut * 2^32);
+    params(k).mOutQ32 = q32;
+    fprintf(fid, '`define MOUT_Q32_%s 32''d%d\n', upper(params(k).name), q32);
+end
+fprintf(fid, '\n// 锚框（Q4 定点：值 = 原始值 × 16）\n');
+for a = 1:size(anchors, 1)
+    fprintf(fid, '`define ANCHOR%d_W_Q4 16''d%d\n', a, round(anchors(a,1)*16));
+    fprintf(fid, '`define ANCHOR%d_H_Q4 16''d%d\n', a, round(anchors(a,2)*16));
+end
+fprintf(fid, '\n`endif\n');
+fclose(fid);
+fprintf('定点常数已写入 %s\n', vhFile);
+
+% 打包权重 ROM：每个字 64 位 = 8 个输出通道的 int8
+%   字地址 = tap*numGrp + grp；字内 LSB = 该组第 0 个通道
+for k = 1:nLayer
+    p  = params(k);
+    Wq = p.Wq;
+    Kk = size(Wq,1);  Ci = size(Wq,3);  Co = size(Wq,4);
+    TAPS  = Kk*Kk*Ci;
+    Wt    = reshape(double(Wq), TAPS, Co);          % [tap, 输出通道]
+    numGrp = ceil(Co/8);
+    words  = zeros(TAPS*numGrp, 1, 'uint64');
+    for t = 0:TAPS-1
+        for g = 0:numGrp-1
+            v = uint64(0);
+            for c = 0:7
+                ci = g*8 + c;
+                if ci < Co
+                    b8 = typecast(int8(Wt(t+1, ci+1)), 'uint8');
+                    v  = bitor(v, bitshift(uint64(b8), 8*c));
+                end
+            end
+            words(t*numGrp + g + 1) = v;
+        end
+    end
+    tag = lower(p.name);
+    if strcmp(tag, 'head_conv'), tag = 'head'; end
+    fid = fopen(fullfile(outDir, sprintf('w_%s_packed.mem', tag)), 'w');
+    for i2 = 1:numel(words)
+        fprintf(fid, '%s\n', dec2hex(words(i2), 16));
+    end
+    fclose(fid);
+    fprintf('打包权重 %-22s %4d 字 × 64bit（%d tap × %d 组）\n', ...
+        sprintf('w_%s_packed.mem', tag), numel(words), TAPS, numGrp);
+end
+
 %% 7) 参数摘要（人读版接口契约）
 fid = fopen(fullfile(outDir, 'params_summary.txt'), 'w');
 fprintf(fid, '输入: %d x %d x 3 (uint8 RGB 0..255, scale=1)\n', S.inputW, S.inputH);
