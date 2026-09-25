@@ -1,7 +1,7 @@
 # FPGA_CNN实现方案（PH1P35MDG324 · 方案 A int8 检测器）
 
 > 本文是 Verilog 施工总图：**现状盘点 → 契约速查 → 架构 → 官方 IP 清单 → 资源账 → 施工顺序 → 待确认事项**。
-> 权威数字出处：`matlab/cnn_detector/FPGA部署契约.md`、`out/params_summary.txt`、`step3/step4` 脚本（以脚本为准，个别与旧契约文档冲突处以本文"§3 定点细节修正"为准）。
+> 权威数字出处：`FPGA部署契约.md`、`out/params_summary.txt`、`step3/step4` 脚本（以脚本为准，个别与旧契约文档冲突处以本文"§3 定点细节修正"为准）。
 > 本文只覆盖 FPGA 端；训练/量化已完工（v1_80ep，浮点↔定点 IoU 0.971）。
 
 ---

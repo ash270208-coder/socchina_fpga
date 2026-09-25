@@ -89,7 +89,9 @@ SC500(MIPI) -> MIPI DPHY RX -> CSI/RAW10 解包 -> ISP(demosaic + AWB)
 | `ip/` | `td_project/al_ip/` | `cnn_rom_w1..w4`、`cnn_rom_wh`、`cnn_rom_exp`、`cnn_buf_a/b/in`、`ram_2port`、`ram_accumulate` |
 | `mem/` | `td_project/*.mem` | `w_conv1..4.mem`、`b_conv1..4.mem`、`w_head.mem`、`b_head.mem`、`lut_exp.mem`、`lut_sigmoid.mem` |
 | `matlab/cnn_detector/` | `matlab/cnn_detector/` | 训练脚本 `step0..step5*.m`、`detector_net.mat`、`training_data.mat`、`snapshots/v1_80ep/`、`out/golden/`、`export_fpga_consts.m`、`out/cnn_params.vh` |
-| `docs/` | 工程根目录 | CNN 训练/实现方案文档 |
+
+> **文档不再重复打包**：CNN 方案 / 可行性 / 部署契约 / 训练记录等文档统一放在仓库根目录 [`docs/`](../docs/)，
+> 本包内不再复制一份，避免同一份文档在多处并存。
 
 网络规模（方案 A）：输入 128×72×3 RGB → conv1 3→8 s1 → conv2 8→16 s2 → conv3 16→32 s2 → conv4 32→32 s1 → head 1×1 32→15 → decode，约 12.9 M MAC/帧，15.5K 参数。
 

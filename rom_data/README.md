@@ -105,7 +105,7 @@
 |---|---|---|---|
 | `gamma_lut.v` | 显示 gamma=2.2 曲线 + 固定黑电平 | 256 项 | 板 A 图像处理链 |
 | `osd_char_lib.v` | 8×8 字库放大到 32×40 窗口 | 16 个字模 | 板 A 文字 OSD |
-| `anlogic_logo_rom.v` | 安路 logo 点阵，**6 387 条组合 `case` 条目**（298 KB 源码） | 160×160，25 bit/像素 | 板 A OSD —— **当前时序瓶颈的元凶**，见 `BOARD_SPLIT.md` 与时序分析记录 |
+| `anlogic_logo_rom.v` | 安路 logo 点阵，**6 387 条组合 `case` 条目**（298 KB 源码） | 160×160，25 bit/像素 | 板 A OSD —— **当前时序瓶颈的元凶**，见 `../docs/BOARD_SPLIT.md` 与 `../docs/TIMING_OSD_ANALYSIS.md` |
 | `osd_overlay.v` 内 `F_cn16_row` | "安路" 16×16 汉字点阵 | 2 字 × 16 行 | 板 A OSD |
 
 ## 7. 重新生成方法

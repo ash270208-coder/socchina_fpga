@@ -1,6 +1,6 @@
 # matlab/cnn_detector —— 方案 A（int8 小检测器）PC 端脚本骨架
 
-这是 `CNN可行性评估.md` 方案 A 的 MATLAB 训练/量化/金标准脚本链：**全程 MATLAB，不依赖 Python**。
+这是 `../../docs/CNN可行性评估.md` 方案 A 的 MATLAB 训练/量化/金标准脚本链：**全程 MATLAB，不依赖 Python**。
 
 > ⚠️ 本骨架由 AI 编写、在你机器上逐步调试过（环境自检、数据解析、训练启动均已通过）。
 > 按顺序逐脚本运行（step0→step1→step2→step3→step4）。
