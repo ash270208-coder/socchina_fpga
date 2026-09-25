@@ -53,18 +53,18 @@ module design_top_wrapper (
     wire 			S_ae_cfg_done;
     wire 			S_ae_req; 
 
-        // ---- 手动 AE 输出 ----
-    wire [15:0] S_ae_manual;
-    wire [15:0] S_ag_manual;
-    wire        S_ae_req_manual;
-
-    // ---- 自动 AE 输出 ----
-    wire [15:0] S_ae_auto;
-    wire [15:0] S_ag_auto;
-    wire        S_ae_req_auto;
-
-    // ---- 模式: 0=自动(默认), 1=手动 ----
-    reg         S_ae_manual_mode;
+    // ---- 自动曝光 (fang 分支合并): 手动/自动 双路 + MUX ----
+    reg          S_ae_manual_mode;    // 0=自动(默认) 1=手动, 按键4 切换
+    wire [15:0]  S_ae_manual;
+    wire [15:0]  S_ag_manual;
+    wire         S_ae_req_manual;
+    wire [15:0]  S_ae_auto;
+    wire [15:0]  S_ag_auto;
+    wire         S_ae_req_auto;
+    wire [7:0]   S_avg_y_pix;         // 帧平均亮度 (HDMI 域统计)
+    wire         S_frame_done_pix;    // 帧统计完成脉冲 (HDMI 域)
+    wire [7:0]   S_avg_y_s2;          // avg_y 两级同步到 24M 域
+    wire         S_frame_done_24m;    // frame_done 展宽同步边沿还原 (24M 域)
 	
 	wire        	S_csi_rx_clk;  
     wire        	S_hs_rx_valid;  
@@ -167,6 +167,19 @@ module design_top_wrapper (
     // VPP 输出信号
     wire [23:0] S_vpp_out_data;
     wire        S_vpp_out_de;
+    wire        S_vpp_out_last;
+    wire        S_vpp_out_user;
+    wire [2:0]  S_vpp_display_mode;
+
+    // 集成 OSD 链: VPP -> Logo/模式 OSD -> 延迟 OSD -> HDMI
+    wire [23:0] S_osd_overlay_data;
+    wire        S_osd_overlay_de;
+    wire        S_osd_overlay_last;
+    wire        S_osd_overlay_user;
+    wire [23:0] S_delay_osd_data;
+    wire        S_delay_osd_de;
+    wire        S_delay_osd_last;
+    wire        S_delay_osd_user;
 
     wire[23:0]  S_video_rd_data;
     reg         S_dbg_raw_seen;
@@ -445,10 +458,13 @@ module design_top_wrapper (
     );
 
 
-	    // =========================================================================
-    // AE 手动/自动 模式切换按键 (I_button[3])
+	
+
+  
+    // =========================================================================
+    // AE 手动/自动 模式切换按键 (I_button[3], 物理按键4)
     //   20ms 去抖 + 下降沿翻转 S_ae_manual_mode
-    //   0 = 自动 (默认), 1 = 手动
+    //   0 = 自动 (上电默认), 1 = 手动
     // =========================================================================
     localparam [19:0] BTN_DEB_MAX = 20'd479_999;   // 20ms @ 24MHz
 
@@ -480,7 +496,6 @@ module design_top_wrapper (
         end
     end
 
-  
   ae_set u_ae_set (
       .I_clk(S_24m_clk),
       .I_rst(~S_rst_n),
@@ -491,11 +506,102 @@ module design_top_wrapper (
       .O_ae( S_ae_manual),
       .O_ag( S_ag_manual)
   );
-  
+
     assign S_ae     = S_ae_manual_mode ? S_ae_manual     : S_ae_auto;
     assign S_ag     = S_ae_manual_mode ? S_ag_manual     : S_ag_auto;
     assign S_ae_req = S_ae_manual_mode ? S_ae_req_manual : S_ae_req_auto;
 
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // user/last 延迟链寄存器 (声明提前, 供亮度统计与 VPP 共用;
+    // 原声明位置在本模块靠后处, 移到这里避免先使用后声明的隐式网冲突)
+    reg S_vpp_user_d1, S_vpp_user_d2, S_vpp_user_d3;
+    reg S_vpp_last_d1, S_vpp_last_d2, S_vpp_last_d3;
+
+    wire [17:0] S_y_sum = S_hdmi_out_data[23:16] * 8'd54
+                        + S_hdmi_out_data[15:8]  * 8'd183
+                        + S_hdmi_out_data[7:0]   * 8'd18;
+    wire [7:0]  S_y_pix = S_y_sum[15:8];
+
+    brightness_stats #(
+        .IMG_WIDTH  (1280),
+        .IMG_HEIGHT (720)
+    ) u_brightness_stats (
+        .I_clk         (S_hdmi_pixel_clk),
+        .I_rst_n       (S_hdmi_rst_n),
+        .I_tlast       (S_vpp_last_d3),
+        .I_tuser       (S_vpp_user_d3),
+        .I_y_tdata     (S_y_pix),
+        .I_tvalid      (S_hdmi_out_de),
+        .I_tready      (1'b1),
+        .O_avg_y       (S_avg_y_pix),
+        .O_frame_done  (S_frame_done_pix)
+    );
+
+    // ---- avg_y 两级同步到 24M 域 ----
+    reg [7:0] S_avg_y_s1, S_avg_y_s2_r;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_avg_y_s1  <= 8'd0;
+            S_avg_y_s2_r<= 8'd0;
+        end else begin
+            S_avg_y_s1  <= S_avg_y_pix;
+            S_avg_y_s2_r<= S_avg_y_s1;
+        end
+    end
+    assign S_avg_y_s2 = S_avg_y_s2_r;
+
+    // ---- frame_done 展宽 + 同步 + 边沿还原 ----
+    reg [7:0] S_fd_ext;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)         S_fd_ext <= 8'd0;
+        else if (S_frame_done_pix) S_fd_ext <= 8'hFF;
+        else if (S_fd_ext != 8'd0) S_fd_ext <= S_fd_ext - 1'b1;
+    end
+    wire S_fd_wide = |S_fd_ext;
+
+    reg S_fd_s1, S_fd_s2, S_fd_s3;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_fd_s1 <= 1'b0;
+            S_fd_s2 <= 1'b0;
+            S_fd_s3 <= 1'b0;
+        end else begin
+            S_fd_s1 <= S_fd_wide;
+            S_fd_s2 <= S_fd_s1;
+            S_fd_s3 <= S_fd_s2;
+        end
+    end
+    assign S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
+
+    // =========================================================================
+    // 自动曝光: 传感器曝光时间闭环控制 (24M 域, 迟滞+限速防闪烁)
+    // =========================================================================
+    ae_auto #(
+        .TARGET_Y (85),
+        .AE_MAX   (1990),
+        .AE_MIN   (4),
+        .AE_INIT  (500),
+        .HYST     (20),
+        .KP       (1),
+        .STEP_MAX (30),       // 限速 ±30 行/次 (抗极限环)
+        .AG_VALUE (80),
+        .UPDATE_HOLD (3)      // 每 4 帧最多变更一次, 等待传感器环回延迟
+    ) u_ae_auto (
+        .I_clk        ( S_24m_clk           ),
+        .I_rst_n      ( S_rst_n             ),
+        .I_enable     ( ~S_ae_manual_mode   ),   // 手动模式时禁用
+        .I_avg_y      ( S_avg_y_s2          ),
+        .I_frame_done ( S_frame_done_24m    ),
+        .I_cfg_done   ( S_cam_cfg_done & S_ae_cfg_done ),
+        .O_ae         ( S_ae_auto           ),
+        .O_ag         ( S_ag_auto           ),
+        .O_ae_req     ( S_ae_req_auto       )
+    );
+  
     // SC500CS factory HD mode: 1280x720@60, RAW10, 2-Lane, 480 Mbps/Lane.
     uicfgcs500_720p #(
       .CLK_DIV(24000000 / 100000 - 1)
@@ -822,9 +928,8 @@ isp_top u_isp_top (
     // user/last 延迟 3 拍: hdmi_mixer 输出 de/data 是 VTC 的 +3 拍
     // (S_video_de_1d -> S_video_de_2d -> O_hdmi_de 三级寄存), 而 VTC 的
     // user/last 与 VTC de_valid(+2拍) 对齐, 因此需延迟 3 拍与 mixer 输出对齐。
+    // (寄存器声明已提前到自动曝光亮度统计块之前)
     // -------------------------------------------------------------------------
-    reg S_vpp_user_d1, S_vpp_user_d2, S_vpp_user_d3;
-    reg S_vpp_last_d1, S_vpp_last_d2, S_vpp_last_d3;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n) begin
             S_vpp_user_d1 <= 1'b0;
@@ -843,99 +948,18 @@ isp_top u_isp_top (
         end
     end
 
-        // ---- 从 hdmi_mixer 输出提取 Y ----
-    wire [17:0] S_y_sum = S_hdmi_out_data[23:16] * 8'd54
-                        + S_hdmi_out_data[15:8]  * 8'd183
-                        + S_hdmi_out_data[7:0]   * 8'd18;
-    wire [7:0]  S_y_pix = S_y_sum[15:8];
-
-    wire [7:0]  S_avg_y_pix;
-    wire        S_frame_done_pix;
-
-    brightness_stats #(
-        .IMG_WIDTH  (1280),
-        .IMG_HEIGHT (720)
-    ) u_brightness_stats (
-        .I_clk         (S_hdmi_pixel_clk),
-        .I_rst_n       (S_hdmi_rst_n),
-        .I_tlast       (S_vpp_last_d3),
-        .I_tuser       (S_vpp_user_d3),
-        .I_y_tdata     (S_y_pix),
-        .I_tvalid      (S_hdmi_out_de),
-        .I_tready      (1'b1),
-        .O_avg_y       (S_avg_y_pix),
-        .O_frame_done  (S_frame_done_pix)
-    );
-
-    // ---- avg_y 两级同步到 24M 域 ----
-    reg [7:0] S_avg_y_s1, S_avg_y_s2;
-    always @(posedge S_24m_clk or negedge S_rst_n) begin
-        if (!S_rst_n) begin
-            S_avg_y_s1 <= 8'd0;
-            S_avg_y_s2 <= 8'd0;
-        end else begin
-            S_avg_y_s1 <= S_avg_y_pix;
-            S_avg_y_s2 <= S_avg_y_s1;
-        end
-    end
-
-    // ---- frame_done 展宽 + 同步 + 边沿还原 ----
-    reg [7:0] S_fd_ext;
-    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
-        if (!S_hdmi_rst_n)         S_fd_ext <= 8'd0;
-        else if (S_frame_done_pix) S_fd_ext <= 8'hFF;
-        else if (S_fd_ext != 8'd0) S_fd_ext <= S_fd_ext - 1'b1;
-    end
-    wire S_fd_wide = |S_fd_ext;
-
-    reg S_fd_s1, S_fd_s2, S_fd_s3;
-    always @(posedge S_24m_clk or negedge S_rst_n) begin
-        if (!S_rst_n) begin
-            S_fd_s1 <= 1'b0;
-            S_fd_s2 <= 1'b0;
-            S_fd_s3 <= 1'b0;
-        end else begin
-            S_fd_s1 <= S_fd_wide;
-            S_fd_s2 <= S_fd_s1;
-            S_fd_s3 <= S_fd_s2;
-        end
-    end
-    wire S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
-    
-        ae_auto #(
-            .TARGET_Y (50),
-            .AE_MAX   (1990),
-            .AE_MIN   (4),
-            .AE_INIT  (500),
-            .HYST     (20),
-            .KP       (1),
-            .STEP_MAX (50),
-            .AG_VALUE (80)
-    ) u_ae_auto (
-        .I_clk        ( S_24m_clk           ),
-        .I_rst_n      ( S_rst_n             ),
-        .I_enable     ( ~S_ae_manual_mode   ),   // ← 手动模式时禁用
-        .I_avg_y      ( S_avg_y_s2          ),
-        .I_frame_done ( S_frame_done_24m    ),
-        .I_cfg_done   ( S_cam_cfg_done & S_ae_cfg_done ),
-        .O_ae         ( S_ae_auto           ),
-        .O_ag         ( S_ag_auto           ),
-        .O_ae_req     ( S_ae_req_auto       )
-    );
-
-    
-
     // -------------------------------------------------------------------------
-    // vs 延迟 17 拍: vpp 流水线给 de/data 增加 17 拍 (16 拍算法 + 1 拍 OSD),
+    // vs 延迟 21 拍: vpp 流水线给 de/data 增加 21 拍
+    // (16 拍算法 + 1 拍画框 OSD + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
-    // 将 vs 同步延迟 17 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    // 将 vs 同步延迟 21 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
     // -------------------------------------------------------------------------
-    reg [16:0] S_vsync_dly;
+    reg [20:0] S_vsync_dly;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n)
-            S_vsync_dly <= 17'd0;
+            S_vsync_dly <= 21'd0;
         else
-            S_vsync_dly <= {S_vsync_dly[15:0], S_hdmi_out_vsync};
+            S_vsync_dly <= {S_vsync_dly[19:0], S_hdmi_out_vsync};
     end
 
     // =========================================================================
@@ -947,7 +971,7 @@ isp_top u_isp_top (
         .SOBEL_THRESHOLD ( 60   ),
         .MIN_FACE_AREA   ( 2000 )
     ) u_vpp_top (
-        .I_button        ( {1'b1, I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
+        .I_button        ( {I_button[3], I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
         .I_clk           ( S_hdmi_pixel_clk ),
         .I_rst_n         ( S_hdmi_rst_n     ),
         .I_tlast         ( S_vpp_last_d3    ),
@@ -958,14 +982,60 @@ isp_top u_isp_top (
         .I_tready        ( 1'b1             ),
 
         .O_tdata         ( S_vpp_out_data   ),
-        .O_tlast         (                  ),
-        .O_tuser         (                  ),
+        .O_tlast         ( S_vpp_out_last   ),
+        .O_tuser         ( S_vpp_out_user   ),
         .O_tvalid        ( S_vpp_out_de     ),
         .O_tready        (                  ),
+        .O_display_mode  ( S_vpp_display_mode ),
 
         .O_face_x        (                  ),
         .O_face_y        (                  ),
         .O_face_valid    (                  )
+    );
+
+    osd_overlay #(
+        .IMG_WIDTH      ( 1280 ),
+        .IMG_HEIGHT     ( 720  ),
+        .LOGO_X         ( 8    ),
+        .LOGO_Y         ( 8    ),
+        .LOGO_W         ( 160  ),
+        .LOGO_H         ( 160  ),
+        .TXT_X          ( 16   ),
+        .TXT_Y          ( 682  ),
+        .CN_X           ( 64   ),
+        .CN_Y           ( 172  )
+    ) u_osd_overlay (
+        .I_clk          ( S_hdmi_pixel_clk ),
+        .I_rst_n        ( S_hdmi_rst_n     ),
+        .I_mode         ( S_vpp_display_mode ),
+        .I_tuser        ( S_vpp_out_user   ),
+        .I_tlast        ( S_vpp_out_last   ),
+        .I_tvalid       ( S_vpp_out_de     ),
+        .I_tdata        ( S_vpp_out_data   ),
+        .O_tuser        ( S_osd_overlay_user ),
+        .O_tlast        ( S_osd_overlay_last ),
+        .O_tvalid       ( S_osd_overlay_de   ),
+        .O_tdata        ( S_osd_overlay_data )
+    );
+
+    delay_osd #(
+        .IMG_WIDTH        ( 1280 ),
+        .IMG_HEIGHT       ( 720  ),
+        .CLK_FREQ_HZ      ( 75000000 )
+    ) u_delay_osd (
+        .I_clk             ( S_hdmi_pixel_clk ),
+        .I_rst_n           ( S_hdmi_rst_n     ),
+        .I_cap_clk         ( S_csi_rx_clk     ),
+        .I_cap_rst_n       ( S_rst_n          ),
+        .I_cap_frame_start ( S_csi_frame_start ),
+        .I_tuser           ( S_osd_overlay_user ),
+        .I_tlast           ( S_osd_overlay_last ),
+        .I_tvalid          ( S_osd_overlay_de   ),
+        .I_tdata           ( S_osd_overlay_data ),
+        .O_tuser           ( S_delay_osd_user ),
+        .O_tlast           ( S_delay_osd_last ),
+        .O_tvalid          ( S_delay_osd_de   ),
+        .O_tdata           ( S_delay_osd_data )
     );
 
     hdmi_tx u_hdmi_tx(
@@ -977,13 +1047,13 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync_dly[16]   ), // 与 VPP 输出 de 同相位 (延迟 17 拍)
-        .I_video_in_de      ( S_vpp_out_de      ), // VPP 处理后的数据有效使能
+        .I_video_in_vs      ( S_vsync_dly[20]   ), // 与 OSD 输出 de 同相位 (延迟 21 拍)
+        .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),
         .I_video_in_last    ( 1'b0              ),
         .O_video_in_ready   (                   ),
-        .I_video_in_data    ( S_vpp_out_data    ), // VPP 处理/叠加后的 24 位像素
+        .I_video_in_data    ( S_delay_osd_data  ), // VPP/OSD 处理后的 24 位像素
         .I_audio_valid      ( 1'b0              ),
         .I_audio_left_data  ( 24'd0             ),
         .I_audio_right_data ( 24'd0             ),
