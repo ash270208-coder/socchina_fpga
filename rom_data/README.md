@@ -91,7 +91,13 @@
 | 其他官方例程 | `lab_ex1` / `lab_ex2` / `lab_ex3` 都带这个目录，**连官方自己的 `.al` 也没收录** |
 
 结论：这是**安路官方例程模板**为"MIPI-DSI 屏"版本预留的数据文件，与本工程（HDMI 输出）无关，
-属死文件。留在仓库里不影响任何综合结果，但不应算作本工程的 ROM 数据。
+属死文件。
+
+**已处理（"哪里来的回哪里去"）**：整个 `dsi_tx_packet/` 目录已从本工程删除。
+删除前先与官方模板原件做过逐字节比对，两个文件 MD5 完全一致
+（`config_data.mif` = 33A275BC…，`config_data.mif.dat` = E95CE63B…），
+原件在 `D:\TD_project\anlogic_example\lab_ex1_mipi_hdmi\...\user_source\hdl_source\dsi_tx_packet\`
+完好无损。如需恢复：`git checkout <删除前提交> -- <工程路径>/user_source/hdl_source/dsi_tx_packet`。
 
 ## 6. RTL 内嵌的查表（不是独立文件，改内容要改 `.v`）
 
