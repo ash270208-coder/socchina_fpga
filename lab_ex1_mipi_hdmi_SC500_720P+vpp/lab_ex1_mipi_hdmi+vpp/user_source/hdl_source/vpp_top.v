@@ -194,18 +194,25 @@ module vpp_top #(
     // =========================================================================
     // 6. 直方图均衡彩色输出链路 (均衡 Y + 原色度, 恢复彩色):
     //    y_equ(6拍) 与 Cb/Cr(3拍, 补 3 拍 = 6拍) 对齐 -> YCbCr444_RGB888(3拍, =9拍)
-    //    -> RGB 再补 7 拍 = 16 拍, 与 tvalid_sobel 对齐
+    //    -> gamma(0拍) -> chroma_nr(3拍) -> 再补 4 拍 = 16 拍, 与 tvalid_sobel 对齐
+    //    (直方图内部已加对比度限制/裁剪, 见 histogram_equ.v 的 CLIP_DIV 参数)
     // =========================================================================
     wire [7:0]  he_r_tdata;
     wire [7:0]  he_g_tdata;
     wire [7:0]  he_b_tdata;
+
+    // 模式 2 专用: gamma(0 拍) + 色度降噪(3 拍)，例化见 6b 节
+    wire [7:0]  he_gamma_r, he_gamma_g, he_gamma_b;
+    wire [23:0] he_gamma_rgb = {he_gamma_r, he_gamma_g, he_gamma_b};
+    wire [23:0] he_nr_rgb;
 
     reg [7:0]   cb_d [0:2];
     reg [7:0]   cr_d [0:2];
     reg         he_tvalid_d [0:2];
     reg         he_tlast_d  [0:2];
     reg         he_tuser_d  [0:2];
-    reg [23:0]  he_rgb_d [0:6];
+    // he_rgb_d 只补 4 拍: 9(转换) + 3(chroma_nr) + 4 = 16 拍
+    reg [23:0]  he_rgb_d [0:3];
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -216,7 +223,7 @@ module vpp_top #(
                 he_tlast_d[i]  <= 1'b0;
                 he_tuser_d[i]  <= 1'b0;
             end
-            for (i = 0; i < 7; i = i + 1)
+            for (i = 0; i < 4; i = i + 1)
                 he_rgb_d[i] <= 24'd0;
         end
         else begin
@@ -234,9 +241,10 @@ module vpp_top #(
                 he_tuser_d[i+1]  <= he_tuser_d[i];
             end
 
-            // 转换后的 RGB (9 拍) 再补 7 拍, 与 Sobel 路径的 16 拍对齐
-            he_rgb_d[0] <= {he_r_tdata, he_g_tdata, he_b_tdata};
-            for (i = 0; i < 6; i = i + 1)
+            // 转换后的 RGB (9 拍) -> 模式2 专用 gamma(0 拍) -> chroma_nr(3 拍)
+            // = 12 拍, 再补 4 拍 -> 16 拍, 与 Sobel 路径对齐
+            he_rgb_d[0] <= he_nr_rgb;
+            for (i = 0; i < 3; i = i + 1)
                 he_rgb_d[i+1] <= he_rgb_d[i];
         end
     end
@@ -261,6 +269,31 @@ module vpp_top #(
         .O_blue_tdata  (he_b_tdata),
         .O_tvalid      (),
         .O_tready      ()
+    );
+
+    // =========================================================================
+    // 6b. 模式 2 的色调域统一 + 色度降噪 (A+E+G 里的 E、G)
+    //     原先模式 2 是"均衡后的 Y + 原始 Cb/Cr"直接转 RGB 输出，两个问题：
+    //       ① 别的档都过 gamma_lut（扣黑电平 + γ2.2），只有它不过 -> 色调域不一致；
+    //       ② 它的 Cb/Cr 没过色度降噪 -> 彩色噪点直接可见。
+    //     现在补上：gamma_lut 纯组合(0 拍)，chroma_nr 内部 3 拍，
+    //     所以整条链路仍然落在第 16 拍（见上面 he_rgb_d 的说明）。
+    //     (信号声明在 6 节开头)
+    // =========================================================================
+    gamma_lut u_gamma_lut_he (
+        .I_r (he_r_tdata),
+        .I_g (he_g_tdata),
+        .I_b (he_b_tdata),
+        .O_r (he_gamma_r),
+        .O_g (he_gamma_g),
+        .O_b (he_gamma_b)
+    );
+
+    chroma_nr u_chroma_nr_he (
+        .I_clk   (I_clk),
+        .I_rst_n (I_rst_n),
+        .I_rgb   (he_gamma_rgb),
+        .O_rgb   (he_nr_rgb)
     );
 
     // =========================================================================
@@ -375,8 +408,8 @@ module vpp_top #(
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
             end
-            3'b010: begin // 模式 2: 直方图均衡化 (彩色输出, 16 拍对齐)
-                mux_tdata  = he_rgb_d[6];
+            3'b010: begin // 模式 2: 直方图均衡化 (已过 gamma + 色度降噪, 16 拍对齐)
+                mux_tdata  = he_rgb_d[3];
                 mux_tlast  = tlast_sobel;
                 mux_tuser  = tuser_sobel;
                 mux_tvalid = tvalid_sobel;
