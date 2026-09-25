@@ -3,8 +3,7 @@
 module vpp_top #(
     parameter IMG_WIDTH  = 1280,
     parameter IMG_HEIGHT = 720,
-    parameter SOBEL_THRESHOLD = 60,
-    parameter MIN_FACE_AREA = 2000
+    parameter SOBEL_THRESHOLD = 60
 )( 
     input  [1:0]   I_button        ,  // 按键输入，用于切换显示模式
     
@@ -22,10 +21,6 @@ module vpp_top #(
     output         O_tvalid        ,
     output         O_tready        ,
     
-    //输出给云台控制模块的信号
-    output [11:0]  O_face_x        ,
-    output [11:0]  O_face_y        ,
-    output         O_face_valid    ,
     // 当前已消抖显示模式 (0=RGB 1=GRAY 2=HIST 3=SOBEL 4=CART),
     // 供下游 OSD 文字层锁定视频 MUX 同步显示
     output [2:0]   O_display_mode  
@@ -409,49 +404,17 @@ module vpp_top #(
 
 
 
-     face_track_top #(
-        .IMG_WIDTH      (IMG_WIDTH),
-        .IMG_HEIGHT     (IMG_HEIGHT),
-        .BOX_COLOR      (24'h00_FF_00)
-    ) u_face_track_top (
-        .I_clk          (I_clk),
-        .I_rst_n        (I_rst_n),
 
-        // =====================================================================
-        // 人脸检测输入: 线性 Y (RGB2Y 后 3 拍, 与 tvalid_ycbcr 同拍)
-        // 原因: 级联在 OpenCV 原始灰度图上训练; LBP 码对全局增益/亮度缩放
-        //       天然不变, 但对 HE 这类强非线性映射不保持 —— HE 会直接改变
-        //       LBP 码的统计分布 (且这里用的是上一帧 CDF, 逐帧漂移), 暗部
-        //       噪声被拉伸成随机纹理, 造成上板漏检 + 噪点区域误检。
-        //       降噪改在低分辨率路径用 lp_filter_3x3 均值滤波解决。
-        // 如需回退到直方图均衡输入: 把 I_ycbcr_tvalid/tlast/tuser 换回
-        // tvalid_hisequ/tlast_hisequ/tuser_hisequ, I_y_tdata 换回
-        // y_equ_tdata, I_cb_tdata/I_cr_tdata 换回 cb_d[2]/cr_d[2] 即可。
-        // =====================================================================
-        .I_ycbcr_tvalid (tvalid_ycbcr),
-        .I_ycbcr_tlast  (tlast_ycbcr),
-        .I_ycbcr_tuser  (tuser_ycbcr),
-        .I_y_tdata      (y_tdata),
-        .I_cb_tdata     (cb_tdata),     // 检测引擎未使用, 保留接线
-        .I_cr_tdata     (cr_tdata),
-
-        // 送入 MUX 选中的待显示画面
-        .I_disp_tvalid  (mux_tvalid),
-        .I_disp_tlast   (mux_tlast),
-        .I_disp_tuser   (mux_tuser),
-        .I_disp_tdata   (mux_tdata),
-
-        // 叠加准星后的最终视频流
-        .O_disp_tvalid  (O_tvalid),
-        .O_disp_tlast   (O_tlast),
-        .O_disp_tuser   (O_tuser),
-        .O_disp_tdata   (O_tdata),
-
-        // 输出形心坐标供顶层舵机云台使用
-        .O_face_x       (O_face_x),
-        .O_face_y       (O_face_y),
-        .O_face_valid   (O_face_valid)
-    );
+    // =========================================================================
+    // 人脸检测已移除（板 A 只做图像处理）：MUX 选中的显示画面直通输出
+    //   原 face_track_top（LBP 级联检测 + 画框 + 准星）已从本工程解绑，
+    //   相关源文件仍保留在磁盘上作为归档，分类见工程根目录 BOARD_SPLIT.md。
+    //   如需恢复人脸检测：git checkout b21e965 -- user_source/hdl_source/vpp_top.v
+    // =========================================================================
+    assign O_tdata  = mux_tdata;
+    assign O_tlast  = mux_tlast;
+    assign O_tuser  = mux_tuser;
+    assign O_tvalid = mux_tvalid;
 
     assign O_tready = 1'b1;
     assign O_display_mode = display_mode;
