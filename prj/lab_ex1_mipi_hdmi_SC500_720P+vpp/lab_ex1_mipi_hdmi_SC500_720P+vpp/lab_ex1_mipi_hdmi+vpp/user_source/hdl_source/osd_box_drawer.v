@@ -68,8 +68,9 @@ module osd_box_drawer #(
     // 移位相加实现乘以 6: (val << 2) + (val << 1)
     wire [10:0] scaled_x = {3'b000, I_face_x, 2'b00} + {4'b0000, I_face_x, 1'b0};
     wire [9:0]  scaled_y = {2'b00,  I_face_y, 2'b00} + {3'b000,  I_face_y, 1'b0};
-    wire [10:0] scaled_w = 11'd144; // 24 * 6 = 144
-    wire [9:0]  scaled_h = 10'd144;
+    // 框尺寸跟随检测窗宽 (引擎输出整窗矩形, 54/69 低分像素 ×6 = 324/414)
+    wire [10:0] scaled_w = {3'b000, I_face_w, 2'b00} + {4'b0000, I_face_w, 1'b0};
+    wire [9:0]  scaled_h = {2'b00,  I_face_h, 2'b00} + {3'b000,  I_face_h, 1'b0};
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -88,8 +89,9 @@ module osd_box_drawer #(
                 box_y2     <= (scaled_y + scaled_h >= IN_HEIGHT) ? (IN_HEIGHT - 1) : (scaled_y + scaled_h);
                 hold_cnt   <= HOLD_FRAMES;
                 box_enable <= 1'b1;
-            end else if (I_tuser) begin
-                // 每过一帧，保持倒计时减 1
+            end else if (I_tvalid && I_tuser) begin
+                // 每过一帧，保持倒计时减 1。门控 I_tvalid，避免 tuser
+                // 在流水线空泡中滞留时被提前倒计时。
                 if (hold_cnt > 0) begin
                     hold_cnt <= hold_cnt - 1'b1;
                 end else begin

@@ -61,6 +61,36 @@ module face_track_top #(
         .O_y            (low_y)
     );
 
+    // 1.5 3x3 均值降噪 (低分辨率路径, 固定 2 拍延迟)
+    //     抑制高增益下的传感器噪声, 稳定 LBP 编码 (替代原先在输入侧
+    //     用直方图均衡的错误做法 —— HE 的非线性映射会破坏 LBP 码分布)
+    wire        flt_valid;
+    wire        flt_user;
+    wire        flt_last;
+    wire [7:0]  flt_gray;
+    wire [7:0]  flt_x;
+    wire [7:0]  flt_y;
+
+    lp_filter_3x3 #(
+        .IMG_WIDTH  (213),
+        .IMG_HEIGHT (120)
+    ) u_lp_filter (
+        .I_clk      (I_clk),
+        .I_rst_n    (I_rst_n),
+        .I_tvalid   (low_valid),
+        .I_tuser    (low_user),
+        .I_tlast    (low_last),
+        .I_grey     (low_gray),
+        .I_x        (low_x),
+        .I_y        (low_y),
+        .O_tvalid   (flt_valid),
+        .O_tuser    (flt_user),
+        .O_tlast    (flt_last),
+        .O_grey     (flt_gray),
+        .O_x        (flt_x),
+        .O_y        (flt_y)
+    );
+
     // 2. 2D 积分图发生器
     wire        int_valid;
     wire        int_user;
@@ -76,12 +106,12 @@ module face_track_top #(
         .I_clk          (I_clk),
         .I_rst_n        (I_rst_n),
         
-        .I_tvalid       (low_valid),
-        .I_tuser        (low_user),
-        .I_tlast        (low_last),
-        .I_grey_tdata   (low_gray),
-        .I_x            (low_x),
-        .I_y            (low_y),
+        .I_tvalid       (flt_valid),
+        .I_tuser        (flt_user),
+        .I_tlast        (flt_last),
+        .I_grey_tdata   (flt_gray),
+        .I_x            (flt_x),
+        .I_y            (flt_y),
         
         .O_tvalid       (int_valid),
         .O_tuser        (int_user),
@@ -120,8 +150,12 @@ module face_track_top #(
     );
 
     // 4. 坐标映射放大回原图尺寸 (中心坐标)
-    wire [11:0] center_x = {1'b0, det_face_x, 2'b00} + {2'b00, det_face_x, 1'b0} + 12'd72;
-    wire [11:0] center_y = {2'b00, det_face_y, 2'b00} + {3'b000, det_face_y, 1'b0} + 12'd72;
+    //    引擎输出整窗矩形 (左上角 + win_w), 中心 = 左上角 + 窗宽/2:
+    //    center = x*6 + w*3  (用移位加法: 6x = 4x+2x, 3w = 2w+w)
+    wire [11:0] center_x = {1'b0, det_face_x, 2'b00} + {2'b00, det_face_x, 1'b0}
+                         + {2'b00, det_face_w, 1'b0} + {4'b0000, det_face_w};
+    wire [11:0] center_y = {2'b00, det_face_y, 2'b00} + {3'b000, det_face_y, 1'b0}
+                         + {2'b00, det_face_h, 1'b0} + {4'b0000, det_face_h};
 
     assign O_face_valid = det_face_valid;
     assign O_face_x     = (center_x >= IMG_WIDTH)  ? (IMG_WIDTH - 1)  : center_x;

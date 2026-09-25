@@ -8,25 +8,25 @@ IO Statistics
   #inout                   37
 
 Gate Statistics
-#Basic gates            29527
-  #and                   1572
+#Basic gates            63466
+  #and                  22425
   #nand                     0
-  #or                    1210
+  #or                     813
   #nor                      0
-  #xor                     96
+  #xor                     97
   #xnor                     0
   #buf                      0
-  #not                    921
+  #not                  18178
   #bufif1                   1
-  #MX21                  3924
+  #MX21                  4407
   #FADD                     0
-  #DFF                  21803
+  #DFF                  17545
   #LATCH                    0
-#MACRO_ADD                653
-#MACRO_EQ                 338
-#MACRO_MULT                33
-#MACRO_MUX               6881
-#MACRO_OTHERS              23
+#MACRO_ADD                634
+#MACRO_EQ                 311
+#MACRO_MULT                27
+#MACRO_MUX               8784
+#MACRO_OTHERS              18
 
 LUT Statistics
 #Total_luts              2265
@@ -40,17 +40,19 @@ Report Hierarchy Area:
 +-----------------------------------------------------------------------------------------------------------------------------------------+
 |Instance                                                         |Module                                         |gates  |seq    |macros |
 +-----------------------------------------------------------------------------------------------------------------------------------------+
-|top                                                              |design_top_wrapper                             |7724   |21803  |1047   |
+|top                                                              |design_top_wrapper                             |45921  |17545  |990    |
 |  u_PLL                                                          |PLL                                            |0      |0      |1      |
 |    ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst                       |ph1p_phy_pll_wrapper_25a56e5ce2f9              |0      |0      |0      |
-|  u_ae_auto                                                      |ae_auto                                        |12     |75     |17     |
+|  u_ae_auto                                                      |ae_auto                                        |16     |47     |17     |
 |  u_ae_set                                                       |ae_set                                         |10     |44     |10     |
 |  u_brightness_stats                                             |brightness_stats                               |16     |198    |9      |
 |  u_csi_unpacket                                                 |csi_unpacket_2lane                             |10     |88     |6      |
+|  u_delay_osd                                                    |delay_osd                                      |470    |136    |50     |
+|    u_osd_char_lib16                                             |osd_char_lib16                                 |59     |0      |2      |
 |  u_hdmi_mixer                                                   |hdmi_mixer                                     |0      |78     |0      |
-|  u_hdmi_tx                                                      |hdmi_tx                                        |389    |1291   |151    |
-|    u_hdmi2phy_wrapper                                           |hdmi_phy_wrapper                               |2      |54     |4      |
-|      u0_lane_lvds_8_1                                           |lane_lvds_10_1                                 |2      |18     |1      |
+|  u_hdmi_tx                                                      |hdmi_tx                                        |388    |1290   |151    |
+|    u_hdmi2phy_wrapper                                           |hdmi_phy_wrapper                               |1      |53     |4      |
+|      u0_lane_lvds_8_1                                           |lane_lvds_10_1                                 |1      |17     |1      |
 |      u1_lane_lvds_8_1                                           |lane_lvds_10_1                                 |0      |12     |1      |
 |      u2_lane_lvds_8_1                                           |lane_lvds_10_1                                 |0      |12     |1      |
 |      u3_lane_lvds_8_1                                           |lane_lvds_10_1                                 |0      |12     |1      |
@@ -102,11 +104,14 @@ Report Hierarchy Area:
 |      ALIGNER_CHANNEL_GEN[1]$u_channel_aligner                   |channel_aligner                                |7      |40     |0      |
 |    u_ph1p_mipiio_rx_wrapper                                     |ph1p_mipiio_rx_wrapper                         |8      |147    |15     |
 |      u_lane0_hs_detect                                          |hs_detect                                      |4      |12     |3      |
-|  u_ph1p35_324_ddr_wrapper                                       |ph1p35_324_ddr_wrapper                         |4572   |3636   |333    |
-|    u_ddr2                                                       |ddr2                                           |4572   |3636   |333    |
-|      ph1p_ddrmc_wrapper                                         |ph1p_ddrmc_wrapper_63f4ac254419                |4572   |3636   |333    |
-|        ph1p_ddrmc_top                                           |ph1p_ddrmc_top                                 |4572   |3636   |333    |
-|          u_alc_mc_top                                           |alc_mc_top                                     |1185   |2211   |213    |
+|  u_osd_overlay                                                  |osd_overlay                                    |38864  |103    |44     |
+|    u_anlogic_logo_rom                                           |anlogic_logo_rom                               |38607  |0      |0      |
+|    u_osd_char_lib                                               |osd_char_lib                                   |53     |0      |3      |
+|  u_ph1p35_324_ddr_wrapper                                       |ph1p35_324_ddr_wrapper                         |4573   |3636   |327    |
+|    u_ddr2                                                       |ddr2                                           |4573   |3636   |327    |
+|      ph1p_ddrmc_wrapper                                         |ph1p_ddrmc_wrapper_63f4ac254419                |4573   |3636   |327    |
+|        ph1p_ddrmc_top                                           |ph1p_ddrmc_top                                 |4573   |3636   |327    |
+|          u_alc_mc_top                                           |alc_mc_top                                     |1186   |2211   |207    |
 |            page_ctrl[0]$u_page_ctrl                             |alc_page_ctrl                                  |173    |376    |30     |
 |            page_ctrl[1]$u_page_ctrl                             |alc_page_ctrl                                  |161    |320    |30     |
 |            page_ctrl[2]$u_page_ctrl                             |alc_page_ctrl                                  |160    |320    |30     |
@@ -126,14 +131,14 @@ Report Hierarchy Area:
 |            u_cmd_scheduler                                      |alc_cmd_scheduler                              |34     |0      |5      |
 |            u_periodic_rd                                        |alc_periodic_rd                                |1      |3      |1      |
 |            u_rbuf_addr_fifo                                     |ph1p_ddr_fifo_dram_sync                        |8      |18     |6      |
-|            u_rd_data                                            |alc_rd_data                                    |43     |156    |20     |
+|            u_rd_data                                            |alc_rd_data                                    |44     |156    |18     |
 |              rd_buffer[0]$u_rd_data_buf                         |alc_mc_spram                                   |0      |0      |0      |
 |              rd_buffer[1]$u_rd_data_buf                         |alc_mc_spram                                   |0      |0      |0      |
 |              u_status_ram0                                      |alc_mc_spram                                   |0      |0      |0      |
 |              u_status_ram1                                      |alc_mc_spram                                   |0      |0      |0      |
 |            u_ref_ctrl                                           |alc_ref_ctrl                                   |50     |31     |8      |
 |            u_wbuf_addr_fifo                                     |ph1p_ddr_fifo_dram_sync                        |8      |12     |6      |
-|            u_wr_data                                            |alc_wr_data                                    |46     |168    |10     |
+|            u_wr_data                                            |alc_wr_data                                    |46     |168    |6      |
 |              u_ptr_ram0                                         |alc_mc_spram                                   |0      |0      |0      |
 |              u_ptr_ram1                                         |alc_mc_spram                                   |0      |0      |0      |
 |              wr_buffer[0]$u_wdata_ram                           |alc_mc_spram                                   |0      |0      |0      |
@@ -192,34 +197,19 @@ Report Hierarchy Area:
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
 |        rd_to_wr_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
 |        wr_to_rd_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
-|  u_vpp_top                                                      |vpp_top                                        |1372   |6320   |273    |
+|  u_vpp_top                                                      |vpp_top                                        |152    |1848   |128    |
 |    u_RGB888_YCbCr444                                            |RGB888_YCbCr444                                |5      |173    |13     |
-|    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |79     |349    |26     |
-|      u_Dilation                                                 |Bit_Dilation_Detector                          |27     |40     |2      |
-|      u_Erosion                                                  |Bit_Erosion_Detector                           |27     |40     |2      |
-|      u_Sobel_edge                                               |Sobel_edge                                     |25     |269    |22     |
+|    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |80     |337    |26     |
+|      u_Dilation                                                 |Bit_Dilation_Detector                          |27     |36     |2      |
+|      u_Erosion                                                  |Bit_Erosion_Detector                           |28     |40     |2      |
+|      u_Sobel_edge                                               |Sobel_edge                                     |25     |261    |22     |
 |    u_YCbCr444_RGB888                                            |YCbCr444_RGB888                                |0      |125    |14     |
-|    u_cartoon_top                                                |cartoon_top                                    |26     |443    |27     |
+|    u_cartoon_top                                                |cartoon_top                                    |25     |425    |27     |
 |      u_Cartoon_Blend                                            |Cartoon_Blend                                  |0      |0      |0      |
-|      u_RGB888_YCbCr444                                          |RGB888_YCbCr444                                |0      |65     |5      |
-|      u_Sobel_edge                                               |Sobel_edge                                     |26     |268    |22     |
+|      u_RGB888_YCbCr444                                          |RGB888_YCbCr444                                |0      |59     |5      |
+|      u_Sobel_edge                                               |Sobel_edge                                     |25     |258    |22     |
 |      u_Color_Quantize                                           |Color_Quantize                                 |0      |24     |0      |
 |    u_chroma_nr                                                  |chroma_nr                                      |3      |24     |22     |
-|    u_face_track_top                                             |face_track_top                                 |1219   |4442   |145    |
-|      u_downscaler                                               |downscaler                                     |36     |46     |12     |
-|      u_integral_image                                           |integral_image                                 |1      |3874   |5      |
-|      u_lbp_engine                                               |lbp_detector_engine                            |1119   |431    |104    |
-|        u_integral_bram_0                                        |frame_integral_bram                            |0      |0      |1      |
-|          ram_5e6f4a9feab8_Inst                                  |ram_5e6f4a9feab8                               |0      |0      |1      |
-|        u_integral_bram_1                                        |frame_integral_bram                            |0      |0      |1      |
-|          ram_5e6f4a9feab8_Inst                                  |ram_5e6f4a9feab8                               |0      |0      |1      |
-|        u_rom_lut                                                |rom_weak_lut                                   |0      |0      |1      |
-|          rom_7b7c1dc52abc_Inst                                  |rom_7b7c1dc52abc                               |0      |0      |1      |
-|        u_rom_rect                                               |rom_feature_rects                              |0      |0      |1      |
-|          rom_0f833efb5013_Inst                                  |rom_0f833efb5013                               |0      |0      |1      |
-|        u_rom_thresh                                             |rom_stage_thresh                               |0      |0      |1      |
-|          rom_02e417c010d2_Inst                                  |rom_02e417c010d2                               |0      |0      |1      |
-|      u_osd_box_drawer                                           |osd_box_drawer                                 |63     |91     |24     |
 |    u_gamma_lut                                                  |gamma_lut                                      |0      |0      |6      |
 |    u_histogram_equ                                              |histogram_equ                                  |21     |127    |13     |
 |      u_ram_accumulate                                           |ram_accumulate                                 |0      |0      |1      |

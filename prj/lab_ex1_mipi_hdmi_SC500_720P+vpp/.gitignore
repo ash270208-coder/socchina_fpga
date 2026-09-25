@@ -1,0 +1,36 @@
+# ============================================================
+# 忽略规则（2026 嵌赛 FPGA 赛道）
+# 原则：只忽略"体积大且可重新生成"的构建产物，不忽略任何源码/权重/文档
+# ============================================================
+
+# ---- 安路 TD 布局布线产物（可重新综合生成）----
+**/*_Runs/**
+*.bit
+*.bid
+*.db
+*.qor
+*.logw
+
+# ---- ModelSim / 仿真临时产物 ----
+*.vstf
+transcript
+vsim.wlf
+work*/
+*.wlf
+
+# ---- MATLAB 自动保存 ----
+*.asv
+*.autosave
+slprj/
+
+# ---- 训练中间 checkpoint（可选保留；如需归档请手动 git add -f）----
+matlab/cnn_detector/checkpoints/
+
+# ---- 本地数据大文件（自采照片、WIDER 数据集）----
+# 注意：需要共享自采彩绘脸样本时，用 git add -f 强制加入
+matlab/cnn_detector/data/images/*.jpg
+matlab/cnn_detector/data/images/*.jpeg
+matlab/cnn_detector/data/images/*.png
+matlab/cnn_detector/data/test/*.jpg
+matlab/cnn_detector/data/test/*.jpeg
+matlab/cnn_detector/data/test/*.png

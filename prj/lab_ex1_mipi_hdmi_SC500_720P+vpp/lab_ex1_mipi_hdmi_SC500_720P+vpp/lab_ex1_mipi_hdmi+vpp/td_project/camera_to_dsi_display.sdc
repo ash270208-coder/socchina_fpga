@@ -15,3 +15,8 @@ set_clock_groups -asynchronous \
     -group [get_clocks {mipi_rx_ck_pad MIPI_RX_BYTE_CLK}] \
     -group [get_clocks {sys_clk_50m pll_clk_100m pll_clk_24m HDMI_PIXEL_CLK HDMI_SERIAL_CLK}] \
     -group [get_clocks {u_ph1p35_324_ddr_wrapper/u_ddr2/ddr_clk u_ph1p35_324_ddr_wrapper/u_ddr2/usr_clk}]
+
+# 自动曝光 CDC 同步链: 亮度统计在 HDMI 域, 闭环控制在 24M 域,
+# avg_y (8bit) 与 frame_done (展宽) 均经 2~3 级触发器同步后使用,
+# 按异步路径处理, 不参与同步时序检查 (否则两时钟近对齐时预算不足产生违例)。
+set_false_path -from [get_clocks {HDMI_PIXEL_CLK}] -to [get_clocks {pll_clk_24m}]

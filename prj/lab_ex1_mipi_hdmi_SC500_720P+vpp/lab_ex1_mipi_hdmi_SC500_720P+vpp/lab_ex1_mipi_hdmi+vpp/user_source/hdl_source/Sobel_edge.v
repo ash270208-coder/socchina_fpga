@@ -190,11 +190,11 @@ module Sobel_edge #(
             // 1. tvalid 必须无条件每拍移位，准确传递有效/气泡状态
             tvalid_shift <= {tvalid_shift[3:0], I_tvalid};
 
-            // 2. tlast 和 tuser 仅在像素有效时移位，防止气泡导致控制信号抢跑
-            if (I_tvalid) begin
-                tlast_shift <= {tlast_shift[3:0], I_tlast};
-                tuser_shift <= {tuser_shift[3:0], I_tuser};
-            end
+            // tlast/tuser 与 tvalid 一样按时钟移位，必须保留行间空泡。
+            // 只在 I_tvalid 时移位会把行尾标志滞留到下一行，导致后级
+            // 坐标计数和 OSD 在不同模式下漂移。
+            tlast_shift <= {tlast_shift[3:0], I_tlast};
+            tuser_shift <= {tuser_shift[3:0], I_tuser};
         end
     end
 

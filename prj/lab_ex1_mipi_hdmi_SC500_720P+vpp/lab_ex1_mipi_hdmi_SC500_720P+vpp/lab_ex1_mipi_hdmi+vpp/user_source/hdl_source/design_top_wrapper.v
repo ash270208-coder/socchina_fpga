@@ -963,13 +963,12 @@ isp_top u_isp_top (
     end
 
     // =========================================================================
-    // VPP 图像算法处理: 按键切换 原图/灰度/直方图均衡/Sobel 边缘 + 人脸检测画框
+    // VPP 图像算法处理: 按键切换 原图/灰度/直方图均衡/Sobel 边缘
     // =========================================================================
     vpp_top #(
         .IMG_WIDTH       ( 1280 ),
         .IMG_HEIGHT      ( 720  ),
-        .SOBEL_THRESHOLD ( 60   ),
-        .MIN_FACE_AREA   ( 2000 )
+        .SOBEL_THRESHOLD ( 60   )
     ) u_vpp_top (
         .I_button        ( {I_button[3], I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
         .I_clk           ( S_hdmi_pixel_clk ),
@@ -986,11 +985,8 @@ isp_top u_isp_top (
         .O_tuser         ( S_vpp_out_user   ),
         .O_tvalid        ( S_vpp_out_de     ),
         .O_tready        (                  ),
-        .O_display_mode  ( S_vpp_display_mode ),
+        .O_display_mode  ( S_vpp_display_mode )
 
-        .O_face_x        (                  ),
-        .O_face_y        (                  ),
-        .O_face_valid    (                  )
     );
 
     osd_overlay #(

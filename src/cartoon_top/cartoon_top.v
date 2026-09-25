@@ -130,7 +130,7 @@ module cartoon_top #(
     //    对齐后两路数据均在 cycle 7 到达 Cartoon_Blend 输入端
     //    控制信号使用 tlast/tuser/tvalid_sobel (已在 cycle 7)
     // =========================================================================
-    localparam QUANT_EXTRA_DLY = 5;
+    localparam QUANT_EXTRA_DLY = 9;
     reg [23:0] quant_rgb_d [0:QUANT_EXTRA_DLY-1];
 
     integer i;
@@ -150,8 +150,33 @@ module cartoon_top #(
     // 对齐后的量化 RGB (cycle 7)
     wire [23:0] quant_rgb_aligned = quant_rgb_d[QUANT_EXTRA_DLY-1];
 
+        // Sobel 输出边缘 mask，取 bit0 作为 1bit 边缘
+    wire sobel_edge = sobel_mask[0];
+
+    // 3x3 膨胀，加粗黑边
+    wire        tvalid_dilate;
+    wire        tlast_dilate;
+    wire        tuser_dilate;
+    wire        edge_dilated;
+
+    Bit_Dilation_Detector #(
+        .IMG_WIDTH (IMG_WIDTH),
+        .IMG_HEIGHT(IMG_HEIGHT)
+    ) u_Bit_Dilation_Detector (
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+        .I_tlast        (tlast_sobel),
+        .I_tuser        (tuser_sobel),
+        .I_per_img_Bit  (sobel_edge),
+        .I_tvalid       (tvalid_sobel),
+        .O_tlast        (tlast_dilate),
+        .O_tuser        (tuser_dilate),
+        .O_per_img_Bit  (edge_dilated),
+        .O_tvalid       (tvalid_dilate)
+    );
+
     // =========================================================================
-    // 5. 卡通化边缘合成 (Cartoon Blend)
+    // 6. 卡通化边缘合成 (Cartoon Blend)
     //    输入两路已在 cycle 7 对齐的数据：
     //      - quant_rgb_aligned : 量化色块 RGB888
     //      - sobel_mask[0]     : 边缘标志 (1=边缘, 0=非边缘)
@@ -168,11 +193,11 @@ module cartoon_top #(
     ) u_Cartoon_Blend (
         .I_clk          (I_clk),
         .I_rst_n        (I_rst_n),
-        .I_tlast        (tlast_sobel),
-        .I_tuser        (tuser_sobel),
+        .I_tlast        (tlast_dilate),
+        .I_tuser        (tuser_dilate),
         .I_color_tdata  (quant_rgb_aligned),
-        .I_edge_flag    (sobel_mask[0]),
-        .I_tvalid       (tvalid_sobel),
+        .I_edge_flag    (edge_dilated),   // 用膨胀后的边缘
+        .I_tvalid       (tvalid_dilate),
         .O_tlast        (tlast_blend),
         .O_tuser        (tuser_blend),
         .O_tdata        (blend_rgb),
@@ -180,7 +205,7 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 6. 输出寄存器 (额外打 1 拍，改善时序，cycle 8 输出)
+    // 7. 输出寄存器 (额外打 1 拍，改善时序，cycle 8 输出)
     // =========================================================================
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
