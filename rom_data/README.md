@@ -75,11 +75,23 @@
 | `x4_conv4.hex` | 73 728 | 18 432 | conv4 输出 32×18×32 |
 | `head_real.hex` | 86 400 | — | head 层浮点参考 |
 
-## 5. 其他 —— `misc/`
+## 5. 已排除：官方模板残留的 DSI 数据文件（**无人使用**）
 
-| 文件 | 字节 | 内容 |
-|---|---|---|
-| `config_data.mif` | 3 338 | MIF 格式，`DEPTH=1024 / WIDTH=8`，DSI 配置包 ROM（来源 `hdl_source/dsi_tx_packet/`） |
+`user_source/hdl_source/dsi_tx_packet/` 里只有两个文件：`config_data.mif`（3 338 B，
+`DEPTH=1024 / WIDTH=8`）及其生成物 `config_data.mif.dat`（10 240 B）。**已逐项核查确认没有任何
+模块使用它**，因此不放进本汇总：
+
+| 核查项 | 结果 |
+|---|---|
+| 目录里有 `.v` 模块吗 | ❌ 没有，只有 `.mif` 和数据文件 |
+| 本工程 `.al` 收录了吗 | ❌ 没有（93 个源文件里 `mif` / `config_data` / `.dat` 命中 0 条） |
+| 全 depot 里有任何工程例化它吗 | ❌ 没有 |
+| 本工程综合资源占用 | `#mipi_tx 0 out of 2 (0.00%)` —— 未使用 MIPI/DSI 发送通道 |
+| 本工程输出接口 | HDMI/TMDS（`pin.adc` 只有 4 路 TMDS + 屏背光 PWM，无 DSI 引脚） |
+| 其他官方例程 | `lab_ex1` / `lab_ex2` / `lab_ex3` 都带这个目录，**连官方自己的 `.al` 也没收录** |
+
+结论：这是**安路官方例程模板**为"MIPI-DSI 屏"版本预留的数据文件，与本工程（HDMI 输出）无关，
+属死文件。留在仓库里不影响任何综合结果，但不应算作本工程的 ROM 数据。
 
 ## 6. RTL 内嵌的查表（不是独立文件，改内容要改 `.v`）
 
