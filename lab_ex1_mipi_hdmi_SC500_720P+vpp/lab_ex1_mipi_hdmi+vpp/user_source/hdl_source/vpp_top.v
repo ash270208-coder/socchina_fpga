@@ -408,8 +408,13 @@ module vpp_top #(
     // =========================================================================
     // 人脸检测已移除（板 A 只做图像处理）：MUX 选中的显示画面直通输出
     //   原 face_track_top（LBP 级联检测 + 画框 + 准星）已从本工程解绑，
-    //   相关源文件仍保留在磁盘上作为归档，分类见工程根目录 BOARD_SPLIT.md。
+    //   相关源文件仍保留在磁盘上作为归档，分类见 docs/BOARD_SPLIT.md。
     //   如需恢复人脸检测：git checkout b21e965 -- user_source/hdl_source/vpp_top.v
+    //
+    //   ⚠ 时序相位：原 face_track_top 内的 osd_box_drawer 会给显示通路加 1 拍，
+    //     删除后整条 DE 链路少 1 拍，因此 design_top_wrapper.v 中给 hdmi_tx 的
+    //     vsync 相位补偿已同步由 21 拍改为 20 拍（S_vsync_dly[19]）。
+    //     以后若在此处增删寄存器级，必须同步修改那个补偿拍数，否则 vs/de 错位。
     // =========================================================================
     assign O_tdata  = mux_tdata;
     assign O_tlast  = mux_tlast;

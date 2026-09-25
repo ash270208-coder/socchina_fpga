@@ -949,17 +949,24 @@ isp_top u_isp_top (
     end
 
     // -------------------------------------------------------------------------
-    // vs 延迟 21 拍: vpp 流水线给 de/data 增加 21 拍
-    // (16 拍算法 + 1 拍画框 OSD + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
+    // vs 延迟 20 拍: vpp 流水线给 de/data 增加 20 拍
+    // (16 拍算法 + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
-    // 将 vs 同步延迟 21 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    // 将 vs 同步延迟 20 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    //
+    // [Step A 变更] 原为 21 拍, 分解为 "16 拍算法 + 1 拍画框 OSD + 2 拍 Logo/模式
+    //   OSD + 2 拍延迟 OSD"; 其中 "1 拍画框 OSD" 来自 face_track_top 内部的
+    //   osd_box_drawer。人脸检测解绑后该级不再存在, DE 链路少 1 拍, 故同步由
+    //   21 拍改为 20 拍。
+    //   ⚠ 今后只要在 vpp → osd_overlay → delay_osd 这条 DE 链路上增删寄存器级,
+    //     必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位(画面横向偏移)。
     // -------------------------------------------------------------------------
-    reg [20:0] S_vsync_dly;
+    reg [19:0] S_vsync_dly;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n)
-            S_vsync_dly <= 21'd0;
+            S_vsync_dly <= 20'd0;
         else
-            S_vsync_dly <= {S_vsync_dly[19:0], S_hdmi_out_vsync};
+            S_vsync_dly <= {S_vsync_dly[18:0], S_hdmi_out_vsync};
     end
 
     // =========================================================================
@@ -1043,7 +1050,7 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync_dly[20]   ), // 与 OSD 输出 de 同相位 (延迟 21 拍)
+        .I_video_in_vs      ( S_vsync_dly[19]   ), // 与 OSD 输出 de 同相位 (延迟 20 拍, 见上方说明)
         .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),

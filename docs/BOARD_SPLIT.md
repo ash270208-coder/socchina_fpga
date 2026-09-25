@@ -75,6 +75,11 @@ SC500(MIPI) -> MIPI DPHY RX -> CSI/RAW10 解包 -> ISP(demosaic + AWB)
 2. `design_top_wrapper.v`
    - 删除 `vpp_top` 例化中的 `MIN_FACE_AREA` 参数覆盖与 `.O_face_x/y/valid` 空连接
    - 更新章节注释
+3. `design_top_wrapper.v` —— **vsync 相位补偿 21 拍 → 20 拍**（关键，容易漏）
+   - 显示通路的延迟链原本是：`16 拍算法(vpp)` + **`1 拍画框 OSD`（`face_track_top` 内的 `osd_box_drawer`，有寄存输出）** + `2 拍 Logo/模式 OSD` + `2 拍延迟 OSD` = **21 拍**
+   - 人脸检测解绑后那 1 拍消失，DE 链路变成 20 拍；若不同步修改，`hdmi_tx` 拿到的 vs/de 相位会错 1 拍（画面横向偏移 1 像素）
+   - 已改为 `reg [19:0] S_vsync_dly` + `S_vsync_dly[19]`，并在两处加了警世注释：**今后在 `vpp → osd_overlay → delay_osd` 这条 DE 链路上增删寄存器级，必须同步改这个拍数**
+   - ⚠ 回退到带人脸检测的版本时，必须把这里改回 21 拍（`[20]`），否则同样错位
 
 > 注意：`.al` 工程文件的源文件清单**未改动**。未被例化的模块不参与综合（自动剪除），因此不占任何资源；这样可避免手工改 TD 工程 XML 的风险。若需要一份"干净清单"，可在 Step B 时用 TD 图形界面移除后重新综合验证。
 
