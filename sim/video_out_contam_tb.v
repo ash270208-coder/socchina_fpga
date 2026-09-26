@@ -68,8 +68,12 @@ module video_out_contam_tb;
     end
 
     // word 内容 = 地址重复 5 次(前 120bit) -> 第 1 个像素就是地址本身
+    // 注意: 再或上 0x800000 作为"有效标记"，这样"陈旧内存"不会退化成 0
+    //       (上一版没加标记，陈旧内存正好是地址 0 -> 被当成"无数据"跳过了)
     wire [24:0] a = pa[LAT-1];
-    always @(*) rd_data = {a[23:0], a[23:0], a[23:0], a[23:0], a[23:0], 8'h00};
+    always @(*) rd_data = {a[23:0] | 24'h800000, a[23:0] | 24'h800000,
+                           a[23:0] | 24'h800000, a[23:0] | 24'h800000,
+                           a[23:0] | 24'h800000, 8'h00};
     always @(*) rd_valid = pv[LAT-1];
 
     // ---- 抓取帧首之后的输出像素 ----
@@ -124,27 +128,28 @@ module video_out_contam_tb;
 
         $display("");
         $display("=== video_out frame-start contamination test ===");
-        $display("   DDR layout: rp0 base=0(0x000000)  rp1 base=7000000(0x6ACFC0)");
-        $display("   pixel value == address of the word it came from");
-        $display("   -> value < 1382400  = OLD frame(rp0) data  = CONTAMINATED");
-        $display("   -> value >= 7000000 = NEW frame(rp1) data  = CLEAN");
+        $display("   DDR layout: rp0 base=0  rp1 base=7000000(0x6ACFC0); 内容 = 地址|0x800000");
+        $display("   -> 0x000000            = 无数据(空)");
+        $display("   -> 0x800000..0x951C00  = 旧帧(rp0) 数据 = 污染(对应画面底部)");
+        $display("   -> >= 0xEACFC0         = 新帧(rp1) 数据 = 干净");
         $display("   captured pixels after frame start (first 24):");
         for (j = 0; j < 24; j = j + 1)
             if (j < ncap)
-                $display("     pix[%0d] = 0x%06X  (%0d)", j, cap[j], cap[j]);
+                $display("     pix[%0d] = 0x%06X  (addr=%0d)", j, cap[j], cap[j] & 24'h7FFFFF);
         $display("");
 
-        // 判定
+        // 判定: 找第一个"有效数据"像素(带 0x800000 标记)
         j = 0;
-        while (j < ncap && cap[j] == 24'd0) j = j + 1;   // 跳过空 FIFO 产生的 0
+        while (j < ncap && (cap[j] & 24'h800000) == 24'd0) j = j + 1;
         if (j < ncap) begin
-            if (cap[j] >= 24'd7000000)
-                $display("   RESULT: CLEAN  (first non-zero pixel = 0x%06X, new frame)", cap[j]);
+            if ((cap[j] & 24'h7FFFFF) >= 24'd7000000)
+                $display("   RESULT: CLEAN  (first valid pixel addr=%0d, new frame)", cap[j] & 24'h7FFFFF);
             else
-                $display("   RESULT: CONTAMINATED  (first non-zero pixel = 0x%06X, old frame)", cap[j]);
+                $display("   RESULT: CONTAMINATED  (first valid pixel addr=%0d, OLD frame)",
+                         cap[j] & 24'h7FFFFF);
         end
         else
-            $display("   RESULT: no pixel captured");
+            $display("   RESULT: no valid pixel captured");
         $display("");
         $finish;
     end

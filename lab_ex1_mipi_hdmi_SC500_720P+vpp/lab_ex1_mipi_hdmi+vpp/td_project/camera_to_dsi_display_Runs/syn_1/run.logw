@@ -4,7 +4,7 @@
    Executable = E:/Anlogic/TD_6.2.1_Engineer_6.2.168.116/bin/run.exe
    Built at =   16:32:07 Jun 12 2025
    Run by =     jingzifu
-   Run Date =   Fri Sep 25 16:26:32 2026
+   Run Date =   Sat Sep 26 15:18:01 2026
 
    Run on =     LAPTOP-B8H3OB4U
 ============================================================
@@ -1823,8 +1823,12 @@ SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Erosion/ramread0_syn_21 has
 SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Erosion/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Sobel_edge/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_vpp_top/u_Sobel_edge/u_Sobel_edge/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
+SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_Bit_Dilation_Detector/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
+SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_Bit_Dilation_Detector/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_Sobel_edge/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_Sobel_edge/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
+SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_lp_filter_3x3/ramread0_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
+SYN-5041 WARNING: Ram Inst: u_vpp_top/u_cartoon_top/u_lp_filter_3x3/ramread1_syn_21 has wrong RAM_STYLE/ROM_STYLE setting, AUTO is really used in ram inference
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[7]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[6]"
 SYN-5011 WARNING: Undriven pin: model "design_top_wrapper" / inst "u_ph1p35_324_ddr_wrapper/u_ddr2/ph1p_ddrmc_wrapper/ph1p_ddrmc_top/u_ddr_phy/u_ddrphy_top/u_ddrphy_init/ramread0_syn_24" in ../../../user_source/hdl_source/ph1p35_ddr/ddr2/src/rtl/phy/ph1p_ddrphy_init.v(73) / pin "di[5]"

@@ -3,7 +3,8 @@
 module vpp_top #(
     parameter IMG_WIDTH  = 1280,
     parameter IMG_HEIGHT = 720,
-    parameter SOBEL_THRESHOLD = 60
+    parameter SOBEL_THRESHOLD = 60,      // 模式 3 (Sobel 显示) 阈值
+    parameter CART_SOBEL_THRESHOLD = 60  // 模式 4 (卡通) 阈值: 低通已降噪, 阈值回退到 60 保留描边; 可在 40~70 微调
 )( 
     input  [1:0]   I_button        ,  // 按键输入，用于切换显示模式
     
@@ -152,14 +153,14 @@ module vpp_top #(
     // 5. 伽马校正 (全工程只做这一次) + 各模式数据统一对齐到 16 拍延迟
     //    (RGB2Y 3拍 + Sobel 5拍 + 腐蚀 4拍 + 膨胀 4拍 = 16拍):
     //    原图:   伽马后延迟 16 拍                     -> raw_rgb_d[15]
-    //    卡通:   伽马后延迟  7 拍                     -> raw_rgb_d[6]
-    //            (卡通内部固定 9 拍, 7+9 = 16, 与其它档严格同拍)
+    //    卡通:   伽马后延迟  1 拍                     -> raw_rgb_d[0]
+    //            (卡通内部固定 15 拍, 1+15 = 16, 与其它档严格同拍)
     //    灰度:   由伽马后的 RGB 现算 (R+2G+B)/4        -> gray_gam (第 16 拍)
     //    直方图: 彩色转换链路见第 6 节 (Y_eq+Cb/Cr -> RGB, 共 16 拍)
     //    Sobel:  sobel_tdata 与 tvalid_sobel 本身对齐
     //
     //    【只用一个伽马】伽马是无记忆的组合逻辑(0 拍), 所以放在最前面做一次,
-    //    后面用两条纯寄存器延迟链分别取第 7 拍(卡通)与第 16 拍(原图)即可,
+    //    后面用两条纯寄存器延迟链分别取第 1 拍(卡通)与第 16 拍(原图)即可,
     //    不需要第二个伽马实例。
     //    注意: raw_rgb_d 里装的已经是"伽马校正后"的数据, 名字沿用原来的,
     //          不要再把它当线性原图使用。
@@ -305,33 +306,29 @@ module vpp_top #(
     //   hdmi_tx 的 de 又是跟着数据走的 —— 所以只要某一档的总延迟不是 16 拍,
     //   这一档相对同步信号就会整体横移若干像素, 表现为"最左边一条窄边条错位"。
     //
-    //   cartoon_top 内部固定 9 拍 (RGB2Y 3 + Sobel 5 = 8 拍对齐, 再打 1 拍输出),
-    //   因此输入必须提前到第 7 拍: 7 + 9 = 16 ✓。
-    //   若像原来那样喂第 16 拍的数据, 输出是 16 + 9 = 25 拍, 会横移 9 个像素。
-    //     - 数据: raw_rgb_d[6]  (= 伽马校正后再延迟 7 拍)
-    //     - 控制: ycbcr 控制信号(第 3 拍)再延迟 4 拍 = 第 7 拍
+    //   cartoon_top 内部固定 15 拍 (RGB2Y 3 + LP 2 + Sobel 5 + 膨胀 4 = 14 拍
+    //   对齐, 再打 1 拍输出), 因此输入必须提前到第 1 拍: 1 + 15 = 16 ✓。
+    //   若像原来那样喂第 3 拍的数据, 输出是 3 + 15 = 18 拍, 会横移 2 个像素。
+    //     - 数据: raw_rgb_d[0]  (= 伽马校正后再延迟 1 拍)
+    //     - 控制: 输入 tvalid/tlast/tuser 打 1 拍
     //     (伽马已在第 5 节统一做过一次, 这里不再重复例化)
     // =========================================================================
-    reg [3:0] cartoon_v_dly;
-    reg [3:0] cartoon_l_dly;
-    reg [3:0] cartoon_u_dly;
+    reg cartoon_in_valid;
+    reg cartoon_in_last;
+    reg cartoon_in_user;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
-            cartoon_v_dly <= 4'd0;
-            cartoon_l_dly <= 4'd0;
-            cartoon_u_dly <= 4'd0;
+            cartoon_in_valid <= 1'b0;
+            cartoon_in_last  <= 1'b0;
+            cartoon_in_user  <= 1'b0;
         end
         else begin
-            cartoon_v_dly <= {cartoon_v_dly[2:0], tvalid_ycbcr};
-            cartoon_l_dly <= {cartoon_l_dly[2:0], tlast_ycbcr};
-            cartoon_u_dly <= {cartoon_u_dly[2:0], tuser_ycbcr};
+            cartoon_in_valid <= I_tvalid;
+            cartoon_in_last  <= I_tlast;
+            cartoon_in_user  <= I_tuser;
         end
     end
-
-    wire cartoon_in_valid = cartoon_v_dly[3];   // 第 7 拍
-    wire cartoon_in_last  = cartoon_l_dly[3];
-    wire cartoon_in_user  = cartoon_u_dly[3];
 
     wire        cartoon_tlast;
     wire        cartoon_tuser;
@@ -339,16 +336,16 @@ module vpp_top #(
     wire [23:0] cartoon_tdata;
 
     cartoon_top #(
-        .IMG_WIDTH       (IMG_WIDTH       ),
-        .IMG_HEIGHT      (IMG_HEIGHT      ),
-        .SOBEL_THRESHOLD (SOBEL_THRESHOLD ),
-        .QUANT_BITS      (4               )   // 每通道保留 4 位高比特 -> 16 级色阶
+        .IMG_WIDTH       (IMG_WIDTH          ),
+        .IMG_HEIGHT      (IMG_HEIGHT         ),
+        .SOBEL_THRESHOLD (CART_SOBEL_THRESHOLD),
+        .QUANT_BITS      (4                  )   // 每通道保留 4 位高比特 -> 16 级色阶
     ) u_cartoon_top (
         .I_clk    (I_clk),
         .I_rst_n  (I_rst_n),
         .I_tlast  (cartoon_in_last ),
         .I_tuser  (cartoon_in_user ),
-        .I_tdata  (raw_rgb_d[6]),
+        .I_tdata  (raw_rgb_d[0]),
         .I_tvalid (cartoon_in_valid),
         .I_tready (1'b1),
         .O_tdata  (cartoon_tdata),
@@ -376,7 +373,7 @@ module vpp_top #(
     //     模块内部 3 拍, 所以从 raw_rgb_d[12] (第 13 拍) 抽输入: 13 + 3 = 16 拍 ✓
     //     只作用于【原图】和兜底档;
     //     灰度档由亮度算出, 而本模块亮度严格不变 -> 数学上不受影响, 保持原样;
-    //     卡通档走 raw_rgb_d[6] (第 7 拍), 不动它, 否则会破坏 16 拍时序。
+    //     卡通档走 raw_rgb_d[0] (第 1 拍), 不动它, 否则会破坏 16 拍时序。
     // =========================================================================
     wire [23:0] nr_rgb;
     chroma_nr u_chroma_nr (
