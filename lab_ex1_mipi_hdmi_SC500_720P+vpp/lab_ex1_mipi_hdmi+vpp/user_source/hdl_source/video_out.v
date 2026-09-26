@@ -26,8 +26,9 @@ module video_out (
     //   的数据（地址是上一帧尾部）随后才到达，被写进刚清空的新 FIFO，并被
     //   当作新帧开头的像素解包输出 —— 表现为"左上角一小段旧内容"，
     //   长度随在途 word 数变化（1 word = 128bit = 5.33 个 RGB 像素）。
-    //   一次突发 240 word + 约 40 拍 DDR 延迟 ≈ 300 拍以内，这里取 400 拍
-    //   (66.7MHz 下约 6us；帧首到有效区还有 20 行 ≈ 320us，完全来得及)。
+    //   一次突发 240 word + DDR/MC 响应延迟(空载约 40 拍，负载下可能更长)，
+    //   取 800 拍留足余量 (66.7MHz 下约 12us；帧首到有效区还有 20 行 ≈ 320us，
+    //   只占 ~4%，FIFO 仍有 300us 以上时间重新灌满)。
     reg[9:0]    S_fifo_rst_cnt;
     wire[8:0]   S_fifo_wr_num;       
     wire        S_fifo_rd_en;        
@@ -68,7 +69,7 @@ module video_out (
         else
             if(S_video_frame_start)
                 S_fifo_rst <= 1'b1;
-            else if(S_fifo_rst_cnt == 10'd400)   // [FIX] 原为 'd10
+            else if(S_fifo_rst_cnt == 10'd800)   // [FIX] 原为 'd10
                 S_fifo_rst <= 1'b0;
             else
                 S_fifo_rst <= S_fifo_rst;
