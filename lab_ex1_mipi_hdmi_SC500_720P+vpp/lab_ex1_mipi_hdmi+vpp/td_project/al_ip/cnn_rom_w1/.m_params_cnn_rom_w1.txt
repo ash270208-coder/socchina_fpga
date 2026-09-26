@@ -1,0 +1,8 @@
+DATA_WIDTH_A; 1; 64
+ADDR_WIDTH_A; 1; 5
+DATA_DEPTH_A; 1; 27
+DATA_WIDTH_B; 0; 16
+ADDR_WIDTH_B; 0; 7
+DATA_DEPTH_B; 0; 108
+INIT_FILE; 1; "../cnn_w_conv1_packed.dath"
+FILL_ALL; 1; "NONE"

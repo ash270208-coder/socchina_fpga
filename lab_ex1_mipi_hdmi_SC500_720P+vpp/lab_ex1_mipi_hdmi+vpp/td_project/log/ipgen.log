@@ -1,0 +1,15 @@
+ipgen_gui_set_spin_box_text IP_Generator DATA_WIDTH_A_c 8
+ipgen_gui_set_spin_box_text IP_Generator DATA_DEPTH_A 512
+ipgen_gui_select_window IP_Generator
+ipgen_gui_click_radio_button IP_Generator SP_RAM unchecked
+ipgen_gui_click_radio_button IP_Generator DP_RAM checked
+ipgen_gui_select_tab IP_Generator Tab_0 Port_A_Options 1
+ipgen_gui_select_tab IP_Generator Tab_0 Port_B_Options 2
+ipgen_gui_set_spin_box_text IP_Generator DATA_DEPTH_A 27648
+ipgen_gui_click_push_button IP_Generator OK
+ipgen_gui_select_dialog IP_Generating_Options
+ipgen_gui_click_push_button IP_Generator GenOptionDialog.Generate
+ipgen_gui_select_window IP_Generator
+ipgen_gui_select_dialog StandardMessageBox #IP Gen Succeeded
+ipgen_gui_click_push_button StandardMessageBox Ok
+#GUI-2000 : The IP files have been generated successfully. :{PH1P35MDG324(D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/al_ip/cnn_buf_in/cnn_buf_in.xml)}
