@@ -158,5 +158,30 @@ E:/Anlogic/TD_6.2.1_Engineer_6.2.168.116/bin/td_commands_prompt.exe `
 - 时序收益：原 18 级路径拆为 `S_x→r1`（区域比较/坐标/地址，约 5~7 级）与 `r1→r2`
   （ROM 查表 + 命中判定）两段；原扇出 619 的大网被寄存器隔断。
 - ⚠ 注意：`O_tdata` 不再是寄存器输出（改为 r2 后的 2 级 mux），下游 `delay_osd`
-  输入前多了约 2 级 LUT；最终 WNS 仍需重新布局布线确认（lin 原环境因加密 HDMI IP
-  无法完成 P&R，本机待验证）。
+  输入前多了约 2 级 LUT；需重新布局布线确认（lin 原环境因加密 HDMI IP 无法完成 P&R）。
+
+### 8.1 重新布局布线实测（2026-09-26 同日）
+
+| 阶段 | 改造前 | 改造后 | 变化 |
+|---|---|---|---|
+| 综合 SWNS | −4.080 ns（24 违例端点） | **+0.860 ns**（0 违例） | +4.94 ns |
+| 布线后 SWNS | +0.105 ns | **+0.952 ns** | +0.85 ns |
+| 布线后 Hold WNS | +0.020 ns | +0.020 ns | — |
+| slice | 15 956（75.21%） | 16 782（79.10%） | +826（+3.9%） |
+
+最差路径（`phy_1/camera_to_dsi_display_pr.timing`）：
+
+```
+Begin Point : u_osd_overlay/add0_syn_130.clk      (HDMI_PIXEL_CLK)
+End Point   : u_osd_overlay/logo_color_r2_reg[17] (HDMI_PIXEL_CLK)
+Data Path   : 11.330 ns  (cell 29% + net 71%)
+Logic Level : 10         (LUT6×6, LUT5/4/3/2 各1)   ← 原 18 级
+Max Fanout  : 142                                  ← 原 619
+```
+
+- 最差路径仍在 OSD 内，但已从"坐标寄存器 → 全判定链 → 输出寄存器"（18 级）
+  变为 "`logo_addr_r1` → Logo ROM 解码 → `logo_color_r2`"（10 级）；
+  路径延迟 17.35→11.33 ns。`O_tdata` 输出 mux 移到 r2 之后，未成为最差路径。
+- 裕量从周期的 0.8%（+105 ps）提升到 7.1%（+952 ps），为后续在像素时钟域继续加
+  图像处理功能留出了空间。资源增加 3.9% 为换取的代价，仍在容量内。
+- 码流：本次新生成 `phy_1`/`best_result` 下 bit 文件（时间戳 2026-09-26 16:02）。
