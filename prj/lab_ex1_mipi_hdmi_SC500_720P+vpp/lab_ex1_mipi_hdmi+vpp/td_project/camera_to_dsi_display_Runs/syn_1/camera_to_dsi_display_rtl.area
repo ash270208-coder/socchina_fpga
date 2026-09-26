@@ -8,24 +8,24 @@ IO Statistics
   #inout                   37
 
 Gate Statistics
-#Basic gates            63428
-  #and                  22414
+#Basic gates            63582
+  #and                  22391
   #nand                     0
-  #or                     813
+  #or                     823
   #nor                      0
   #xor                     97
   #xnor                     0
   #buf                      0
-  #not                  18152
+  #not                  18128
   #bufif1                   1
-  #MX21                  4407
+  #MX21                  4432
   #FADD                     0
-  #DFF                  17544
+  #DFF                  17710
   #LATCH                    0
-#MACRO_ADD                634
-#MACRO_EQ                 311
+#MACRO_ADD                645
+#MACRO_EQ                 313
 #MACRO_MULT                27
-#MACRO_MUX               8784
+#MACRO_MUX               8790
 #MACRO_OTHERS              18
 
 LUT Statistics
@@ -40,7 +40,7 @@ Report Hierarchy Area:
 +-----------------------------------------------------------------------------------------------------------------------------------------+
 |Instance                                                         |Module                                         |gates  |seq    |macros |
 +-----------------------------------------------------------------------------------------------------------------------------------------+
-|top                                                              |design_top_wrapper                             |45884  |17544  |990    |
+|top                                                              |design_top_wrapper                             |45872  |17710  |1003   |
 |  u_PLL                                                          |PLL                                            |0      |0      |1      |
 |    ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst                       |ph1p_phy_pll_wrapper_25a56e5ce2f9              |0      |0      |0      |
 |  u_ae_auto                                                      |ae_auto                                        |16     |47     |17     |
@@ -104,8 +104,8 @@ Report Hierarchy Area:
 |      ALIGNER_CHANNEL_GEN[1]$u_channel_aligner                   |channel_aligner                                |7      |40     |0      |
 |    u_ph1p_mipiio_rx_wrapper                                     |ph1p_mipiio_rx_wrapper                         |8      |147    |15     |
 |      u_lane0_hs_detect                                          |hs_detect                                      |4      |12     |3      |
-|  u_osd_overlay                                                  |osd_overlay                                    |38827  |103    |44     |
-|    u_anlogic_logo_rom                                           |anlogic_logo_rom                               |38570  |0      |0      |
+|  u_osd_overlay                                                  |osd_overlay                                    |38769  |103    |44     |
+|    u_anlogic_logo_rom                                           |anlogic_logo_rom                               |38511  |0      |0      |
 |    u_osd_char_lib                                               |osd_char_lib                                   |53     |0      |3      |
 |  u_ph1p35_324_ddr_wrapper                                       |ph1p35_324_ddr_wrapper                         |4573   |3636   |327    |
 |    u_ddr2                                                       |ddr2                                           |4573   |3636   |327    |
@@ -197,17 +197,19 @@ Report Hierarchy Area:
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
 |        rd_to_wr_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
 |        wr_to_rd_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
-|  u_vpp_top                                                      |vpp_top                                        |152    |1848   |128    |
+|  u_vpp_top                                                      |vpp_top                                        |198    |2014   |141    |
 |    u_RGB888_YCbCr444                                            |RGB888_YCbCr444                                |5      |173    |13     |
-|    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |80     |337    |26     |
-|      u_Dilation                                                 |Bit_Dilation_Detector                          |27     |36     |2      |
+|    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |81     |337    |26     |
+|      u_Dilation                                                 |Bit_Dilation_Detector                          |28     |36     |2      |
 |      u_Erosion                                                  |Bit_Erosion_Detector                           |28     |40     |2      |
 |      u_Sobel_edge                                               |Sobel_edge                                     |25     |261    |22     |
 |    u_YCbCr444_RGB888                                            |YCbCr444_RGB888                                |0      |125    |14     |
-|    u_cartoon_top                                                |cartoon_top                                    |25     |425    |27     |
+|    u_cartoon_top                                                |cartoon_top                                    |71     |591    |40     |
+|      u_Bit_Dilation_Detector                                    |Bit_Dilation_Detector                          |27     |36     |2      |
+|      u_Bit_Neighbor_Count                                       |Bit_Neighbor_Count                             |19     |41     |11     |
 |      u_Cartoon_Blend                                            |Cartoon_Blend                                  |0      |0      |0      |
 |      u_RGB888_YCbCr444                                          |RGB888_YCbCr444                                |0      |59     |5      |
-|      u_Sobel_edge                                               |Sobel_edge                                     |25     |258    |22     |
+|      u_Sobel_edge                                               |Sobel_edge                                     |25     |261    |22     |
 |      u_Color_Quantize                                           |Color_Quantize                                 |0      |24     |0      |
 |    u_chroma_nr                                                  |chroma_nr                                      |3      |24     |22     |
 |    u_gamma_lut                                                  |gamma_lut                                      |0      |0      |6      |

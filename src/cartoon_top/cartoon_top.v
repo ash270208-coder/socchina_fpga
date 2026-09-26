@@ -3,8 +3,9 @@
 module cartoon_top #(
     parameter IMG_WIDTH        = 1280,
     parameter IMG_HEIGHT       = 720,
-    parameter SOBEL_THRESHOLD  = 60,
-    parameter QUANT_BITS       = 4
+    parameter SOBEL_THRESHOLD  = 150,
+    parameter QUANT_BITS       = 4,
+    parameter COUNT_THRESHOLD  = 3
 )(
     input               I_clk,
     input               I_rst_n,
@@ -26,19 +27,19 @@ module cartoon_top #(
     // 卡通化算法顶层集成模块 (Cartoon Top)
     // =========================================================================
     // 2026 嵌赛 FPGA 选题二：卡通化图像风格化处理
-    // 流水线：边缘提取 + 区域填充，色度低位量化方案
-    //
     // 数据通路：
-    //   输入 RGB888 ─┬─ RGB888_YCbCr444(3拍) ─ Sobel_edge(4拍) ─ sobel_mask  [cycle 7]
-    //                └─ Color_Quantize(2拍) ─ 延时链(+5拍) ─ quant_rgb_aligned [cycle 7]
-    //   Cartoon_Blend(0拍，组合逻辑) ─ 输出寄存器(1拍) ─ O_tdata  [cycle 8]
+    //   输入 RGB888 ─┬─ RGB888_YCbCr444(3拍) ─ Sobel_edge(4拍)
+    //                │      ─ Bit_Neighbor_Count(4拍) ─ Bit_Dilation_Detector(4拍)
+    //                │      ─ edge_dilated  [cycle 15]
+    //                └─ Color_Quantize(2拍) ─ 延时链(+13拍) ─ quant_rgb_aligned [cycle 15]
+    //   Cartoon_Blend(0拍，组合逻辑) ─ 输出寄存器(1拍) ─ O_tdata  [cycle 16]
     //
-    // 两路数据在 cycle 7 严格对齐后喂入 Cartoon_Blend，防止帧撕裂。
+    //   两路数据在 cycle 15 严格对齐后喂入 Cartoon_Blend，防止帧撕裂。
     // =========================================================================
 
     // =========================================================================
-    // 1. RGB888 转 YCbCr444 (提取 Y 灰度 + Cb/Cr)
-    //    流水线延迟：3 拍 (cycle 3 输出)
+    // 1. RGB888 转 YCbCr444 (提取 Y 灰度)
+    //    流水线延迟：3 拍
     // =========================================================================
     wire        tlast_ycbcr;
     wire        tuser_ycbcr;
@@ -71,9 +72,7 @@ module cartoon_top #(
 
     // =========================================================================
     // 2. Sobel 边缘检测 (对 Y 灰度做边缘提取，输出二值 mask)
-    //    I_grey_tdata 输入 Y，O_grey_tdata 输出二值 mask (8'hFF=边缘, 8'h00=非边缘)
-    //    流水线延迟：4 拍 (从 ycbcr 输出算起)
-    //    Sobel 路径总延迟 = 3 + 4 = 7 拍 (cycle 7 输出)
+    //    流水线延迟：4 拍
     // =========================================================================
     wire        tlast_sobel;
     wire        tuser_sobel;
@@ -98,9 +97,8 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 3. 颜色量化 (Color Quantize，低位量化海报化色块)
-    //    直接量化输入 RGB888，每通道保留 QUANT_BITS 高位，低位补零
-    //    流水线延迟：2 拍 (cycle 2 输出)
+    // 3. 颜色量化 (Color Quantize)
+    //    流水线延迟：2 拍
     // =========================================================================
     wire        tlast_quant;
     wire        tuser_quant;
@@ -123,14 +121,12 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 4. 延时对齐链 (Delay Alignment)
-    //    Sobel 路径总延迟 = RGB2YCbCr(3拍) + Sobel(4拍) = 7 拍
-    //    Color_Quantize 路径延迟 = 2 拍
-    //    差值 = 7 - 2 = 5 拍 → quant_rgb 需额外延迟 5 拍
-    //    对齐后两路数据均在 cycle 7 到达 Cartoon_Blend 输入端
-    //    控制信号使用 tlast/tuser/tvalid_sobel (已在 cycle 7)
+    // 4. 延时对齐链
+    //    边缘路径 = 3 + 4 + 4 + 4 = 15 拍
+    //    Color_Quantize = 2 拍
+    //    差值 = 15 - 2 = 13 拍
     // =========================================================================
-    localparam QUANT_EXTRA_DLY = 9;
+    localparam QUANT_EXTRA_DLY = 13;
     reg [23:0] quant_rgb_d [0:QUANT_EXTRA_DLY-1];
 
     integer i;
@@ -147,13 +143,37 @@ module cartoon_top #(
         end
     end
 
-    // 对齐后的量化 RGB (cycle 7)
     wire [23:0] quant_rgb_aligned = quant_rgb_d[QUANT_EXTRA_DLY-1];
 
-        // Sobel 输出边缘 mask，取 bit0 作为 1bit 边缘
+    // =========================================================================
+    // 5. 边缘处理：邻域计数去噪 → 膨胀加粗
+    // =========================================================================
     wire sobel_edge = sobel_mask[0];
 
-    // 3x3 膨胀，加粗黑边
+    // ---- 5.1 邻域计数去噪 ----
+    wire        tvalid_cnt;
+    wire        tlast_cnt;
+    wire        tuser_cnt;
+    wire        edge_cnt;
+
+    Bit_Neighbor_Count #(
+        .IMG_WIDTH       (IMG_WIDTH),
+        .IMG_HEIGHT      (IMG_HEIGHT),
+        .COUNT_THRESHOLD (COUNT_THRESHOLD)
+    ) u_Bit_Neighbor_Count (
+        .I_clk          (I_clk),
+        .I_rst_n        (I_rst_n),
+        .I_tlast        (tlast_sobel),
+        .I_tuser        (tuser_sobel),
+        .I_per_img_Bit  (sobel_edge),
+        .I_tvalid       (tvalid_sobel),
+        .O_tlast        (tlast_cnt),
+        .O_tuser        (tuser_cnt),
+        .O_per_img_Bit  (edge_cnt),
+        .O_tvalid       (tvalid_cnt)
+    );
+
+    // ---- 5.2 膨胀加粗 ----
     wire        tvalid_dilate;
     wire        tlast_dilate;
     wire        tuser_dilate;
@@ -165,10 +185,10 @@ module cartoon_top #(
     ) u_Bit_Dilation_Detector (
         .I_clk          (I_clk),
         .I_rst_n        (I_rst_n),
-        .I_tlast        (tlast_sobel),
-        .I_tuser        (tuser_sobel),
-        .I_per_img_Bit  (sobel_edge),
-        .I_tvalid       (tvalid_sobel),
+        .I_tlast        (tlast_cnt),
+        .I_tuser        (tuser_cnt),
+        .I_per_img_Bit  (edge_cnt),
+        .I_tvalid       (tvalid_cnt),
         .O_tlast        (tlast_dilate),
         .O_tuser        (tuser_dilate),
         .O_per_img_Bit  (edge_dilated),
@@ -177,10 +197,6 @@ module cartoon_top #(
 
     // =========================================================================
     // 6. 卡通化边缘合成 (Cartoon Blend)
-    //    输入两路已在 cycle 7 对齐的数据：
-    //      - quant_rgb_aligned : 量化色块 RGB888
-    //      - sobel_mask[0]     : 边缘标志 (1=边缘, 0=非边缘)
-    //    纯组合逻辑 (0 拍延迟)，边缘位置输出黑色描边，非边缘透传色块
     // =========================================================================
     wire        tlast_blend;
     wire        tuser_blend;
@@ -196,7 +212,7 @@ module cartoon_top #(
         .I_tlast        (tlast_dilate),
         .I_tuser        (tuser_dilate),
         .I_color_tdata  (quant_rgb_aligned),
-        .I_edge_flag    (edge_dilated),   // 用膨胀后的边缘
+        .I_edge_flag    (edge_dilated),
         .I_tvalid       (tvalid_dilate),
         .O_tlast        (tlast_blend),
         .O_tuser        (tuser_blend),
@@ -205,7 +221,7 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 7. 输出寄存器 (额外打 1 拍，改善时序，cycle 8 输出)
+    // 7. 输出寄存器 (打 1 拍)
     // =========================================================================
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -222,7 +238,6 @@ module cartoon_top #(
         end
     end
 
-    // ready 信号透传（无反压逻辑，与 vpp_top 风格一致）
     assign O_tready = I_tready;
 
 endmodule
