@@ -21,7 +21,14 @@ module video_out (
 );
 
     reg         S_fifo_rst;     
-    reg[7:0]    S_fifo_rst_cnt;
+    // [FIX-帧首污染] 帧首复位必须覆盖"DDR 读的在途突发 + 流水延迟"
+    //   原来只复位 11 拍：11 拍后复位撤销，而上一帧最后一批"已请求但还没回来"
+    //   的数据（地址是上一帧尾部）随后才到达，被写进刚清空的新 FIFO，并被
+    //   当作新帧开头的像素解包输出 —— 表现为"左上角一小段旧内容"，
+    //   长度随在途 word 数变化（1 word = 128bit = 5.33 个 RGB 像素）。
+    //   一次突发 240 word + 约 40 拍 DDR 延迟 ≈ 300 拍以内，这里取 400 拍
+    //   (66.7MHz 下约 6us；帧首到有效区还有 20 行 ≈ 320us，完全来得及)。
+    reg[9:0]    S_fifo_rst_cnt;
     wire[8:0]   S_fifo_wr_num;       
     wire        S_fifo_rd_en;        
     wire[127:0] S_fifo_rd_data;      
@@ -61,7 +68,7 @@ module video_out (
         else
             if(S_video_frame_start)
                 S_fifo_rst <= 1'b1;
-            else if(S_fifo_rst_cnt == 'd10)
+            else if(S_fifo_rst_cnt == 10'd400)   // [FIX] 原为 'd10
                 S_fifo_rst <= 1'b0;
             else
                 S_fifo_rst <= S_fifo_rst;
@@ -86,6 +93,10 @@ module video_out (
     */
     always @(posedge I_ddr_clk or negedge I_rst_n) begin
         if(!I_rst_n)
+            S_ddr_rd_valid <= 1'b0;
+        // [FIX-帧首污染] 帧首立刻中止仍在进行的读突发，否则会继续向
+        //   "上一帧的尾部地址"发起请求，这些数据回来后会污染新帧 FIFO 的头部。
+        else if(S_video_frame_start)
             S_ddr_rd_valid <= 1'b0;
         else
 			if(O_ddr_user_rd_en && S_ddr_rd_cnt == 'd239)
