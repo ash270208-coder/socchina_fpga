@@ -49,7 +49,7 @@ module osd_overlay #(
     output reg         O_tuser,
     output reg         O_tlast,
     output reg         O_tvalid,
-    output reg  [23:0] O_tdata
+    output wire [23:0] O_tdata
 );
 
     // 文字条宽度：紧凑排版后最宽 SOBEL = 第10字符(g9)起始238 + 字宽24 = 262
@@ -78,6 +78,36 @@ module osd_overlay #(
     reg [11:0] S_x;
     reg [11:0] S_y;
 
+    // Pre-decode coordinate-dependent OSD inputs before the existing r1
+    // register. This keeps the external two-cycle latency unchanged while
+    // shortening the ROM-to-output combinational path.
+    wire [11:0] x_in_aligned = (I_tvalid && I_tuser) ? 12'd0 : S_x;
+    wire [11:0] y_in_aligned = (I_tvalid && I_tuser) ? 12'd0 : S_y;
+    wire [2:0] mode_in_aligned = (I_tvalid && I_tuser) ?
+                                 ((I_mode <= 3'd4) ? I_mode : 3'd0) : osd_mode;
+    wire logo_region_in = I_tvalid &&
+        (x_in_aligned >= LOGO_X) && (x_in_aligned < LOGO_X + LOGO_W) &&
+        (y_in_aligned >= LOGO_Y) && (y_in_aligned < LOGO_Y + LOGO_H);
+    wire [11:0] logo_lx_in = x_in_aligned - LOGO_X;
+    wire [11:0] logo_ly_in = y_in_aligned - LOGO_Y;
+    wire [14:0] logo_addr_in = ({3'd0, logo_ly_in} << 7) +
+                               ({3'd0, logo_ly_in} << 5) +
+                               {3'd0, logo_lx_in};
+
+    wire text_region_in = I_tvalid &&
+        (x_in_aligned >= TXT_X) && (x_in_aligned < TXT_X + TXT_W) &&
+        (y_in_aligned >= TXT_Y) && (y_in_aligned < TXT_Y + TXT_H);
+    wire [8:0] txt_local_x_in = x_in_aligned - TXT_X;
+    wire [5:0] txt_local_y_in = y_in_aligned - TXT_Y;
+
+    wire cn_region_in = I_tvalid &&
+        (x_in_aligned >= CN_X) && (x_in_aligned < CN_X + CN_W) &&
+        (y_in_aligned >= CN_Y) && (y_in_aligned < CN_Y + CN_H);
+    wire cn_char_in = x_in_aligned >= CN_X + 24;
+    wire [4:0] cn_local_x_in = cn_char_in ?
+                               x_in_aligned - CN_X - 12'd24 : x_in_aligned - CN_X;
+    wire [4:0] cn_local_y_in = y_in_aligned - CN_Y;
+
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
             S_x <= 12'd0;
@@ -105,15 +135,24 @@ module osd_overlay #(
     end
 
     //----------------------------------------------------------------------
-    // 3. 一级流水：把数据与坐标延迟一拍对齐
-    //    （同一时钟沿采样 I_tdata 与 S_x/S_y 的旧值，保证像素-坐标对应）
+    // 3. 一级流水：锁存像素数据及各图层的预译码结果。
+    //    区域比较、局部坐标和 Logo 地址在该寄存器前计算，使第二级
+    //    只承担字模/Logo 查表和最终命中判定；总输出延迟仍为两拍。
     //----------------------------------------------------------------------
     reg        valid_r1;
     reg        last_r1;
     reg        user_r1;
     reg [23:0] data_r1;
-    reg [11:0] x_r1;
-    reg [11:0] y_r1;
+    reg        logo_region_r1;
+    reg [14:0] logo_addr_r1;
+    reg        text_region_r1;
+    reg [8:0]  txt_local_x_r1;
+    reg [5:0]  txt_local_y_r1;
+    reg [2:0]  mode_r1;
+    reg        cn_region_r1;
+    reg [4:0]  cn_local_x_r1;
+    reg [4:0]  cn_local_y_r1;
+    reg        cn_char_r1;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -121,41 +160,52 @@ module osd_overlay #(
             last_r1  <= 1'b0;
             user_r1  <= 1'b0;
             data_r1  <= 24'd0;
-            x_r1     <= 12'd0;
-            y_r1     <= 12'd0;
+            logo_region_r1 <= 1'b0;
+            logo_addr_r1   <= 15'd0;
+            text_region_r1 <= 1'b0;
+            txt_local_x_r1 <= 9'd0;
+            txt_local_y_r1 <= 6'd0;
+            mode_r1        <= 3'd0;
+            cn_region_r1   <= 1'b0;
+            cn_local_x_r1  <= 5'd0;
+            cn_local_y_r1  <= 5'd0;
+            cn_char_r1     <= 1'b0;
         end
         else begin
             valid_r1 <= I_tvalid;
             last_r1  <= I_tlast;
             user_r1  <= I_tuser;
             data_r1  <= I_tdata;
-            // tuser identifies the first active pixel.  Re-anchor that pixel
-            // at (0,0) even when the preceding stream ended unexpectedly.
-            x_r1     <= (I_tvalid && I_tuser) ? 12'd0 : S_x;
-            y_r1     <= (I_tvalid && I_tuser) ? 12'd0 : S_y;
+            logo_region_r1 <= logo_region_in;
+            logo_addr_r1   <= logo_addr_in;
+            text_region_r1 <= text_region_in;
+            txt_local_x_r1 <= txt_local_x_in;
+            txt_local_y_r1 <= txt_local_y_in;
+            mode_r1        <= mode_in_aligned;
+            cn_region_r1   <= cn_region_in;
+            cn_local_x_r1  <= cn_local_x_in;
+            cn_local_y_r1  <= cn_local_y_in;
+            cn_char_r1     <= cn_char_in;
         end
     end
 
     //----------------------------------------------------------------------
-    // 4. 组合 OSD 判定：由 (x_r1, y_r1) 决定是否替换像素
+    // 4. 第二级组合查表：由第一级锁存的图层坐标读取字模/Logo
     //----------------------------------------------------------------------
     // Logo ROM 接口
     wire [24:0] logo_pixel;
-    reg  [14:0] logo_addr;
-    reg  [11:0] logo_lx;
-    reg  [11:0] logo_ly;
 
     // 字符库接口
     wire [31:0] char_row_bits;
     reg  [7:0]  char_sel;
     reg  [5:0]  char_row;
-    reg  [8:0]  txt_local_x;   // 文字条内 x(0..TXT_W-1)
-    reg  [5:0]  txt_local_y;   // 文字条内 y(0..TXT_H-1)
+    reg  [8:0]  txt_local_x;
+    reg  [5:0]  txt_local_y;
     reg  [3:0]  txt_glyph;     // 字符序号
     reg  [5:0]  txt_lx;        // 字符内列(0..23)
     reg  [5:0]  src_col;       // 字模源列（显示列经 4/3 缩放映射）
     reg  [5:0]  src_row;       // 字模源行（显示行经 4/3 缩放映射）
-    reg         text_pixel_on;
+    wire        text_pixel_on;
 
     // "安路"汉字区（Logo 正下方）内部信号
     reg  [4:0]  cn_local_x;    // 文字区内 x(0..CN_W-1)
@@ -166,8 +216,18 @@ module osd_overlay #(
     reg  [15:0] cn_row_bits;   // 该行 16 位点阵
     reg         cn_on;         // 笔画点亮
 
-    reg        osd_hit;
-    reg [23:0] osd_color;
+    wire text_region_now = valid_r1 &&
+                           text_region_r1;
+    wire cn_region_now = valid_r1 &&
+                         cn_region_r1;
+    wire logo_opaque_now = valid_r1 && logo_region_r1 && logo_pixel[24];
+
+    reg [23:0] data_r2;
+    reg [23:0] logo_color_r2;
+    reg        logo_hit_r2;
+    reg        text_hit_r2;
+    reg        text_pixel_r2;
+    reg        cn_hit_r2;
 
     // 模式 → 字符序列映射
     function [7:0] F_mode_glyph;
@@ -403,110 +463,66 @@ module osd_overlay #(
         end
     endfunction
 
+    // Keep the font-ROM inputs in a separate combinational cone from its
+    // output. This avoids a false feedback loop through char_row_bits in RTL
+    // simulation and lets the font lookup run in parallel with layer priority.
     always @(*) begin
-        // 默认透传
-        osd_hit        = 1'b0;
-        osd_color      = 24'd0;
-        logo_addr      = 15'd0;
-        logo_lx        = 12'd0;
-        logo_ly        = 12'd0;
-        char_sel       = 8'h20;
-        char_row       = 6'd0;
-        txt_local_x    = 8'd0;
-        txt_local_y    = 5'd0;
-        txt_glyph      = 4'd0;
-        txt_lx         = 6'd0;
-        src_col        = 6'd0;
-        src_row        = 6'd0;
-        text_pixel_on  = 1'b0;
-        cn_local_x     = 5'd0;
-        cn_local_y     = 5'd0;
-        cn_char        = 1'b0;
-        cn_col         = 4'd0;
-        cn_row         = 4'd0;
-        cn_row_bits    = 16'd0;
-        cn_on          = 1'b0;
+        char_sel      = 8'h20;
+        char_row      = 6'd0;
+        txt_local_x   = 9'd0;
+        txt_local_y   = 6'd0;
+        txt_glyph     = 4'd0;
+        txt_lx        = 6'd0;
+        src_col       = 6'd0;
+        src_row       = 6'd0;
 
-        if (valid_r1) begin
-            // ---- (a) Logo 区域（左上角）----
-            if ((x_r1 >= LOGO_X) && (x_r1 < LOGO_X + LOGO_W) &&
-                (y_r1 >= LOGO_Y) && (y_r1 < LOGO_Y + LOGO_H)) begin
-                logo_lx   = x_r1 - LOGO_X;
-                logo_ly   = y_r1 - LOGO_Y;
-                logo_addr = (logo_ly << 7) + (logo_ly << 5) + logo_lx;
-                if (logo_pixel[24]) begin   // bit24 为 1 表示不透明像素
-                    osd_hit   = 1'b1;
-                    osd_color = logo_pixel[23:0];
-                end
+        if (text_region_r1) begin
+            txt_local_x = txt_local_x_r1;
+            txt_local_y = txt_local_y_r1;
+            txt_glyph = (txt_local_x < 9'd26)  ? 4'd0 :
+                        (txt_local_x < 9'd52)  ? 4'd1 :
+                        (txt_local_x < 9'd78)  ? 4'd2 :
+                        (txt_local_x < 9'd104) ? 4'd3 :
+                        (txt_local_x < 9'd134) ? 4'd4 :
+                        (txt_local_x < 9'd160) ? 4'd5 :
+                        (txt_local_x < 9'd186) ? 4'd6 :
+                        (txt_local_x < 9'd212) ? 4'd7 :
+                        (txt_local_x < 9'd238) ? 4'd8 :
+                        (txt_local_x < 9'd262) ? 4'd9 : 4'd10;
+            txt_lx = txt_local_x - F_txt_start(txt_glyph);
+            if ((txt_glyph < 4'd10) && (txt_lx < 6'd24) && (txt_local_y < 6'd30)) begin
+                char_sel = F_mode_glyph(mode_r1, txt_glyph);
+                src_row = F_dn43(txt_local_y);
+                src_col = F_dn43(txt_lx);
+                char_row = src_row;
             end
+        end
+    end
 
-            // ---- (b) 模式文字区域（左下角）----
-            if (!osd_hit &&
-                (x_r1 >= TXT_X) && (x_r1 < TXT_X + TXT_W) &&
-                (y_r1 >= TXT_Y) && (y_r1 < TXT_Y + TXT_H)) begin
-                txt_local_x = x_r1 - TXT_X;             // 0..TXT_W-1
-                txt_local_y = y_r1 - TXT_Y;             // 0..TXT_H-1
-                // 字符序号：紧凑排版用起始边界比较链定位字符（边界即各字符起点 26/52/.../262）
-                txt_glyph = (txt_local_x < 9'd26)  ? 4'd0 :
-                            (txt_local_x < 9'd52)  ? 4'd1 :
-                            (txt_local_x < 9'd78)  ? 4'd2 :
-                            (txt_local_x < 9'd104) ? 4'd3 :
-                            (txt_local_x < 9'd134) ? 4'd4 :
-                            (txt_local_x < 9'd160) ? 4'd5 :
-                            (txt_local_x < 9'd186) ? 4'd6 :
-                            (txt_local_x < 9'd212) ? 4'd7 :
-                            (txt_local_x < 9'd238) ? 4'd8 :
-                            (txt_local_x < 9'd262) ? 4'd9 : 4'd10;
-                // 字符内列 = 局部 x 减去该字符起始偏移
-                txt_lx = txt_local_x - F_txt_start(txt_glyph);
-                if ((txt_glyph < 4'd10) && (txt_lx < 6'd24) && (txt_local_y < 6'd30)) begin
-                    char_sel = F_mode_glyph(osd_mode, txt_glyph);
-                    src_row       = F_dn43(txt_local_y);      // 显示行 0..29 → 字模行 0..38（×4/3）
-                    src_col       = F_dn43(txt_lx);           // 显示列 0..23 → 字模列 0..30（×4/3）
-                    char_row      = src_row;
-                    text_pixel_on = char_row_bits[31 - src_col]; // bit31=最左列
-                end
-                if (text_pixel_on) begin
-                    osd_hit   = 1'b1;
-                    osd_color = COLOR_TEXT;
-                end
-                else begin
-                    osd_hit   = 1'b1;   // 底条（含字符间隔与下边距）
-                    osd_color = COLOR_BAR;
-                end
-            end
+    assign text_pixel_on = char_row_bits[31 - src_col];
 
-            // ---- (c) "安路"汉字区（Logo 正下方）----
-            if (!osd_hit &&
-                (x_r1 >= CN_X) && (x_r1 < CN_X + CN_W) &&
-                (y_r1 >= CN_Y) && (y_r1 < CN_Y + CN_H)) begin
-                cn_local_y = y_r1 - CN_Y;   // 0..23
-                if (x_r1 - CN_X < 24) begin        // 左半：安
-                    cn_char    = 1'b0;
-                    cn_local_x = x_r1 - CN_X;      // 0..23
-                end
-                else begin                          // 右半：路
-                    cn_char    = 1'b1;
-                    cn_local_x = x_r1 - CN_X - 5'd24; // 0..23
-                end
-                // 垂直下沉 2px；下沉量不足时屏蔽（与参考工程 CN_Y_OFFSET 语义一致）
-                if (cn_local_y >= CN_OFFSET)
-                    cn_local_y = cn_local_y - CN_OFFSET;
-                else
-                    cn_local_y = 5'd31;
-                if ((cn_local_x < 5'd24) && (cn_local_y < 5'd24)) begin
-                    // 16x16 字模放大到 24x24：(n*16)/24 化简为 floor(2n/3)，查表取值，
-                    // 省去 ×16 中间量与 ÷24 除法
-                    cn_col     = F_cn_scale(cn_local_x);
-                    cn_row     = F_cn_scale(cn_local_y);
-                    cn_row_bits = F_cn16_row(cn_char, cn_row);
-                    cn_on       = cn_row_bits[15 - cn_col]; // bit15 = 最左列
-                end
-                if (cn_on) begin
-                    osd_hit   = 1'b1;
-                    osd_color = COLOR_CN;
-                end
-                // 笔画以外透传视频（背景透明，不遮挡图像）
+    always @(*) begin
+        cn_local_x  = 5'd0;
+        cn_local_y  = 5'd0;
+        cn_char     = 1'b0;
+        cn_col      = 4'd0;
+        cn_row      = 4'd0;
+        cn_row_bits = 16'd0;
+        cn_on       = 1'b0;
+
+        if (cn_region_now) begin
+            cn_local_y = cn_local_y_r1;
+            cn_local_x = cn_local_x_r1;
+            cn_char    = cn_char_r1;
+            if (cn_local_y >= CN_OFFSET)
+                cn_local_y = cn_local_y - CN_OFFSET;
+            else
+                cn_local_y = 5'd31;
+            if ((cn_local_x < 5'd24) && (cn_local_y < 5'd24)) begin
+                cn_col      = F_cn_scale(cn_local_x);
+                cn_row      = F_cn_scale(cn_local_y);
+                cn_row_bits = F_cn16_row(cn_char, cn_row);
+                cn_on       = cn_row_bits[15 - cn_col];
             end
         end
     end
@@ -519,21 +535,39 @@ module osd_overlay #(
             O_tvalid <= 1'b0;
             O_tlast  <= 1'b0;
             O_tuser  <= 1'b0;
-            O_tdata  <= 24'd0;
+            data_r2       <= 24'd0;
+            logo_color_r2 <= 24'd0;
+            logo_hit_r2   <= 1'b0;
+            text_hit_r2   <= 1'b0;
+            text_pixel_r2 <= 1'b0;
+            cn_hit_r2     <= 1'b0;
         end
         else begin
             O_tvalid <= valid_r1;
             O_tlast  <= last_r1;
             O_tuser  <= user_r1;
-            O_tdata  <= osd_hit ? osd_color : data_r1;
+            data_r2       <= data_r1;
+            logo_color_r2 <= logo_pixel[23:0];
+            logo_hit_r2   <= logo_opaque_now;
+            text_hit_r2   <= text_region_now && !logo_opaque_now;
+            text_pixel_r2 <= text_pixel_on;
+            cn_hit_r2     <= cn_region_now && cn_on &&
+                             !logo_opaque_now && !text_region_now;
         end
     end
+
+    // The OSD color mux is deliberately after the stage-2 registers. The
+    // expensive Logo ROM and font decoding therefore terminate at registers,
+    // while the original two-cycle video latency remains unchanged.
+    assign O_tdata = logo_hit_r2 ? logo_color_r2 :
+                     text_hit_r2 ? (text_pixel_r2 ? COLOR_TEXT : COLOR_BAR) :
+                     cn_hit_r2   ? COLOR_CN : data_r2;
 
     //----------------------------------------------------------------------
     // 6. 子模块例化
     //----------------------------------------------------------------------
     anlogic_logo_rom u_anlogic_logo_rom(
-        .I_addr  ( logo_addr ),
+        .I_addr  ( logo_addr_r1 ),
         .O_pixel ( logo_pixel )
     );
 
