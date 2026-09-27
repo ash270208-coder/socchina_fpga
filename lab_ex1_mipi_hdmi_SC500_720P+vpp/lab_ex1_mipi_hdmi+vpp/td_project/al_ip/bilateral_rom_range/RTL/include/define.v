@@ -1,0 +1,4 @@
+`define SP_ROM_0eb03742bff9
+`define OUTREG_DISA_0eb03742bff9
+`define OUTREG_DISB_0eb03742bff9
+`define PH1P_0eb03742bff9

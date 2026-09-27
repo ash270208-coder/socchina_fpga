@@ -3,7 +3,7 @@
 module cartoon_top #(
     parameter IMG_WIDTH        = 1280,
     parameter IMG_HEIGHT       = 720,
-    parameter SOBEL_THRESHOLD  = 60,
+    parameter SOBEL_THRESHOLD  = 70,
     parameter QUANT_BITS       = 4
 )(
     input               I_clk,
@@ -26,20 +26,20 @@ module cartoon_top #(
     // 卡通化算法顶层集成模块 (Cartoon Top)
     // =========================================================================
     // 2026 嵌赛 FPGA 选题二：卡通化图像风格化处理
-    // 流水线：3x3 低通降噪 + 边缘提取 + 3x3 膨胀加粗 + 区域填充，色度低位量化方案
+    // 流水线：3x3 双边降噪 + 边缘提取 + 3x3 膨胀加粗 + 区域填充，色度低位量化方案
     //
     // 数据通路 (按本工程实际拍数标注):
-    //   输入 RGB888 ─┬─ RGB888_YCbCr444(3拍) ─ lp_filter_3x3_stream(2拍) ─ Sobel_edge(5拍) ─ sobel_mask [cycle 10]
-    //                │                                                                       └─ Bit_Dilation_Detector(4拍) ─ edge_dilated [cycle 14]
-    //                └─ Color_Quantize(2拍) ─ 延时链(+12拍) ─ quant_rgb_aligned [cycle 14]
-    //   Cartoon_Blend(0拍，组合逻辑) ─ 输出寄存器(1拍) ─ O_tdata  [cycle 15]
+    //   输入 RGB888 ─┬─ RGB888_YCbCr444(3拍) ─ bilateral_filter_3x3(8拍) ─ Sobel_edge(5拍) ─ sobel_mask [cycle 16]
+    //                │                                                                         └─ Bit_Dilation_Detector(4拍) ─ edge_dilated [cycle 20]
+    //                └─ Color_Quantize(2拍) ─ 延时链(+18拍) ─ quant_rgb_aligned [cycle 20]
+    //   Cartoon_Blend(0拍，组合逻辑) ─ 输出寄存器(1拍) ─ O_tdata  [cycle 21]
     //
-    // 两路数据在 cycle 14 严格对齐后喂入 Cartoon_Blend，防止帧撕裂。
+    // 两路数据在 cycle 20 严格对齐后喂入 Cartoon_Blend，防止帧撕裂。
     //
     // 【重要】本工程 user_source/hdl_source/Sobel_edge.v 是 5 级流水线输出，
-    //         而 fang 分支卡通目录里那份 Sobel_edge 只有 4 级。所以延时链必须
-    //         取 12 拍 (2+12 = 3+2+5+4) 才能对齐，即 QUANT_EXTRA_DLY = 12。
-    //         若以后换回 4 级 Sobel，把 QUANT_EXTRA_DLY 改回 11 即可。
+    //         而 fang 分支卡通目录里那份 Sobel_edge 只有 4 级。延时链必须取
+    //         18 拍 (2+18 = 3+8+5+4) 才能对齐，即 QUANT_EXTRA_DLY = 18。
+    //         若以后换回 4 级 Sobel，把 QUANT_EXTRA_DLY 改回 17 即可。
     // =========================================================================
 
     // =========================================================================
@@ -76,21 +76,20 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 2. 3x3 中心加权低通 (lp_filter_3x3_stream, 对 Y 灰度先平滑再提取边缘)
-    //    高增益下传感器噪声会被 Sobel 当成边缘, 膨胀后放大成黑噪点。
-    //    二项式核 [1 2 1; 2 4 2; 1 2 1]/16 把噪声标准差压到约 0.375, 同时
-    //    中心权重 4/16 保留边缘梯度, 避免均匀均值把描边磨淡。
-    //    流水线延迟：2 拍 (从 ycbcr 输出算起, cycle 5 输出)
+    // 2. 3x3 双边滤波 (bilateral_filter_3x3, 对 Y 灰度做保边缘降噪)
+    //    空间核 [1 2 1;2 4 2;1 2 1] + 高斯距离核(σr=35): 平滑平区噪声的同时
+    //    保留大梯度边缘, 避免普通低通把描边磨淡。是"噪点太多"的治本方案。
+    //    流水线延迟：8 拍 (从 ycbcr 输出算起, cycle 11 输出)
     // =========================================================================
     wire        tlast_lp;
     wire        tuser_lp;
     wire        tvalid_lp;
     wire [7:0]  y_lp;
 
-    lp_filter_3x3_stream #(
+    bilateral_filter_3x3 #(
         .IMG_WIDTH (IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
-    ) u_lp_filter_3x3 (
+    ) u_bilateral_filter (
         .I_clk         (I_clk),
         .I_rst_n       (I_rst_n),
         .I_tvalid      (tvalid_ycbcr),
@@ -104,10 +103,10 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 3. Sobel 边缘检测 (对低通后的 Y 灰度做边缘提取，输出二值 mask)
+    // 3. Sobel 边缘检测 (对双边滤波后的 Y 灰度做边缘提取，输出二值 mask)
     //    I_grey_tdata 输入 Y，O_grey_tdata 输出二值 mask (8'hFF=边缘, 8'h00=非边缘)
-    //    流水线延迟：5 拍 (本工程 Sobel_edge 为 5 级流水, 从 LP 输出算起)
-    //    Sobel 路径总延迟 = 3 + 2 + 5 = 10 拍 (cycle 10 输出)
+    //    流水线延迟：5 拍 (本工程 Sobel_edge 为 5 级流水, 从双边输出算起)
+    //    Sobel 路径总延迟 = 3 + 8 + 5 = 16 拍 (cycle 16 输出)
     // =========================================================================
     wire        tlast_sobel;
     wire        tuser_sobel;
@@ -158,13 +157,13 @@ module cartoon_top #(
 
     // =========================================================================
     // 5. 延时对齐链 (Delay Alignment)
-    //    Sobel 路径总延迟 = RGB2YCbCr(3拍) + LP(2拍) + Sobel(5拍) + 膨胀(4拍) = 14 拍
+    //    Sobel 路径总延迟 = RGB2YCbCr(3拍) + 双边(8拍) + Sobel(5拍) + 膨胀(4拍) = 20 拍
     //    Color_Quantize 路径延迟 = 2 拍
-    //    差值 = 14 - 2 = 12 拍 → quant_rgb 需额外延迟 12 拍
-    //    对齐后两路数据均在 cycle 14 到达 Cartoon_Blend 输入端
-    //    控制信号使用 tlast/tuser/tvalid_dilate (已在 cycle 14)
+    //    差值 = 20 - 2 = 18 拍 → quant_rgb 需额外延迟 18 拍
+    //    对齐后两路数据均在 cycle 20 到达 Cartoon_Blend 输入端
+    //    控制信号使用 tlast/tuser/tvalid_dilate (已在 cycle 20)
     // =========================================================================
-    localparam QUANT_EXTRA_DLY = 12;
+    localparam QUANT_EXTRA_DLY = 18;
     reg [23:0] quant_rgb_d [0:QUANT_EXTRA_DLY-1];
 
     integer i;
@@ -181,13 +180,13 @@ module cartoon_top #(
         end
     end
 
-    // 对齐后的量化 RGB (cycle 14)
+    // 对齐后的量化 RGB (cycle 20)
     wire [23:0] quant_rgb_aligned = quant_rgb_d[QUANT_EXTRA_DLY-1];
 
     // =========================================================================
     // 6. 3x3 膨胀 (Bit Dilation，加粗黑边)
     //    Sobel 输出边缘 mask 取 bit0 作为 1bit 边缘，再做 3x3 膨胀加粗
-    //    流水线延迟：4 拍 (从 sobel 输出算起) -> edge_dilated [cycle 14]
+    //    流水线延迟：4 拍 (从 sobel 输出算起) -> edge_dilated [cycle 20]
     // =========================================================================
     wire sobel_edge = sobel_mask[0];
 
@@ -214,7 +213,7 @@ module cartoon_top #(
 
     // =========================================================================
     // 7. 卡通化边缘合成 (Cartoon Blend)
-    //    输入两路已在 cycle 14 对齐的数据：
+    //    输入两路已在 cycle 20 对齐的数据：
     //      - quant_rgb_aligned : 量化色块 RGB888
     //      - edge_dilated      : 膨胀后的边缘标志 (1=边缘, 0=非边缘)
     //    纯组合逻辑 (0 拍延迟)，边缘位置输出黑色描边，非边缘透传色块
@@ -242,7 +241,7 @@ module cartoon_top #(
     );
 
     // =========================================================================
-    // 8. 输出寄存器 (额外打 1 拍，改善时序，cycle 15 输出)
+    // 8. 输出寄存器 (额外打 1 拍，改善时序，cycle 21 输出)
     // =========================================================================
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin

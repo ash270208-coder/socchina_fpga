@@ -1,0 +1,39 @@
+DATA_WIDTH_A : 8 : U : En :  : 1 : 1152
+DATA_DEPTH_A : 256 : U : En :  : 2 : 65536
+DATA_WIDTH_B : 1 : U : Dis : 1;;2;;4;;8;;16;;32;;64 :  : 
+DATA_DEPTH_B : 2048 : G : Dis :  :  : 
+DEBUG : 0 : U : En :  :  : 
+PACK : 0 : U : En :  :  : 
+FAST : 0 : G : En :  :  : 
+ADDR_WIDTH_A : 8 : G : En :  :  : 
+ADDR_WIDTH_B : 11 : G : En :  :  : 
+SP_ROM : 1 : G : En :  :  : 
+OUTREG_WITH_OCEA : 0 : G : En :  :  : 
+OUTREG_DISA : 1 : G : En :  :  : 
+OUTREG_WITHOUT_OCEA : 0 : G : En :  :  : 
+OUTREG_WITH_OCEB : 0 : G : En :  :  : 
+OUTREG_WITHOUT_OCEB : 0 : G : En :  :  : 
+OUTREG_DISB : 1 : G : En :  :  : 
+Load_Init_File : 1 : U : En :  :  : 
+INIT_FILE : ../bilateral_range.dath : G : En :  :  : 
+Mif_File : D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/bilateral_range.dath : U : En :  :  : 
+Fill_Memory_Initialization_Values : 0 : U : En :  :  : 
+EMB20K : 1 : U : En :  :  : 
+EMB20K_FAST : 0 : U : En :  :  : 
+Single_Port_ROM : 1 : U : En :  :  : 
+Dual_Port_ROM : 0 : U : En :  :  : 
+Fill_all_with_0 : 1 : U : Dis :  :  : 
+Fill_all_with_1 : 0 : U : Dis :  :  : 
+PortA_Register_None : 1 : U : En :  :  : 
+PortA_Register_without_Ocea : 0 : U : En :  :  : 
+PortA_Register_with_Ocea : 0 : U : En :  :  : 
+PortB_Register_None : 1 : U : Dis :  :  : 
+PortB_Register_without_Oceb : 0 : U : Dis :  :  : 
+PortB_Register_with_Oceb : 0 : U : Dis :  :  : 
+FILL_INIT_VAL : NONE : G : En :  :  : 
+depth_range_display_a : 2~65536 : G : En :  :  : 
+width_range_display_a : 1~1152 : G : En :  :  : 
+problem_sum : 0 : G : En :  :  : 
+SF2 : 0 : G : En :  :  : 
+DR1P : 0 : G : En :  :  : 
+PH1P : 1 : G : En :  :  : 

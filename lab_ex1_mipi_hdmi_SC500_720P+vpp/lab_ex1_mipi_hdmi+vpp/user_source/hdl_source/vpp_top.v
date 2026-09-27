@@ -4,7 +4,7 @@ module vpp_top #(
     parameter IMG_WIDTH  = 1280,
     parameter IMG_HEIGHT = 720,
     parameter SOBEL_THRESHOLD = 60,      // 模式 3 (Sobel 显示) 阈值
-    parameter CART_SOBEL_THRESHOLD = 60  // 模式 4 (卡通) 阈值: 低通已降噪, 阈值回退到 60 保留描边; 可在 40~70 微调
+    parameter CART_SOBEL_THRESHOLD = 75  // 模式 4 (卡通) 阈值: 90 时描边偏淡、70 时黑点偏多, 折中 80; 可在 70~100 微调
 )( 
     input  [1:0]   I_button        ,  // 按键输入，用于切换显示模式
     
@@ -150,17 +150,17 @@ module vpp_top #(
     );
 
     // =========================================================================
-    // 5. 伽马校正 (全工程只做这一次) + 各模式数据统一对齐到 16 拍延迟
-    //    (RGB2Y 3拍 + Sobel 5拍 + 腐蚀 4拍 + 膨胀 4拍 = 16拍):
-    //    原图:   伽马后延迟 16 拍                     -> raw_rgb_d[15]
+    // 5. 伽马校正 (全工程只做这一次) + 各模式数据统一对齐到 22 拍延迟
+    //    (卡通用了 8 拍双边滤波, 整条对齐由 16 拍放宽到 22 拍):
+    //    原图:   伽马后延迟 22 拍                     -> raw_rgb_d[21]
     //    卡通:   伽马后延迟  1 拍                     -> raw_rgb_d[0]
-    //            (卡通内部固定 15 拍, 1+15 = 16, 与其它档严格同拍)
-    //    灰度:   由伽马后的 RGB 现算 (R+2G+B)/4        -> gray_gam (第 16 拍)
-    //    直方图: 彩色转换链路见第 6 节 (Y_eq+Cb/Cr -> RGB, 共 16 拍)
-    //    Sobel:  sobel_tdata 与 tvalid_sobel 本身对齐
+    //            (卡通内部固定 21 拍, 1+21 = 22, 与其它档严格同拍)
+    //    灰度:   由伽马后的 RGB 现算 (R+2G+B)/4        -> gray_gam (第 22 拍)
+    //    直方图: 彩色转换链路见第 6 节 (Y_eq+Cb/Cr -> RGB, 共 22 拍)
+    //    Sobel:  sobel_tdata 与 tvalid_sobel 补 6 拍 -> 第 22 拍
     //
     //    【只用一个伽马】伽马是无记忆的组合逻辑(0 拍), 所以放在最前面做一次,
-    //    后面用两条纯寄存器延迟链分别取第 1 拍(卡通)与第 16 拍(原图)即可,
+    //    后面用两条纯寄存器延迟链分别取第 1 拍(卡通)与第 22 拍(原图)即可,
     //    不需要第二个伽马实例。
     //    注意: raw_rgb_d 里装的已经是"伽马校正后"的数据, 名字沿用原来的,
     //          不要再把它当线性原图使用。
@@ -175,19 +175,19 @@ module vpp_top #(
         .O_b (gamma_b)
     );
 
-    reg [23:0] raw_rgb_d [0:15];
+    reg [23:0] raw_rgb_d [0:21];
     integer i;
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
-            for (i = 0; i < 16; i = i + 1)
+            for (i = 0; i < 22; i = i + 1)
                 raw_rgb_d[i] <= 24'd0;
         end
         else begin
             // 延迟链随时钟无条件推进, 与 Sobel 控制信号严格同拍
             // 链里装的是伽马校正后的原图数据
             raw_rgb_d[0] <= {gamma_r, gamma_g, gamma_b};
-            for (i = 0; i < 15; i = i + 1)
+            for (i = 0; i < 21; i = i + 1)
                 raw_rgb_d[i+1] <= raw_rgb_d[i];
         end
     end
@@ -195,7 +195,7 @@ module vpp_top #(
     // =========================================================================
     // 6. 直方图均衡彩色输出链路 (均衡 Y + 原色度, 恢复彩色):
     //    y_equ(6拍) 与 Cb/Cr(3拍, 补 3 拍 = 6拍) 对齐 -> YCbCr444_RGB888(3拍, =9拍)
-    //    -> gamma(0拍) -> chroma_nr(3拍) -> 再补 4 拍 = 16 拍, 与 tvalid_sobel 对齐
+    //    -> gamma(0拍) -> chroma_nr(3拍) -> 再补 10 拍 = 22 拍, 与 Sobel(补6拍后) 对齐
     //    (直方图内部已加对比度限制/裁剪, 见 histogram_equ.v 的 CLIP_DIV 参数)
     // =========================================================================
     wire [7:0]  he_r_tdata;
@@ -212,8 +212,8 @@ module vpp_top #(
     reg         he_tvalid_d [0:2];
     reg         he_tlast_d  [0:2];
     reg         he_tuser_d  [0:2];
-    // he_rgb_d 只补 4 拍: 9(转换) + 3(chroma_nr) + 4 = 16 拍
-    reg [23:0]  he_rgb_d [0:3];
+    // he_rgb_d 补 10 拍: 9(转换) + 3(chroma_nr) + 10 = 22 拍
+    reg [23:0]  he_rgb_d [0:9];
 
     always @(posedge I_clk or negedge I_rst_n) begin
         if (!I_rst_n) begin
@@ -224,7 +224,7 @@ module vpp_top #(
                 he_tlast_d[i]  <= 1'b0;
                 he_tuser_d[i]  <= 1'b0;
             end
-            for (i = 0; i < 4; i = i + 1)
+            for (i = 0; i < 10; i = i + 1)
                 he_rgb_d[i] <= 24'd0;
         end
         else begin
@@ -243,9 +243,9 @@ module vpp_top #(
             end
 
             // 转换后的 RGB (9 拍) -> 模式2 专用 gamma(0 拍) -> chroma_nr(3 拍)
-            // = 12 拍, 再补 4 拍 -> 16 拍, 与 Sobel 路径对齐
+            // = 12 拍, 再补 10 拍 -> 22 拍, 与 Sobel 路径对齐
             he_rgb_d[0] <= he_nr_rgb;
-            for (i = 0; i < 3; i = i + 1)
+            for (i = 0; i < 9; i = i + 1)
                 he_rgb_d[i+1] <= he_rgb_d[i];
         end
     end
@@ -278,7 +278,7 @@ module vpp_top #(
     //       ① 别的档都过 gamma_lut（扣黑电平 + γ2.2），只有它不过 -> 色调域不一致；
     //       ② 它的 Cb/Cr 没过色度降噪 -> 彩色噪点直接可见。
     //     现在补上：gamma_lut 纯组合(0 拍)，chroma_nr 内部 3 拍，
-    //     所以整条链路仍然落在第 16 拍（见上面 he_rgb_d 的说明）。
+    //     所以整条链路仍然落在第 22 拍（见上面 he_rgb_d 的说明）。
     //     (信号声明在 6 节开头)
     // =========================================================================
     gamma_lut u_gamma_lut_he (
@@ -301,14 +301,13 @@ module vpp_top #(
     // 6c. 卡通化图像风格化 (Cartoon Top)
     //
     // 【时序对齐 —— 关键，别乱改】
-    //   整条 vpp 流水线的输出必须落在第 16 拍:
-    //   design_top_wrapper.v 把 vs 延迟 17 拍来匹配 "vpp 16 拍 + OSD 1 拍",
-    //   hdmi_tx 的 de 又是跟着数据走的 —— 所以只要某一档的总延迟不是 16 拍,
-    //   这一档相对同步信号就会整体横移若干像素, 表现为"最左边一条窄边条错位"。
+    //   整条 vpp 流水线的输出必须落在第 22 拍:
+    //   design_top_wrapper.v 把 vs 延迟 26 拍来匹配 "vpp 22 拍 + Logo OSD 2 拍
+    //   + 延迟 OSD 2 拍", hdmi_tx 的 de 又是跟着数据走的 —— 只要某一档总延迟
+    //   不是 22 拍, 这一档相对同步信号就会整体横移, 表现为"最左边窄边条错位"。
     //
-    //   cartoon_top 内部固定 15 拍 (RGB2Y 3 + LP 2 + Sobel 5 + 膨胀 4 = 14 拍
-    //   对齐, 再打 1 拍输出), 因此输入必须提前到第 1 拍: 1 + 15 = 16 ✓。
-    //   若像原来那样喂第 3 拍的数据, 输出是 3 + 15 = 18 拍, 会横移 2 个像素。
+    //   cartoon_top 内部固定 21 拍 (RGB2Y 3 + 双边 8 + Sobel 5 + 膨胀 4 = 20 拍
+    //   对齐, 再打 1 拍输出), 因此输入必须提前到第 1 拍: 1 + 21 = 22 ✓。
     //     - 数据: raw_rgb_d[0]  (= 伽马校正后再延迟 1 拍)
     //     - 控制: 输入 tvalid/tlast/tuser 打 1 拍
     //     (伽马已在第 5 节统一做过一次, 这里不再重复例化)
@@ -339,7 +338,7 @@ module vpp_top #(
         .IMG_WIDTH       (IMG_WIDTH          ),
         .IMG_HEIGHT      (IMG_HEIGHT         ),
         .SOBEL_THRESHOLD (CART_SOBEL_THRESHOLD),
-        .QUANT_BITS      (4                  )   // 每通道保留 4 位高比特 -> 16 级色阶
+        .QUANT_BITS      (5                  )   // 每通道保留 5 位高比特 -> 32 级色阶 (过渡更细腻、色带更少)
     ) u_cartoon_top (
         .I_clk    (I_clk),
         .I_rst_n  (I_rst_n),
@@ -359,29 +358,58 @@ module vpp_top #(
     // 6d. 灰度档显示数据: 直接用伽马后的 RGB 加权取灰 (R + 2G + B)/4
     //     伽马是无记忆函数, 直接对伽马后的三通道加权, 就是"显示域的灰";
     //     比原来那条线性 Y 延迟链更亮, 符合 sRGB 显示的观感。
-    //     好处: 不用第二个伽马实例, 也不额外增加延迟(用的还是第 16 拍那档)。
+    //     好处: 不用第二个伽马实例, 也不额外增加延迟(用的还是第 22 拍那档)。
     //     原来那条 raw_y_d 延迟链已删除(它只被模式 1 用到)。
     //     注意位宽: 三项相加最大 255+510+255 = 1020, 所以先扩到 10 位再相加。
     // =========================================================================
-    wire [9:0] gray_sum = {2'b00, raw_rgb_d[15][23:16]}
-                        + {1'b0,  raw_rgb_d[15][15: 8], 1'b0}
-                        + {2'b00, raw_rgb_d[15][ 7: 0]};
+    wire [9:0] gray_sum = {2'b00, raw_rgb_d[21][23:16]}
+                        + {1'b0,  raw_rgb_d[21][15: 8], 1'b0}
+                        + {2'b00, raw_rgb_d[21][ 7: 0]};
     wire [7:0] gray_gam = gray_sum[9:2];   // /4
 
     // =========================================================================
     // 6e. 色度降噪 (只动色度, 亮度保持锐利, 原理见 chroma_nr.v)
-    //     模块内部 3 拍, 所以从 raw_rgb_d[12] (第 13 拍) 抽输入: 13 + 3 = 16 拍 ✓
+    //     模块内部 3 拍, 所以从 raw_rgb_d[18] (第 19 拍) 抽输入: 19 + 3 = 22 拍 ✓
     //     只作用于【原图】和兜底档;
     //     灰度档由亮度算出, 而本模块亮度严格不变 -> 数学上不受影响, 保持原样;
-    //     卡通档走 raw_rgb_d[0] (第 1 拍), 不动它, 否则会破坏 16 拍时序。
+    //     卡通档走 raw_rgb_d[0] (第 1 拍), 不动它, 否则会破坏 22 拍时序。
     // =========================================================================
     wire [23:0] nr_rgb;
     chroma_nr u_chroma_nr (
         .I_clk   (I_clk),
         .I_rst_n (I_rst_n),
-        .I_rgb   (raw_rgb_d[12]),
+        .I_rgb   (raw_rgb_d[18]),
         .O_rgb   (nr_rgb)
     );
+
+    // =========================================================================
+    // 6f. Sobel 路径统一补 6 拍 (16 → 22, 与卡通/其它档严格同拍)
+    //     Sobel_edge_detection_top 内部 = RGB2Y 3 + Sobel 5 + 腐蚀 4 + 膨胀 4 = 16 拍
+    // =========================================================================
+    reg [7:0] sobel_tdata_d [0:5];
+    reg [5:0] sobel_v_d, sobel_l_d, sobel_u_d;
+
+    always @(posedge I_clk or negedge I_rst_n) begin
+        if (!I_rst_n) begin
+            for (i = 0; i < 6; i = i + 1) sobel_tdata_d[i] <= 8'd0;
+            sobel_v_d <= 6'd0;
+            sobel_l_d <= 6'd0;
+            sobel_u_d <= 6'd0;
+        end
+        else begin
+            sobel_tdata_d[0] <= sobel_tdata;
+            for (i = 0; i < 5; i = i + 1)
+                sobel_tdata_d[i+1] <= sobel_tdata_d[i];
+            sobel_v_d <= {sobel_v_d[4:0], tvalid_sobel};
+            sobel_l_d <= {sobel_l_d[4:0], tlast_sobel};
+            sobel_u_d <= {sobel_u_d[4:0], tuser_sobel};
+        end
+    end
+
+    wire [7:0] sobel_tdata_d6 = sobel_tdata_d[5];
+    wire       sobel_v_d6     = sobel_v_d[5];
+    wire       sobel_l_d6     = sobel_l_d[5];
+    wire       sobel_u_d6     = sobel_u_d[5];
 
     // =========================================================================
     // 7. 多路模式选择输出
@@ -393,29 +421,29 @@ module vpp_top #(
 
     always @(*) begin
         case (display_mode)
-            3'b000: begin // 模式 0: 彩色原图 (伽马校正后, 16 拍对齐)
+            3'b000: begin // 模式 0: 彩色原图 (伽马校正后, 22 拍对齐)
                 mux_tdata  = nr_rgb;
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+                mux_tlast  = sobel_l_d6;
+                mux_tuser  = sobel_u_d6;
+                mux_tvalid = sobel_v_d6;
             end
-            3'b001: begin // 模式 1: 灰度图 (伽马域取灰, 16 拍对齐)
+            3'b001: begin // 模式 1: 灰度图 (伽马域取灰, 22 拍对齐)
                 mux_tdata  = {gray_gam, gray_gam, gray_gam};
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+                mux_tlast  = sobel_l_d6;
+                mux_tuser  = sobel_u_d6;
+                mux_tvalid = sobel_v_d6;
             end
-            3'b010: begin // 模式 2: 直方图均衡化 (已过 gamma + 色度降噪, 16 拍对齐)
-                mux_tdata  = he_rgb_d[3];
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+            3'b010: begin // 模式 2: 直方图均衡化 (已过 gamma + 色度降噪, 22 拍对齐)
+                mux_tdata  = he_rgb_d[9];
+                mux_tlast  = sobel_l_d6;
+                mux_tuser  = sobel_u_d6;
+                mux_tvalid = sobel_v_d6;
             end
             3'b011: begin // 模式 3: Sobel 边缘检测图
-                mux_tdata  = {sobel_tdata, sobel_tdata, sobel_tdata};
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+                mux_tdata  = {sobel_tdata_d6, sobel_tdata_d6, sobel_tdata_d6};
+                mux_tlast  = sobel_l_d6;
+                mux_tuser  = sobel_u_d6;
+                mux_tvalid = sobel_v_d6;
             end
             3'b100: begin // 模式 4: 卡通化风格化 (自带控制信号)
                 mux_tdata  = cartoon_tdata;
@@ -425,9 +453,9 @@ module vpp_top #(
             end
             default: begin // 兜底: 彩色原图 (伽马校正后)
                 mux_tdata  = nr_rgb;
-                mux_tlast  = tlast_sobel;
-                mux_tuser  = tuser_sobel;
-                mux_tvalid = tvalid_sobel;
+                mux_tlast  = sobel_l_d6;
+                mux_tuser  = sobel_u_d6;
+                mux_tvalid = sobel_v_d6;
             end
         endcase
     end
