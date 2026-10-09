@@ -33,6 +33,7 @@
 | [`docs/训练记录.md`](docs/训练记录.md) | 可复现训练配方 + 踩坑表 | CNN · 板 B |
 | [`docs/LBP评估与替代方案.md`](docs/LBP评估与替代方案.md) | LBP 级联为什么不行（原方案评估） | LBP |
 | [`docs/BOARD_SPLIT.md`](docs/BOARD_SPLIT.md) | 双板分工、板 A/B 文件分类、回退方法 | 双板 |
+| [`docs/A板以太网改造方案.md`](docs/A板以太网改造方案.md) | **板 A 加以太网**：R10/R11 冲突解法、RGMII 引脚表、复位方案、资源账 | 双板 · 板 A |
 | [`docs/TIMING_OSD_ANALYSIS.md`](docs/TIMING_OSD_ANALYSIS.md) | OSD 时序违例根因与加固方案 | 双板 · 时序 |
 | [`rom_data/README.md`](rom_data/README.md) | ROM / 查表数据文件逐个说明 | 数据 |
 | [`matlab/cnn_detector/README.md`](matlab/cnn_detector/README.md) | MATLAB 训练/量化脚本链说明 | 代码 |
