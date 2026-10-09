@@ -1,22 +1,65 @@
 
 set_pin_assignment	{ I_sys_clk }			{ LOCATION = C4; IOSTANDARD  = LVCMOS33; PULLTYPE = PULLUP; }
-set_pin_assignment	{ I_rst_n }				{ LOCATION = R10; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
 
+#===== 复位 =====
+# 原 { I_rst_n } = R10 已删除：R10 在板上铜线是 ETHPHY_TX_EN，让给 phy1_rgmii_tx_ctl。
+# 复位改为 pll_por.v 内部上电复位（50MHz 域，10ms），不再占用任何引脚。
+# 参考 docs/A板以太网改造方案.md §2.4 / §4。
+# 若日后坚持要物理复位键，在此补一行指向空闲球（必须先与实物原理图核对）。
+
+#===== 摄像头 I2C / 时钟 / 复位（不变）=====
 set_pin_assignment	{ O_cam_scl }		{ LOCATION = K3; IOSTANDARD  = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 set_pin_assignment	{ IO_cam_sda }		{ LOCATION = J3; IOSTANDARD  = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 set_pin_assignment	{ O_cam_24m }	{ LOCATION = L3; IOSTANDARD  = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
-set_pin_assignment	{ O_cam_rst }		{ LOCATION = L2; IOSTANDARD  = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
+set_pin_assignment	{ O_cam_rst }	{ LOCATION = L2; IOSTANDARD  = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 
+#===== 按键（4 个，全部保留）=====
 set_pin_assignment	{ I_button[0] }			{ LOCATION = D5;  IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 set_pin_assignment	{ I_button[1] }			{ LOCATION = A9; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 
  set_pin_assignment	{ I_button[2] }			{ LOCATION = B9;  IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
  set_pin_assignment	{ I_button[3] }			{ LOCATION = C7; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLUP; }
 
-set_pin_assignment	{ O_screen_pwm } 		{ LOCATION = R11; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; PULLTYPE = PULLDOWN; }
+#===== 原 { O_screen_pwm } = R11 已删除：R11 在板上铜线是 ETHPHY_TXD0，让给 phy1_rgmii_tx_data[0]。
+# 外部 HDMI 显示器不需要 FPGA 提供背光 PWM。若日后要保留，迁到空闲球（须核对原理图）。
+# 同时注意：R11 原有的 PULLTYPE = PULLDOWN 是 PWM 输出的配置，RGMII 数据脚不能带下拉
+# （会吃摆幅、破坏眼图），所以这里不是"改约束"而是"整条挪走"。
+
+#===== HDMI TMDS（不变）=====
 set_pin_assignment	{ O_tmds_ch0_p }		{ LOCATION = G16; IOSTANDARD = TMDS33; PULLTYPE = NONE; }
 set_pin_assignment	{ O_tmds_ch1_p }		{ LOCATION = F17; IOSTANDARD = TMDS33; PULLTYPE = NONE; }
 set_pin_assignment	{ O_tmds_ch2_p }		{ LOCATION = H14; IOSTANDARD = TMDS33; PULLTYPE = NONE; }
 set_pin_assignment	{ O_tmds_clk_p }		{ LOCATION = C17; IOSTANDARD = TMDS33; PULLTYPE = NONE; }
 
+#===== RGMII 接收（PHY -> FPGA）—— 新增，照抄已在板 B 验证过的 ph1_demo.adc =====
+# HX1P35A/B 电气连接与球位相同（板卡技术人员确认，仅机械螺丝孔不同）。
+# BANK22 VCCIO = 3.3V，故全部 LVCMOS33。
+# 手册第 8 页表格漏列 RX_CLK；板源 FPGA 网络图明确 ETHPHY_RX_CLK = V3。
+# 手册第 15 页确认 V2 是 J2 扩展口 GPIOA_0，不能用作网口 RX_CLK。
+set_pin_assignment	{ phy1_rgmii_rx_clk }		{ LOCATION = V3;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment	{ phy1_rgmii_rx_ctl }		{ LOCATION = N8;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment	{ phy1_rgmii_rx_data[0] }	{ LOCATION = N9;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment	{ phy1_rgmii_rx_data[1] }	{ LOCATION = T7;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment	{ phy1_rgmii_rx_data[2] }	{ LOCATION = T8;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
+set_pin_assignment	{ phy1_rgmii_rx_data[3] }	{ LOCATION = T9;  IOSTANDARD = LVCMOS33; PULLTYPE = NONE; }
 
+#===== RGMII 发送（FPGA -> PHY）—— 新增；R10/R11 两颗球在此让位收回 =====
+# TX 组是 U9/R10/R11/P11/T10/R12（TX_CLK/TX_EN/TXD0~3），不按顺序排：
+# TXD0 = R11 夹在 TX_EN 与 TXD1 之间，所以 R10、R11 必须一起让出来，无法只挪一颗。
+set_pin_assignment	{ phy1_rgmii_tx_clk }		{ LOCATION = U9;  IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+set_pin_assignment	{ phy1_rgmii_tx_ctl }		{ LOCATION = R10; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+set_pin_assignment	{ phy1_rgmii_tx_data[0] }	{ LOCATION = R11; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+set_pin_assignment	{ phy1_rgmii_tx_data[1] }	{ LOCATION = P11; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+set_pin_assignment	{ phy1_rgmii_tx_data[2] }	{ LOCATION = T10; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+set_pin_assignment	{ phy1_rgmii_tx_data[3] }	{ LOCATION = R12; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+
+#===== PHY 硬件复位（新增）=====
+# YT8511C 的 RESET_N = V8；V9 是 MDC，不是复位脚。
+set_pin_assignment	{ phy_reset }	{ LOCATION = V8; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 16; SLEWRATE = FAST; }
+
+#===== 板载 LED（新增，用于网口阶段调试；原理图 LED0~LED3 = D10/E10/C6/D6，高电平点亮）=====
+# 原有 TMDS/pad 均不占用这四颗球（改动前 #pad 仅 19，IO 报告里没有它们）。
+set_pin_assignment	{ led[0] }	{ LOCATION = D10; IOSTANDARD = LVCMOS33; }
+set_pin_assignment	{ led[1] }	{ LOCATION = E10; IOSTANDARD = LVCMOS33; }
+set_pin_assignment	{ led[2] }	{ LOCATION = C6;  IOSTANDARD = LVCMOS33; }
+set_pin_assignment	{ led[3] }	{ LOCATION = D6;  IOSTANDARD = LVCMOS33; }

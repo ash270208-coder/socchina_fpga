@@ -2,8 +2,11 @@
 
 module design_top_wrapper (
     input wire        I_sys_clk,
-    input wire        I_rst_n,
-      
+    // [以太网改造 第1步] 原 input I_rst_n（约束到 R10）已删除。
+    //   R10 在板上铜线是 ETHPHY_TX_EN，必须让给 phy1_rgmii_tx_ctl。
+    //   复位改由 pll_por.v 在 I_sys_clk 域内部产生，见下方 u_pll_por。
+    //   参考 docs/A板以太网改造方案.md §2.4 / §4。
+
     output wire       O_cam_scl,
     inout  wire       IO_cam_sda,
     output wire       O_cam_24m,
@@ -11,7 +14,22 @@ module design_top_wrapper (
       
     inout wire [3:0]  I_button,
 
-    output wire       O_screen_pwm,
+    // [以太网改造 第2步] 原 output O_screen_pwm（约束到 R11）已删除。
+    //   R11 在板上铜线是 ETHPHY_TXD0，必须让给 phy1_rgmii_tx_data[0]。
+    //   外部 HDMI 显示器不需要 FPGA 背光 PWM。
+
+    // ---- 千兆以太网 RGMII（YT8511C，BANK22 3.3V）----
+    // 第1步只声明引脚与 PHY 复位，网络逻辑尚未接入（第2步搬入）。
+    input  wire        phy1_rgmii_rx_clk,
+    input  wire        phy1_rgmii_rx_ctl,
+    input  wire [3:0]  phy1_rgmii_rx_data,
+    output wire        phy1_rgmii_tx_clk,
+    output wire        phy1_rgmii_tx_ctl,     // -> R10
+    output wire [3:0]  phy1_rgmii_tx_data,    // bit0 -> R11
+    output wire        phy_reset,
+
+    output wire [3:0]  led,
+
     output wire       O_tmds_ch0_p,
     output wire       O_tmds_ch1_p,
     output wire       O_tmds_ch2_p,
@@ -225,12 +243,35 @@ module design_top_wrapper (
     wire        S_lane_error_any;
 
 
-    assign O_screen_pwm = 1'b1;
+    // [以太网改造 第1步] 原 assign O_screen_pwm = 1'b1; 已删除（R11 让给 RGMII TXD0）。
     assign S_video_out_vsync = ~S_hdmi_vsync;
 	
 	
     assign S_rst_n 		= S_pll_lock;
     assign S_hdmi_rst_n = S_pll_lock;
+
+    // =========================================================================
+    // [以太网改造 第1步] PLL 上电复位
+    //   原实现: PLL.reset = ~I_rst_n, 而 I_rst_n 约束在 R10 上——该球板上实际连到
+    //   PHY 的 TX_EN，**没有按键**。所以"复位"只是靠该球的内部弱上拉缓缓拉高，
+    //   上电确实能启动，但复位功能从未生效，且 PLL 一旦失锁就只能断电。
+    //   现在 R10 让给 RGMII，改由 pll_por 在 I_sys_clk(50MHz) 域产生 10ms 上电复位
+    //   窗口（异步复位 / 同步释放），不再依赖任何悬空引脚。
+    //   ⚠ pll_por 必须跑 I_sys_clk，不能跑 PLL 自己的输出（自举依赖）。
+    //   ext_arst_n 预留作运行中软复位，当前不使用，接 1'b1。
+    //   参考 docs/A板以太网改造方案.md §4.2。
+    // =========================================================================
+    wire S_por_rst;
+    wire S_por_arst_n;      // 低有效上电复位 -> 直接作 PHY 的 RESET_N
+
+    pll_por #(
+        .POR_CYCLES ( 32'd500_000 )      // 50MHz × 10ms
+    ) u_pll_por (
+        .clk        ( I_sys_clk   ),
+        .ext_arst_n ( 1'b1        ),
+        .pll_rst    ( S_por_rst   ),
+        .por_arst_n ( S_por_arst_n)
+    );
 
     always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
         if(!S_rst_n)
@@ -445,7 +486,9 @@ module design_top_wrapper (
 	
     PLL u_PLL(
         .refclk      ( I_sys_clk         ),
-        .reset    	 ( ~I_rst_n          ),
+        // [以太网改造 第1步] 原 .reset(~I_rst_n)：I_rst_n 曾约束在 R10（板上实为
+        //   PHY 的 TX_EN，无按键），现改由 pll_por 产生的内部上电复位驱动。
+        .reset    	 ( S_por_rst         ),
         
         .clk0_out    ( S_100m_clk        ),
         .clk1_out    ( S_24m_clk         ),
@@ -456,6 +499,28 @@ module design_top_wrapper (
         .lock        ( S_pll_lock        )
 
     );
+
+    // =========================================================================
+    // [以太网改造 第1步] PHY 硬件复位 + 板载 LED
+    //   YT8511C 的 RESET_N 必须保持低电平 ≥10ms 才能完成自举/自协商。
+    //   这里直接复用 pll_por 的 10ms 上电复位输出：同源、不依赖 PLL 输出时钟，
+    //   PLL 万一失锁时 PHY 复位依然正确。
+    //   ⚠ 不要照抄实施指导文档 §5.6/§7.9 的 8 位计数器（256 拍 ≈ 2.5µs）——
+    //     那个复位脉冲远短于 10ms，会让 PHY 工作在未定义状态。
+    //   板 B 的对应写法见 cnn_boardB/src/net/board_b_top.v:64-74。
+    // =========================================================================
+    assign phy_reset = S_por_arst_n;
+
+    // LED 诊断：led[1] 亮 = PLL 已锁定，led[0] 亮 = PHY 复位已释放。
+    // （原理图 LED0~LED3 = D10/E10/C6/D6，高电平点亮；led[0] 即 LED1。）
+    assign led = { 2'b00, S_por_arst_n, S_pll_lock };
+
+    // [以太网改造 第2步] RGMII 发送端口在接入网络逻辑前先给确定电平，避免输出悬空；
+    //   第2步会把它们接到 rgmii_interface / temac_block。
+    //   RX 侧本步不参与逻辑（引脚已声明），综合按未使用处理。
+    assign phy1_rgmii_tx_clk  = 1'b0;
+    assign phy1_rgmii_tx_ctl  = 1'b0;
+    assign phy1_rgmii_tx_data = 4'b0000;
 
 
 	
