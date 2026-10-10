@@ -501,26 +501,48 @@ module design_top_wrapper (
     );
 
     // =========================================================================
-    // [以太网改造 第1步] PHY 硬件复位 + 板载 LED
-    //   YT8511C 的 RESET_N 必须保持低电平 ≥10ms 才能完成自举/自协商。
-    //   这里直接复用 pll_por 的 10ms 上电复位输出：同源、不依赖 PLL 输出时钟，
-    //   PLL 万一失锁时 PHY 复位依然正确。
-    //   ⚠ 不要照抄实施指导文档 §5.6/§7.9 的 8 位计数器（256 拍 ≈ 2.5µs）——
-    //     那个复位脉冲远短于 10ms，会让 PHY 工作在未定义状态。
-    //   板 B 的对应写法见 cnn_boardB/src/net/board_b_top.v:64-74。
+    // [以太网改造 第2步] 网络链路例化（板 A 接入千兆网口）
+    //   独立网络 PLL + RGMII + TEMAC + UDP/IP 协议栈 + 跨时钟 FIFO，
+    //   应用层暂为安路官方 UDP 原样回环（net/udp_loopback.v），
+    //   第 3 步换成「取数 -> 降采样 -> 帧门控 -> 发 20 个 UDP 包」，
+    //   第 4 步再加「收人脸框 -> 画到 HDMI」。
+    //
+    //   视频链路完全不经过本模块：wrapper 不读任何视频信号，也不驱动任何视频
+    //   信号，所以第 1 步已上板验证的画面时序不受影响。
+    //
+    //   复位：por_arst_n 直接来自 pll_por（I_sys_clk 域 10ms 上电复位），
+    //         不占用任何按键，也不依赖 R10（R10 已让给 phy1_rgmii_tx_ctl）。
+    //   PHY 的 RESET_N 由 wrapper 内部用 25MHz 域数 250_000 拍(=10ms) 产生，
+    //         外加 pll_por 的 10ms，实际低电平约 20ms，满足 YT8511C 的 ≥10ms。
+    //
+    //   参考 docs/板A以太网改造_实施计划.md §5，相对其 §5.2 有的两处修正：
+    //     ① DEVICE 必须 "PH1P"（§5.2 原文已是 PH1P，这里保持）
+    //     ② 应用层用官方 udp_loopback，不用 §5.2 那段 4 行组合逻辑回环
+    //        （那版不等 request->ack 握手，收不到/回不出正确 UDP 包）
     // =========================================================================
-    assign phy_reset = S_por_arst_n;
+    wire [2:0] net_led;          // ⚠ 必须先声明再用，否则被隐式声明成 1 位线
 
-    // LED 诊断：led[1] 亮 = PLL 已锁定，led[0] 亮 = PHY 复位已释放。
-    // （原理图 LED0~LED3 = D10/E10/C6/D6，高电平点亮；led[0] 即 LED1。）
-    assign led = { 2'b00, S_por_arst_n, S_pll_lock };
+    board_a_net_wrapper u_net (
+        .clk_50m            ( I_sys_clk           ),
+        .por_arst_n         ( S_por_arst_n        ),
+        .phy1_rgmii_rx_clk  ( phy1_rgmii_rx_clk   ),
+        .phy1_rgmii_rx_ctl  ( phy1_rgmii_rx_ctl   ),
+        .phy1_rgmii_rx_data ( phy1_rgmii_rx_data  ),
+        .phy1_rgmii_tx_clk  ( phy1_rgmii_tx_clk   ),
+        .phy1_rgmii_tx_ctl  ( phy1_rgmii_tx_ctl   ),
+        .phy1_rgmii_tx_data ( phy1_rgmii_tx_data  ),
+        .phy_reset          ( phy_reset           ),
+        .net_led            ( net_led             )
+    );
 
-    // [以太网改造 第2步] RGMII 发送端口在接入网络逻辑前先给确定电平，避免输出悬空；
-    //   第2步会把它们接到 rgmii_interface / temac_block。
-    //   RX 侧本步不参与逻辑（引脚已声明），综合按未使用处理。
-    assign phy1_rgmii_tx_clk  = 1'b0;
-    assign phy1_rgmii_tx_ctl  = 1'b0;
-    assign phy1_rgmii_tx_data = 4'b0000;
+    // 板载 LED（原理图 LED0~LED3 = D10/E10/C6/D6，全部高电平点亮）
+    //   led[0] = net_led[0]  PHY 复位已释放 —— 链路可自协商
+    //   led[1] = S_pll_lock  视频 PLL 已锁定
+    //   led[2] = net_led[1]  收到 UDP 载荷（展宽 ~0.2s）
+    //   led[3] = net_led[2]  心跳（~0.54s 翻转）
+    // 第 1 步那句 `{ 2'b00, S_por_arst_n, S_pll_lock }` 是 5 位宽进 4 位口，
+    // 这里改成 4 位并保持 led[0]/led[1] 的原有含义。
+    assign led = { net_led[2], net_led[1], S_pll_lock, net_led[0] };
 
 
 	
