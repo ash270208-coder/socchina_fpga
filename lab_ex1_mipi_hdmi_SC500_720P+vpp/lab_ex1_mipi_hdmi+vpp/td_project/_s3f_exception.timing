@@ -1,0 +1,161 @@
+Created by          : Tang Dynasty v6.2.168116
+                    : Copyright (c) 2012-2025 Anlogic Inc.
+Generated           : Sat Oct 10 19:25:14 2026
+
+Top Model           : design_top_wrapper
+Device              : PH1P35MDG324
+Speed               : 3
+STA coverage        : 96.64%
+Constraint File     : D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project/camera_to_dsi_display.sdc;
+Confidence          : Routed
+Check Corner        : Both (Slow and Fast)
+CRPR Enabled        : Yes
+Report Scheme       : 10 end point(s) per path group, 1 path(s) per end point
+
+
+Check Status
+-------------
+
+Corner   | Max      Min     
+------------------------------------
+Slow     | yes      yes     
+Fast     | yes      yes     
+
+MCP/SMD Summary
+--------------------
+
+		Max Check
+		--------------------
+		     Total    Dominated     Shadowed      Ignored   Constraint
+		         1            1            0            0   set_max_delay 4.000 -datapath_only -to [get_pins {phy1_rgmii_tx_clk_syn_*.rst}]
+		        18            0            0           18   set_max_delay -from [get_regs -nowarn {*/primary_addr_gray_reg[*]}] -to [get_regs -nowarn {*/sync_r1[*]}] -datapath_only 14.700
+		        18            0            0           18   set_max_delay -from [get_regs -nowarn {*/primary_addr_gray_reg[*]}] -to [get_regs -nowarn {*/sync_r1[*]}] -datapath_only 13.033
+
+		Min Check
+		--------------------
+		     Total    Dominated     Shadowed      Ignored   Constraint
+
+Status of timing exceptions
+--------------------------------------------------
+
+MCP/SMD Details
+--------------------
+
+
+Constraint     :   set_max_delay 4.000 -datapath_only -to [get_pins {phy1_rgmii_tx_clk_syn_*.rst}]
+Check Type     :   Max
+--------------------------------------------------------------------------------
+Total Paths    :            1
+Dominated      :            1,        100.0%
+
+
+Constraint     :   set_max_delay -from [get_regs -nowarn {*/primary_addr_gray_reg[*]}] -to [get_regs -nowarn {*/sync_r1[*]}] -datapath_only 14.700
+Check Type     :   Max
+--------------------------------------------------------------------------------
+Total Paths    :           18
+Dominated      :            0,          0.0%
+Ignored        :           18,        100.0%
+               :           18, by set_clock_groups
+
+
+Constraint     :   set_max_delay -from [get_regs -nowarn {*/primary_addr_gray_reg[*]}] -to [get_regs -nowarn {*/sync_r1[*]}] -datapath_only 13.033
+Check Type     :   Max
+--------------------------------------------------------------------------------
+Total Paths    :           18
+Dominated      :            0,          0.0%
+Ignored        :           18,        100.0%
+               :           18, by set_clock_groups
+
+
+Details on timing exceptions
+--------------------------------------------------
+
+Timing details for constraint:
+	set_max_delay 4.000 -datapath_only -to [get_pins {phy1_rgmii_tx_clk_syn_*.rst}]
+--------------------------------------------------
+
+----------------------------------------------------------------------------------------------------
+Path Group     :     
+set_max_delay 4.000 -datapath_only -to [get_pins {phy1_rgmii_tx_clk_syn_*.rst}]
+
+Type           :     SMD
+
+Statistics:
+Max            : SWNS      1.946ns, STNS      0.000ns,         0 Viol Endpoints,         1 Total Endpoints,         1 Paths Analyzed
+Min            : HWNS      0.000ns, HTNS      0.000ns,         0 Viol Endpoints,         0 Total Endpoints,         0 Paths Analyzed
+----------------------------------------------------------------------------------------------------
+
+Max Paths
+----------------------------------------------------------------------------------------------------
+Slack               : 1.946ns
+Begin Point         : u_net/u_trimac/u1_rgmii_interface/tx_reset_txc_reg_syn_3.clk (rising edge triggered by clock net_pll_clk_125m_0  { rise@0.000000ns  fall@4.000000ns  period=8.000000 })
+End Point           : phy1_rgmii_tx_clk_syn_2.rst (rising edge triggered by clock u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.clkc[4]  { rise@2.000000ns  fall@6.000000ns  period=8.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 4.000ns { u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.clkc[4] rising@0.000ns - net_pll_clk_125m_0 rising@0.000ns }
+Data Path Delay     : 1.341ns (cell 0.126ns (9%), net 1.215ns (91%))
+Clock Skew          : 0.000ns
+Logic Level         : 0
+Max Fanout          : 1
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.092ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+source latency                          0.000          0.000               
+port                C4                  0.000          0.000          pin: I_sys_clk
+hierarchy                               0.000          0.000          pin: I_sys_clk_syn_7.ipad
+HDIO                x033y078            0.000          0.000          pin: I_sys_clk_syn_7.sg09_di
+HDIO                x033y078            0.000          0.000          pin: I_sys_clk_syn_7.di
+net (fo=4)          x043y040            0.000          0.000          net: I_sys_clk_dup_6,  ../user_source/hdl_source/design_top_wrapper.v(4)
+                                                                      pin: u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.refclk
+PLL                 x043y040            0.000          0.000          pin: u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.clkc[0]
+net (fo=1)                              0.000          0.000          net: u_net/u_clk_gen/u_pll_0/clk0_buf,  ../user_source/hdl_source/net/pll_gen_1.v(44)
+                                                                      pin: u_net/u_clk_gen/u_pll_0/bufg_feedback.clkin[0]
+GCLK                x023y039z20         0.000          0.000          pin: u_net/u_clk_gen/u_pll_0/bufg_feedback.clkout
+net (fo=3)                              0.000          0.000          net: u_net/u_trimac/trimac_core/tx_mac_clk,  ../user_source/hdl_source/net/ip/TEMAC_CORE_gate.v(105)
+                                                                      pin: u_net/u_clk_gen/u_pll_0/bufg_feedback_auto_created_sclk_s_0_l_bk4.clkin
+SCLK                x023y019z3          0.000          0.000          pin: u_net/u_clk_gen/u_pll_0/bufg_feedback_auto_created_sclk_s_0_l_bk4.clkout
+net (fo=120)                            0.000          0.000          net: u_net/u_clk_gen/u_pll_0/bufg_feedback_auto_created_sclk_s_0_l_bk4_sclk_outnet,  NOFILE(0)
+                                                                      pin: u_net/u_trimac/u1_rgmii_interface/tx_reset_txc_reg_syn_3.clk
+--------------------------------------------------------------------  ---------------
+clk2q               x014y001z7          0.126    f     0.126          pin: u_net/u_trimac/u1_rgmii_interface/tx_reset_txc_reg_syn_3.oqa
+net (fo=1)                              1.215          1.341          net: u_net/u_trimac/u1_rgmii_interface/tx_reset_txc,  ../user_source/hdl_source/net/rgmii_interface.v(116)
+                                                                      pin: phy1_rgmii_tx_clk_syn_2.rst
+HDIO (reg)          x013y001            0.000    f     1.341               
+--------------------------------------------------------------------  ---------------
+Arrival                                                1.341               
+
+source latency                          0.000          0.000               
+port                C4                  0.000          0.000          pin: I_sys_clk
+hierarchy                               0.000          0.000          pin: I_sys_clk_syn_7.ipad
+HDIO                x033y078            0.000          0.000          pin: I_sys_clk_syn_7.sg09_di
+HDIO                x033y078            0.000          0.000          pin: I_sys_clk_syn_7.di
+net (fo=4)          x043y040            0.000          0.000          net: I_sys_clk_dup_6,  ../user_source/hdl_source/design_top_wrapper.v(4)
+                                                                      pin: u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.refclk
+PLL                 x043y040            0.000          0.000          pin: u_net/u_clk_gen/u_pll_0/pll_inst/u_PH1P_PHY_PLL.clkc[4]
+net (fo=1)                              0.000          0.000          net: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk,  ../user_source/hdl_source/net/ODDR.v(31)
+                                                                      pin: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_created_gclkinst.clkin[0]
+GCLK                x023y039z27         0.000          0.000          pin: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_created_gclkinst.clkout
+net (fo=1)                              0.000          0.000          net: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_syn_1,  ../user_source/hdl_source/net/ODDR.v(31)
+                                                                      pin: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_created_gclkinst_auto_created_sclk_s_0_r_bk12.clkin
+SCLK                x023y019z23         0.000          0.000          pin: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_created_gclkinst_auto_created_sclk_s_0_r_bk12.clkout
+net (fo=1)                              0.000          0.000          net: u_net/u_trimac/u1_rgmii_interface/rgmii_txc_ddr/clk_created_gclkinst_auto_created_sclk_s_0_r_bk12_sclk_outnet,  NOFILE(0)
+                                                                      pin: phy1_rgmii_tx_clk_syn_2.osclk
+constraint delay                        4.000          4.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.713          3.287               
+clock uncertainty                       0.000          3.287               
+clock pessimism                         0.000          3.287               
+--------------------------------------------------------------------  ---------------
+Required                                               3.287               
+--------------------------------------------------------------------  ---------------
+Slack                                                  1.946               
+
+
+
+Min Paths
+----------------------------------------------------------------------------------------------------
+
+
+
+

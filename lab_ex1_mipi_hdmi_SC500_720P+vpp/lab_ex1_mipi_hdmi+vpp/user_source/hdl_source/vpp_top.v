@@ -24,7 +24,20 @@ module vpp_top #(
     
     // 当前已消抖显示模式 (0=RGB 1=GRAY 2=HIST 3=SOBEL 4=CART),
     // 供下游 OSD 文字层锁定视频 MUX 同步显示
-    output [2:0]   O_display_mode  
+    output [2:0]   O_display_mode  ,
+
+    // =========================================================================
+    // [以太网改造 第3步] 给 CNN 通路单独引出的取数口
+    //   O_raw_tdata = raw_rgb_d[21]：伽马校正后的**原图**（22 拍对齐那一级），
+    //                 **不随按键的 5 档显示模式变** —— 这是 CNN 取数的唯一正确位置。
+    //                 绝不能取 mux 输出（会随模式在灰度/直方图/Sobel/卡通之间变）。
+    //   O_raw_tvalid/user/last = mux_*，与 raw_rgb_d[21] 严格同拍。
+    //   这 4 个口只是把内部已有寄存器引出来，不新增任何逻辑、不改动显示链路。
+    // =========================================================================
+    output [23:0]  O_raw_tdata     ,
+    output         O_raw_tvalid    ,
+    output         O_raw_tuser     ,
+    output         O_raw_tlast
 );
 
     // =========================================================================
@@ -481,5 +494,16 @@ module vpp_top #(
 
     assign O_tready = 1'b1;
     assign O_display_mode = display_mode;
+
+    // =========================================================================
+    // [以太网改造 第3步] CNN 取数口
+    //   data 取 raw_rgb_d[21]（伽马后原图，22 拍对齐那一级，不随显示模式变）
+    //   控制信号取 mux_*（与 raw_rgb_d[21] 严格同拍）
+    //   只是把已有寄存器引出来，不新增逻辑
+    // =========================================================================
+    assign O_raw_tdata  = raw_rgb_d[21];
+    assign O_raw_tvalid = mux_tvalid;
+    assign O_raw_tuser  = mux_tuser;
+    assign O_raw_tlast  = mux_tlast;
 
 endmodule

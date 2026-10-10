@@ -36,6 +36,17 @@ module board_a_net_wrapper (
     input  wire        clk_50m,           // C4 板载 50MHz 晶振（I_sys_clk）
     input  wire        por_arst_n,        // 来自 pll_por：低有效 10ms 上电复位
 
+    // ---- [第3步] 视频取数口（pclk 域）----
+    //   来自 vpp_top 新加的 O_raw_*：raw_rgb_d[21]（伽马后原图，不随显示模式变）
+    //   + 与之严格同拍的 tvalid/tuser/tlast
+    //   I_pclk_rst_n 必须传**视频域的复位**（S_hdmi_rst_n），不要传网络域的 reset
+    input  wire        I_pclk,            // S_hdmi_pixel_clk（75MHz）
+    input  wire        I_pclk_rst_n,      // S_hdmi_rst_n（低有效）
+    input  wire        I_raw_tvalid,
+    input  wire        I_raw_tuser,
+    input  wire        I_raw_tlast,
+    input  wire [23:0] I_raw_tdata,
+
     // ---- RGMII（YT8511C，BANK22 3.3V）----
     input  wire        phy1_rgmii_rx_clk,
     input  wire        phy1_rgmii_rx_ctl,
@@ -47,7 +58,7 @@ module board_a_net_wrapper (
 
     // ---- 诊断 LED（高电平点亮），顶层再映射到 led[3:0] ----
     //   net_led[0] = PHY 复位已释放（≈ 链路可自协商）
-    //   net_led[1] = 收到 UDP 载荷（展宽，便于肉眼观察）
+    //   net_led[1] = 一整帧 128x72 图像已发完（每 6 帧闪一次，展宽）
     //   net_led[2] = 心跳
     output wire [2:0]  net_led
 );
@@ -59,8 +70,8 @@ module board_a_net_wrapper (
     parameter LOCAL_UDP_PORT_NUM = 16'h0001;
     parameter LOCAL_IP_ADDRESS   = 32'hC0A8F001;      // 192.168.240.1
     parameter LOCAL_MAC_ADDRESS  = 48'h020000002401;  // 02:00:00:00:24:01
-    parameter DST_UDP_PORT_NUM   = 16'h0002;
-    parameter DST_IP_ADDRESS     = 32'hC0A8F002;      // 192.168.240.2
+    parameter DST_UDP_PORT_NUM   = 16'h1A0A;          // 6666（第2步用的 2 是低位端口，PC 侧被占过，改成普通端口）
+    parameter DST_IP_ADDRESS     = 32'hC0A8F002;      // 192.168.240.2（板 B 的 IP；电脑当板 B 时把 PC 网卡设成 .2）
 
     // ---------------------------------------------------------------------
     // 复位：全部由 pll_por 的 10ms 上电复位驱动，不依赖任何引脚
@@ -150,26 +161,152 @@ module board_a_net_wrapper (
         .clk_25_out   ( clk_25_out  )
     );
 
-    // ---------------------------------------------------------------------
-    // 应用层：安路官方 UDP 原样回环（收什么发什么）
-    //   第 3 步会换成 取数 -> 降采样 -> 帧门控 -> 跨时钟 FIFO -> 发 20 个 UDP 包
-    //   第 4 步再加 收人脸框解析
-    // ---------------------------------------------------------------------
-    udp_loopback #(
-        .DEVICE (DEVICE)
-    ) u_loopback (
-        .app_rx_clk         (udp_clk),
-        .app_tx_clk         (udp_clk),
-        .reset              (reset),
-        .app_rx_data        (app_rx_data),
-        .app_rx_data_valid  (app_rx_data_valid),
-        .app_rx_data_length (app_rx_data_length),
-        .udp_tx_ready       (udp_tx_ready),
-        .app_tx_ack         (app_tx_ack),
-        .app_tx_data        (app_tx_data),
-        .app_tx_data_request(app_tx_data_request),
-        .app_tx_data_valid  (app_tx_data_valid),
-        .udp_data_length    (udp_data_length)
+    // =====================================================================
+    // [第3步] 应用层：取数 -> 降采样 -> 帧门控 -> 跨时钟 FIFO -> 发 20 个 UDP 包
+    //   第 2 步的 udp_loopback 已撤掉（它那块 65536x8 的 ram_fifo 实测占 28 块 ERAM，
+    //   换成这里 4096 深的图像 FIFO 后省下约 26 块）
+    //   第 4 步再在这一层加 收人脸框解析 + 画框
+    //
+    //   数据通路（除最后写进异步 FIFO 外，全在 pclk 域）：
+    //     I_raw_*  (vpp_top raw_rgb_d[21], 1280x720, 22 拍对齐)
+    //       -> u_cnn_ds10      10x10 块平均 -> 128x72
+    //       -> u_p2b           24bit 拆成 R/G/B 三字节
+    //       -> u_img_fifo      写 pclk / 读 udp_clk
+    //     udp_clk 域：
+    //       -> u_sender        打 20 个 UDP 包（2 字节序号 + 图像字节）
+    //
+    //   ⚠ 帧门控必须门在**写侧**（pixel_to_bytes 的 I_gate）。
+    //     cnn_ds10 靠"10 行条纹双 bank 乒乓"工作，输入被抽掉会让块边界错乱；
+    //     门在写侧时 cnn_ds10 一直连续跑，块网格永远与帧对齐。
+    // =====================================================================
+
+    // ---- 复位：把网络侧 reset 也同步进 pclk，与视频复位合并 ----
+    //   目的：保证"帧门控计数器"和发送侧同时开始 —— 第一个被采集的帧一定是
+    //   FIFO 全空时开始的，从而包边界与帧边界永不发生永久错位。
+    //   （异步置位/同步释放，避免 pclk 侧的 recovery 问题）
+    reg prs1, prs2;
+    always @(posedge I_pclk or posedge reset) begin
+        if (reset) begin prs1 <= 1'b1; prs2 <= 1'b1; end
+        else       begin prs1 <= 1'b0; prs2 <= prs1; end
+    end
+    wire pclk_arst_n = I_pclk_rst_n & ~prs2;
+
+    // ---- 帧门控：每 6 帧采集 1 帧 ----
+    reg [2:0] fdiv;
+    reg       gate;
+    always @(posedge I_pclk or negedge pclk_arst_n) begin
+        if (!pclk_arst_n) begin
+            fdiv <= 3'd0;
+            gate <= 1'b0;
+        end else if (I_raw_tuser) begin
+            gate <= (fdiv == 3'd0);                              // 复位后第 1 帧就采
+            fdiv <= (fdiv == 3'd5) ? 3'd0 : (fdiv + 3'd1);
+        end
+    end
+
+    // ---- frame_start 跨时钟：pclk 侧翻转握手 → udp_clk 侧边沿检测 ----
+    //   不用单周期脉冲直传：翻转握手对 75M/125M 任意相位都稳
+    reg fs_tgl;
+    always @(posedge I_pclk or negedge pclk_arst_n) begin
+        if (!pclk_arst_n)                 fs_tgl <= 1'b0;
+        else if (I_raw_tuser && gate)     fs_tgl <= ~fs_tgl;
+    end
+
+    reg fs_s1, fs_s2, fs_s3;
+    always @(posedge udp_clk or negedge net_rst_n) begin
+        if (!net_rst_n) begin fs_s1 <= 1'b0; fs_s2 <= 1'b0; fs_s3 <= 1'b0; end
+        else begin fs_s1 <= fs_tgl; fs_s2 <= fs_s1; fs_s3 <= fs_s2; end
+    end
+    wire frame_start_pulse = fs_s2 ^ fs_s3;
+
+    // ---- 10x10 块平均降采样：1280x720 -> 128x72 ----
+    wire        ds_valid, ds_user, ds_last;
+    wire [23:0] ds_data;
+    wire [7:0]  ds_x, ds_y;
+
+    cnn_ds10 #(
+        .IN_W  (1280), .IN_H  (720),
+        .SCALE (10),
+        .OUT_W (128),  .OUT_H (72)
+    ) u_cnn_ds10 (
+        .I_clk    (I_pclk),
+        .I_rst_n  (pclk_arst_n),
+        .I_tvalid (I_raw_tvalid),
+        .I_tuser  (I_raw_tuser),
+        .I_tlast  (I_raw_tlast),
+        .I_tdata  (I_raw_tdata),
+        .O_tvalid (ds_valid),
+        .O_tuser  (ds_user),
+        .O_tlast  (ds_last),
+        .O_tdata  (ds_data),
+        .O_x      (ds_x),
+        .O_y      (ds_y)
+    );
+
+    // ---- 像素拆字节（R,G,B 三拍）----
+    wire [7:0] pb_byte;
+    wire       pb_we;
+    pixel_to_bytes u_p2b (
+        .I_clk   (I_pclk),
+        .I_rst_n (pclk_arst_n),
+        .I_valid (ds_valid),
+        .I_data  (ds_data),
+        .I_gate  (gate),
+        .O_byte  (pb_byte),
+        .O_we    (pb_we)
+    );
+
+    // ---- 图像异步 FIFO：写 pclk / 读 udp_clk，4096 x 8，show-ahead ----
+    //   复用已验证的 ram_fifo（PH1P 分支走 PH1P_LOGIC_ERAM），
+    //   免得再走一次 TD IP Generator 图形界面步骤。约 2 块 ERAM。
+    //   深度 4096 >> 单包 1402；生产者平均 2.25 字节/us，消费者 125 字节/us，
+    //   实际是生产者限速，FIFO 占用长期低于 ~1800，不会溢出。
+    //   ⚠ rdusedw 的位宽是 [ADDR_WIDTH_R:0] = 14 位（含进位），别声明成 13 位
+    wire [7:0]  fifo_q;
+    wire [13:0] fifo_cnt;
+    wire        fifo_full, fifo_empty;
+    wire        img_we   = pb_we & ~fifo_full;   // 满了就丢（正常不会发生）
+    wire        fifo_rd;                          // 由 tx_frame_sender 驱动
+
+    ram_fifo #(
+        .DEVICE        ("PH1P"),
+        .DATA_WIDTH_W  (8),
+        .ADDR_WIDTH_W  (12),
+        .DATA_WIDTH_R  (8),
+        .ADDR_WIDTH_R  (12),
+        .SHOW_AHEAD_EN (1)
+    ) u_img_fifo (
+        .rst        (reset),
+        .di         (pb_byte),
+        .clkw       (I_pclk),
+        .we         (img_we),
+        .clkr       (udp_clk),
+        .re         (fifo_rd),
+        .do         (fifo_q),
+        .empty_flag (fifo_empty),
+        .full_flag  (fifo_full),
+        .wrusedw    (),
+        .rdusedw    (fifo_cnt)
+    );
+
+    // ---- 打 20 个 UDP 包 ----
+    //   修正版：首字节与 tx_valid 同拍就绪（见 tx_frame_sender.v 头部说明）
+    wire        snd_frame_done;
+    tx_frame_sender u_sender (
+        .I_clk          (udp_clk),
+        .I_rst          (reset),
+        .I_frame_start  (frame_start_pulse),
+        .O_fifo_rd      (fifo_rd),
+        .I_fifo_q       (fifo_q),
+        .I_fifo_cnt     (fifo_cnt),
+        .I_tx_ready     (udp_tx_ready),
+        .I_tx_ack       (app_tx_ack),
+        .O_tx_request   (app_tx_data_request),
+        .O_tx_valid     (app_tx_data_valid),
+        .O_tx_data      (app_tx_data),
+        .O_tx_length    (udp_data_length),
+        .O_busy         (),
+        .O_frame_done   (snd_frame_done)
     );
 
     // ---------------------------------------------------------------------
@@ -312,13 +449,14 @@ module board_a_net_wrapper (
 
     // ---------------------------------------------------------------------
     // 诊断 LED（高电平点亮）
-    //   app_rx_data_valid 是逐字节脉冲，直接点灯看不见 -> 展宽成 ~0.2s
+    //   snd_frame_done 是单周期脉冲 -> 展宽成 ~0.2s 才看得见
+    //   每 6 帧发 1 帧（约 100ms 一次），所以这个灯会以 ~0.1s 的间隔闪
     // ---------------------------------------------------------------------
-    reg [24:0] rx_led_cnt;
+    reg [24:0] tx_led_cnt;
     always @(posedge udp_clk or negedge net_rst_n) begin
-        if (!net_rst_n)                                  rx_led_cnt <= 25'd0;
-        else if (app_rx_data_valid)                      rx_led_cnt <= 25'd25_000_000;
-        else if (rx_led_cnt != 25'd0)                    rx_led_cnt <= rx_led_cnt - 25'd1;
+        if (!net_rst_n)                                  tx_led_cnt <= 25'd0;
+        else if (snd_frame_done)                         tx_led_cnt <= 25'd25_000_000;
+        else if (tx_led_cnt != 25'd0)                    tx_led_cnt <= tx_led_cnt - 25'd1;
     end
 
     reg [26:0] hb_cnt;
@@ -328,7 +466,7 @@ module board_a_net_wrapper (
     end
 
     assign net_led[0] = phy_reset;               // PHY 复位已释放 = 链路就绪
-    assign net_led[1] = (rx_led_cnt != 25'd0);   // 收到 UDP 载荷（展宽 ~0.2s）
+    assign net_led[1] = (tx_led_cnt != 25'd0);   // 一整帧 128x72 图像已发完（展宽 ~0.2s）
     assign net_led[2] = hb_cnt[26];              // 心跳 ~0.54s 翻转
 
 endmodule

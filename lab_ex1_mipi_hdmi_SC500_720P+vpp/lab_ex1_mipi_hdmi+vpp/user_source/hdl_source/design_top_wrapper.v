@@ -189,6 +189,17 @@ module design_top_wrapper (
     wire        S_vpp_out_user;
     wire [2:0]  S_vpp_display_mode;
 
+    // [以太网改造 第3步] CNN 取数：vpp_top 里的 raw_rgb_d[21]（伽马后原图）
+    //   + 与之严格同拍的 tvalid/tuser/tlast，直接送进 board_a_net_wrapper。
+    //   ⚠ 取的是"原图"那一级，**不是** mux 输出 —— 后者会随按键的
+    //     5 档显示模式在灰度/直方图/Sobel/卡通之间变。
+    //   ⚠ 名字必须避开 S_raw_t*：那是 ISP 的原始数据流（[39:0]，本文件第 107 行），
+    //     曾经因为重名导致 HDL-7181 / HDL-8007「net 被多处驱动」。
+    wire [23:0] S_cnn_raw_tdata;
+    wire        S_cnn_raw_tvalid;
+    wire        S_cnn_raw_tuser;
+    wire        S_cnn_raw_tlast;
+
     // 集成 OSD 链: VPP -> Logo/模式 OSD -> 延迟 OSD -> HDMI
     wire [23:0] S_osd_overlay_data;
     wire        S_osd_overlay_de;
@@ -525,6 +536,13 @@ module design_top_wrapper (
     board_a_net_wrapper u_net (
         .clk_50m            ( I_sys_clk           ),
         .por_arst_n         ( S_por_arst_n        ),
+        // [第3步] 视频取数：pclk 域复位必须用 S_hdmi_rst_n（视频域），不要用网络域的复位
+        .I_pclk             ( S_hdmi_pixel_clk    ),
+        .I_pclk_rst_n       ( S_hdmi_rst_n        ),
+        .I_raw_tvalid       ( S_cnn_raw_tvalid    ),
+        .I_raw_tuser        ( S_cnn_raw_tuser     ),
+        .I_raw_tlast        ( S_cnn_raw_tlast     ),
+        .I_raw_tdata        ( S_cnn_raw_tdata     ),
         .phy1_rgmii_rx_clk  ( phy1_rgmii_rx_clk   ),
         .phy1_rgmii_rx_ctl  ( phy1_rgmii_rx_ctl   ),
         .phy1_rgmii_rx_data ( phy1_rgmii_rx_data  ),
@@ -1077,7 +1095,13 @@ isp_top u_isp_top (
         .O_tuser         ( S_vpp_out_user   ),
         .O_tvalid        ( S_vpp_out_de     ),
         .O_tready        (                  ),
-        .O_display_mode  ( S_vpp_display_mode )
+        .O_display_mode  ( S_vpp_display_mode ),
+
+        // [以太网改造 第3步] CNN 取数口（raw_rgb_d[21] + 同拍控制信号）
+        .O_raw_tdata     ( S_cnn_raw_tdata    ),
+        .O_raw_tvalid    ( S_cnn_raw_tvalid   ),
+        .O_raw_tuser     ( S_cnn_raw_tuser    ),
+        .O_raw_tlast     ( S_cnn_raw_tlast    )
 
     );
 
