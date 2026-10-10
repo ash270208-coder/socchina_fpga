@@ -58,8 +58,8 @@ module board_a_net_wrapper (
 
     // ---- 诊断 LED（高电平点亮），顶层再映射到 led[3:0] ----
     //   net_led[0] = PHY 复位已释放（≈ 链路可自协商）
-    //   net_led[1] = 一整帧 128x72 图像已发完（每 6 帧闪一次，展宽）
-    //   net_led[2] = 心跳
+    //   net_led[1] = 一整帧 128x72 图像已发完（展宽 ~0.2s，正常应常亮）
+    //   net_led[2] = ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
     output wire [2:0]  net_led
 );
 
@@ -291,7 +291,13 @@ module board_a_net_wrapper (
 
     // ---- 打 20 个 UDP 包 ----
     //   修正版：首字节与 tx_valid 同拍就绪（见 tx_frame_sender.v 头部说明）
+    //   O_tx_abort：等 ack 超时、主动放弃本帧（超时保护，见 tx_frame_sender.v 注释）
     wire        snd_frame_done;
+    wire        snd_tx_abort;
+    // 协议栈报告：ARP 请求没收到回应。
+    //   板 A 是**主动**发给 192.168.240.2，必须先 ARP 解析出 .2 的 MAC；
+    //   收不到回应就发不出去，而且会连带把 ping 回复也堵住（同一条 TX 通路）。
+    wire        arp_no_reply;
     tx_frame_sender u_sender (
         .I_clk          (udp_clk),
         .I_rst          (reset),
@@ -306,7 +312,8 @@ module board_a_net_wrapper (
         .O_tx_data      (app_tx_data),
         .O_tx_length    (udp_data_length),
         .O_busy         (),
-        .O_frame_done   (snd_frame_done)
+        .O_frame_done   (snd_frame_done),
+        .O_tx_abort     (snd_tx_abort)
     );
 
     // ---------------------------------------------------------------------
@@ -348,7 +355,7 @@ module board_a_net_wrapper (
         .temac_tx_sof       (temac_tx_sof),
         .temac_tx_eof       (temac_tx_eof),
         .ip_rx_error        (),
-        .arp_request_no_reply_error ()
+        .arp_request_no_reply_error (arp_no_reply)
     );
 
     // ---------------------------------------------------------------------
@@ -448,9 +455,22 @@ module board_a_net_wrapper (
     );
 
     // ---------------------------------------------------------------------
-    // 诊断 LED（高电平点亮）
-    //   snd_frame_done 是单周期脉冲 -> 展宽成 ~0.2s 才看得见
-    //   每 6 帧发 1 帧（约 100ms 一次），所以这个灯会以 ~0.1s 的间隔闪
+    // 诊断 LED（高电平点亮）—— 顶层再映射成 led[3:0]
+    //
+    //   顶层映射：led = { net_led[2], net_led[1], S_pll_lock, net_led[0] }
+    //     led[0] D10 = net_led[0]  PHY 复位已释放（链路可自协商）
+    //     led[1] E10 = S_pll_lock  视频 PLL 已锁定
+    //     led[2] C6  = net_led[1]  一整帧 128x72 已发完（展宽 ~0.2s）
+    //     led[3] D6  = net_led[2]  ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
+    //
+    //   判读：
+    //     正常工作            -> led[2] 常亮（每 6 帧发一帧 ≈99ms < 展宽 200ms，所以常亮）
+    //                             led[3] 灭
+    //     发不出去（ARP 不通）-> led[2] 灭、led[3] 亮
+    //     led[3] 亮 = 板 A 解析不到 192.168.240.2 的 MAC
+    //                 -> 对面那台 .2 的设备不在、网线不通、或 PC 网卡没设成 .2
+    //     （snd_tx_abort 也是"发送失败"的指示，但 4 个灯不够分，
+    //       暂时不上灯；若 led[2] 灭而 led[3] 也不亮，再把它换上来。）
     // ---------------------------------------------------------------------
     reg [24:0] tx_led_cnt;
     always @(posedge udp_clk or negedge net_rst_n) begin
@@ -459,14 +479,16 @@ module board_a_net_wrapper (
         else if (tx_led_cnt != 25'd0)                    tx_led_cnt <= tx_led_cnt - 25'd1;
     end
 
-    reg [26:0] hb_cnt;
+    // ARP 无回应：可能是脉冲也可能是电平，两种都用"置满、慢慢减"来展宽
+    reg [24:0] arp_led_cnt;
     always @(posedge udp_clk or negedge net_rst_n) begin
-        if (!net_rst_n) hb_cnt <= 27'd0;
-        else            hb_cnt <= hb_cnt + 27'd1;
+        if (!net_rst_n)                                  arp_led_cnt <= 25'd0;
+        else if (arp_no_reply)                           arp_led_cnt <= 25'd25_000_000;
+        else if (arp_led_cnt != 25'd0)                   arp_led_cnt <= arp_led_cnt - 25'd1;
     end
 
-    assign net_led[0] = phy_reset;               // PHY 复位已释放 = 链路就绪
-    assign net_led[1] = (tx_led_cnt != 25'd0);   // 一整帧 128x72 图像已发完（展宽 ~0.2s）
-    assign net_led[2] = hb_cnt[26];              // 心跳 ~0.54s 翻转
+    assign net_led[0] = phy_reset;                      // PHY 复位已释放 = 链路就绪
+    assign net_led[1] = (tx_led_cnt  != 25'd0);         // 一整帧 128x72 已发完（展宽 ~0.2s）
+    assign net_led[2] = (arp_led_cnt != 25'd0);         // ⚠ ARP 无回应（展宽 ~0.2s）
 
 endmodule

@@ -556,8 +556,14 @@ module design_top_wrapper (
     // 板载 LED（原理图 LED0~LED3 = D10/E10/C6/D6，全部高电平点亮）
     //   led[0] = net_led[0]  PHY 复位已释放 —— 链路可自协商
     //   led[1] = S_pll_lock  视频 PLL 已锁定
-    //   led[2] = net_led[1]  收到 UDP 载荷（展宽 ~0.2s）
-    //   led[3] = net_led[2]  心跳（~0.54s 翻转）
+    //   led[2] = net_led[1]  一整帧 128x72 图像已发完（展宽 ~0.2s）
+    //                        每 6 帧发 1 帧 ≈ 99ms 触发一次 < 展宽 200ms
+    //                        -> 正常工作时应该**常亮**（不是闪）
+    //   led[3] = net_led[2]  ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
+    //                        亮 = 解析不到 192.168.240.2 的 MAC
+    //                        （对面 .2 不在 / 网线不通 / PC 网卡没设成 .2）
+    //                        ★ 这个灯替代了原来的"心跳"，因为第 3 步是**主动**发包，
+    //                          ARP 是否通是当前最有价值的判据。
     // 第 1 步那句 `{ 2'b00, S_por_arst_n, S_pll_lock }` 是 5 位宽进 4 位口，
     // 这里改成 4 位并保持 led[0]/led[1] 的原有含义。
     assign led = { net_led[2], net_led[1], S_pll_lock, net_led[0] };
