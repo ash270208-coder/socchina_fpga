@@ -16,6 +16,7 @@ module design_top_wrapper (
     output wire       O_tmds_ch1_p,
     output wire       O_tmds_ch2_p,
     output wire       O_tmds_clk_p,
+    output wire       O_servo_pwm,   // 新增：云台 PWM 输出
 
     inout wire        IO_rx_clk_pad_n, 
     inout wire        IO_rx_clk_pad_p, 
@@ -38,6 +39,17 @@ module design_top_wrapper (
     inout wire[1:0]   ddr_dqs_n   
 );
 
+    // ---- 来自其他模块的目标坐标原始信号 ----
+wire        S_target_valid_raw;
+wire [10:0] S_target_x_raw;
+
+// ---- 同步到 24M 域的寄存器 ----
+reg         S_target_valid_s1, S_target_valid_s2;
+reg  [10:0] S_target_x_s1, S_target_x_s2;
+
+// ---- 同步后的 24M 域信号 ----
+wire        S_target_valid_24m;
+wire [10:0] S_target_x_24m;
 
     wire        	S_100m_clk;
     wire        	S_24m_clk;
@@ -458,7 +470,51 @@ module design_top_wrapper (
     );
 
 
-	
+	// =========================================================================
+// 目标坐标同步到 24M 域（用于云台控制）
+// =========================================================================
+always @(posedge S_24m_clk or negedge S_rst_n) begin
+    if (!S_rst_n) begin
+        S_target_valid_s1 <= 1'b0;
+        S_target_valid_s2 <= 1'b0;
+        S_target_x_s1     <= 11'd0;
+        S_target_x_s2     <= 11'd0;
+    end
+    else begin
+        S_target_valid_s1 <= S_target_valid_raw;
+        S_target_valid_s2 <= S_target_valid_s1;
+
+        S_target_x_s1     <= S_target_x_raw;
+        S_target_x_s2     <= S_target_x_s1;
+    end
+end
+
+assign S_target_valid_24m = S_target_valid_s2;
+assign S_target_x_24m     = S_target_x_s2;
+
+// =========================================================================
+// 云台 PWM 控制（TBS-K15 270° 舵机）
+// =========================================================================
+ptz_servo_ctrl #(
+    .CLK_HZ    (24_000_000),
+    .ANGLE_MAX (270),
+    .IMG_W     (1280),
+    .CENTER_X  (640),
+    .DEADZONE  (60),
+    .UPDATE_MS (50),
+    .STEP_MAX  (8)
+) u_ptz_servo_ctrl (
+    .clk          (S_24m_clk),
+    .rst_n        (~S_rst_n),      // 注意：S_rst_n 是高有效 PLL lock，模块内部是低有效复位，所以要取反
+    .target_valid (S_target_valid_24m),
+    .target_x     (S_target_x_24m),
+    .pwm_out      (O_servo_pwm),
+    .angle_dbg    ()
+);
+
+// 临时测试：目标固定在中心，云台不动
+assign S_target_valid_raw = 1'b1;
+assign S_target_x_raw     = 11'd640;
 
   
     // =========================================================================
