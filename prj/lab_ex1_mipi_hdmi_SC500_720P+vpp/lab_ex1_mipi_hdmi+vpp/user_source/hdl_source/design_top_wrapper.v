@@ -505,7 +505,7 @@ ptz_servo_ctrl #(
     .STEP_MAX  (8)
 ) u_ptz_servo_ctrl (
     .clk          (S_24m_clk),
-    .rst_n        (~S_rst_n),      // 注意：S_rst_n 是高有效 PLL lock，模块内部是低有效复位，所以要取反
+    .rst_n        (S_rst_n),
     .target_valid (S_target_valid_24m),
     .target_x     (S_target_x_24m),
     .pwm_out      (O_servo_pwm),

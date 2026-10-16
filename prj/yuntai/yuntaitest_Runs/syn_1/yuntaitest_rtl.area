@@ -1,0 +1,36 @@
+standard
+***Report Model: ptz_top Device: PH1P35MDG324***
+
+IO Statistics
+#IO                         9
+  #input                    4
+  #output                   5
+  #inout                    0
+
+Gate Statistics
+#Basic gates              144
+  #and                      4
+  #nand                     0
+  #or                       1
+  #nor                      0
+  #xor                      2
+  #xnor                     0
+  #buf                      0
+  #not                     12
+  #bufif1                   0
+  #MX21                    14
+  #FADD                     0
+  #DFF                    111
+  #LATCH                    0
+#MACRO_ADD                 10
+#MACRO_EQ                   4
+#MACRO_MULT                 1
+#MACRO_MUX                 75
+
+Report Hierarchy Area:
++-----------------------------------------------------------+
+|Instance           |Module         |gates  |seq    |macros |
++-----------------------------------------------------------+
+|top                |ptz_top        |33     |111    |15     |
+|  u_ptz_servo_ctrl |ptz_servo_ctrl |4      |64     |11     |
++-----------------------------------------------------------+

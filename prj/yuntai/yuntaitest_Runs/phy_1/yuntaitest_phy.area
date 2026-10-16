@@ -1,0 +1,85 @@
+standard
+***Report Model: ptz_top Device: PH1P35MDG324***
+
+Design Statistics
+#IO                         9   out of    160    5.62%
+  #input                    4
+  #output                   5
+  #inout                    0
+#lut6                     194   out of  21216    0.91%
+#reg                      111
+  #slice reg              111   out of  42432    0.26%
+  #pad reg                  0
+
+Utilization Statistics
+#slice                    194   out of  21216    0.91%
+  #used ram                 0
+    #dram lut               0
+    #shifter lut            0
+  #used logic             194
+    #with luts             96
+    #with adder            98
+    #reg only               0
+#feedthrough               19
+#f7mux                      0   out of  10608    0.00%
+#f8mux                      0   out of   5304    0.00%
+#eram                       0   out of    108    0.00%
+  #eram20k                  0
+  #fifo20k                  0
+#dsp                        1   out of     40    2.50%
+#ddr_byte                   0   out of     12    0.00%
+#mipi_tx                    0   out of      2    0.00%
+#mipi_rx                    0   out of      2    0.00%
+#pad                        9   out of    160    5.62%
+#pll                        0   out of      6    0.00%
+#gclk                       1   out of     32    3.12%
+#lclk                       0   out of     12    0.00%
+#sclk                       3   out of     48    6.25%
+#mlclk                      0   out of      6    0.00%
+#ioclk                      0   out of     18    0.00%
+
+
+Detailed IO Report
+
+     Name        Direction    Location    IOStandard    IOType    DriveStrength    PullType    PackReg  
+  I_button_0       INPUT         D5        LVCMOS33      HDIO          N/A          PULLUP      NONE    
+  I_button_1       INPUT         A9        LVCMOS33      HDIO          N/A          PULLUP      NONE    
+   I_clk_50m       INPUT         C4        LVCMOS33      HDIO          N/A          PULLUP      NONE    
+    I_rst_n        INPUT         C7        LVCMOS33      HDIO          N/A          PULLUP      NONE    
+   O_led[3]       OUTPUT         D6        LVCMOS33      HDIO           8            NONE       NONE    
+   O_led[2]       OUTPUT         C6        LVCMOS33      HDIO           8            NONE       NONE    
+   O_led[1]       OUTPUT        E10        LVCMOS33      HDIO           8            NONE       NONE    
+   O_led[0]       OUTPUT        D10        LVCMOS33      HDIO           8            NONE       NONE    
+  O_servo_pwm     OUTPUT        C18        LVCMOS33      HRIO           8            NONE       NONE    
+
+Report Clock Domain Luts:
+
+------------------------------------------------------------------------------------------------------------------
+  Index   |  Name         |  Frequency   |  LUT As Logic   |  LUT As Shifter   |  LUT As Dram   |  BRAM   |  DSP
+------------------------------------------------------------------------------------------------------------------
+  #1      |  DeriveClock  |  50MHz       |  182            |  0                |  0             |  0      |  1
+------------------------------------------------------------------------------------------------------------------
+
+Clock Resource Statistics
+Index     ClockNet           Type            DriverType         Driver                ClockFanout        GclkLocation
+#1        I_clk_50m_dup_1    InferredGclk    hdio               I_clk_50m_syn_2.di    84                 x23y39z16
+
+Report Hierarchy Area:
++---------------------------------------------------------------------------------------------------------------------------------------------+
+|Instance           |Module         |logic lut |ripple  |seq     |eram    |dsp     |dram lut |shifter lut |f7mux   |f8mux   |pll     |ddr     |
++---------------------------------------------------------------------------------------------------------------------------------------------+
+|top                |ptz_top        |96        |98      |111     |0       |1       |0        |0           |0       |0       |0       |0       |
+|  u_ptz_servo_ctrl |ptz_servo_ctrl |40        |58      |64      |0       |1       |0        |0           |0       |0       |0       |0       |
++---------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+DataNet Average Fanout:
+
+   Index     Fanout    Nets  
+    #1         1       393   
+    #2         2        66   
+    #3         3        17   
+    #4         4        15   
+    #5        5-10      25   
+    #6       11-50      1    
+  Average     1.56           

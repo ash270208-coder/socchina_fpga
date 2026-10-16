@@ -1,0 +1,32 @@
+# ==========================================
+# 时钟引脚
+# ==========================================
+set_pin_assignment { I_clk_50m } { LOCATION = C4; IOSTANDARD = LVCMOS33; }
+
+# ==========================================
+# 复位与按键
+# ==========================================
+set_pin_assignment { I_rst_n }    { LOCATION = C7; IOSTANDARD = LVCMOS33; }  # KEY4
+set_pin_assignment { I_button_0 } { LOCATION = D5; IOSTANDARD = LVCMOS33; }  # KEY1
+set_pin_assignment { I_button_1 } { LOCATION = A9; IOSTANDARD = LVCMOS33; }  # KEY2
+
+# ==========================================
+# 舵机 PWM 输出（接 40Pin 扩展口 J2 的第1脚）
+# ==========================================
+set_pin_assignment { O_servo_pwm } { LOCATION = C18; IOSTANDARD = LVCMOS33; }
+
+# ==========================================
+# 调试 LED
+# ==========================================
+set_pin_assignment { O_led[0] } { LOCATION = D10; IOSTANDARD = LVCMOS33; } # LED1
+set_pin_assignment { O_led[1] } { LOCATION = E10; IOSTANDARD = LVCMOS33; } # LED2
+set_pin_assignment { O_led[2] } { LOCATION = C6;  IOSTANDARD = LVCMOS33; } # LED3
+set_pin_assignment { O_led[3] } { LOCATION = D6;  IOSTANDARD = LVCMOS33; } # LED4
+
+# 1. 声明 50MHz 时钟（周期 20ns）
+create_clock -name clk_50m -period 20 [get_ports I_clk_50m]
+
+# 2. 按键和复位是异步信号，不需要按 20ns 的时钟去分析，设为伪路径
+set_false_path -from [get_ports I_rst_n]
+set_false_path -from [get_ports I_button_0]
+set_false_path -from [get_ports I_button_1]

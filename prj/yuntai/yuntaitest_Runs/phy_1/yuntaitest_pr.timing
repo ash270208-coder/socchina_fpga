@@ -1,0 +1,930 @@
+Created by          : Tang Dynasty v6.2.168116
+                    : Copyright (c) 2012-2025 Anlogic Inc.
+Generated           : Fri Oct 16 20:42:20 2026
+
+Top Model           : ptz_top
+Device              : PH1P35MDG324
+Speed               : 3
+STA coverage        : 87.15%
+Constraint File     : 
+Confidence          : Routed
+Check Corner        : Both (Slow and Fast)
+CRPR Enabled        : Yes
+Report Scheme       : 10 end point(s) per path group, 1 path(s) per end point
+
+
+Check Status
+-------------
+
+Corner   | Max      Min     
+------------------------------------
+Slow     | yes      yes     
+Fast     | yes      yes     
+
+
+Timing Status
+--------------------
+	SWNS: 14.954ns, STNS: 0.000ns
+	HWNS: 0.142ns, HTNS: 0.000ns
+	Period Check WNS: 0.000ns
+
+
+Clock Summary
+--------------------
+
+       Clock-Id:       C-Freq       Fanout   Clock-Name
+--------------------------------------------------------------------------------
+           clk0:       50.000           84   DeriveClock
+--------------------------------------------------------------------------------
+
+       Name            Type         Rise(ns)   Fall(ns)          C-Period(ns)     C-Freq(MHz)          R-Period(ns)     R-Freq(MHz)         SWNS(ns)   STNS(ns)         HWNS(ns)   HTNS(ns)         Skew(ns)           Fanout        Max-Level        CC-From    CC-To
+       clk0           local            0.000     10.000                20.000          50.000                 5.046         198.177           14.954      0.000            0.142      0.000            0.000               84                3             no       no
+
+Notes
+----------
+C-Period  :  constraint period
+C-Freq    :  constraint freq
+R-Period  :  report min period
+R-Freq    :  report fmax
+CC-From   :  has path(s) from cross-domain clock
+CC-To     :  has path(s) to cross-domain clock
+
+
+*   Clock R-Period data only takes intra-clock timing. SWNS/STNS/HWNS/HTNS take both intra-clock and inter-clock timing.
+*   If there is mismatch between R-Period and SWNS, check inter-clock timing of this clock as capture clock.
+*   SWNS/STNS/HWNS/HTNS of timing exception (SMCP/SMD) only counted in global Timing Status, not counted in Clock Summary.
+
+Intra clock domain timing
+--------------------------------------------------
+
+----------------------------------------------------------------------------------------------------
+Path Group     :     DeriveClock -> DeriveClock
+Type           :     Self
+From Clock     :     DeriveClock
+To Clock       :     DeriveClock
+Min Period     :     5.046ns
+Fmax           :     198.177MHz
+
+Statistics:
+Max            : SWNS     14.954ns, STNS      0.000ns,         0 Viol Endpoints,       120 Total Endpoints,       308 Paths Analyzed
+Min            : HWNS      0.142ns, HTNS      0.000ns,         0 Viol Endpoints,       120 Total Endpoints,       308 Paths Analyzed
+----------------------------------------------------------------------------------------------------
+
+Max Paths
+----------------------------------------------------------------------------------------------------
+Slack               : 14.954ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_110.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.932ns (cell 3.314ns (67%), net 1.618ns (33%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.420    r     2.930       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[15]
+net (fo=1)                              0.000          2.930          net: u_ptz_servo_ctrl/mult0_syn_106[15],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[15]
+DSPSIOU             x027y052            0.471    f     3.401          pin: u_ptz_servo_ctrl/mult0_syn_58.p[15]
+net (fo=1)                              0.704          4.105          net: u_ptz_servo_ctrl/mult0_syn_4[15],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_108.ic
+ADDER               x026y051z5          0.540    r     4.645       2  pin: u_ptz_servo_ctrl/add3_syn_108.fco
+net (fo=1)                              0.000          4.645          net: u_ptz_servo_ctrl/add3_syn_92,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_109.fci
+ADDER               x026y051z6          0.059    r     4.704          pin: u_ptz_servo_ctrl/add3_syn_109.fco
+net (fo=1)                              0.000          4.704          net: u_ptz_servo_ctrl/add3_syn_93,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_110.fci
+ADDER (reg)         x026y051z7          0.228    f     4.932       3  net: u_ptz_servo_ctrl/pulse_reg[18],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.932               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 14.954               
+
+Slack               : 15.013ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_109.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.873ns (cell 3.255ns (66%), net 1.618ns (34%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.420    r     2.930       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[15]
+net (fo=1)                              0.000          2.930          net: u_ptz_servo_ctrl/mult0_syn_106[15],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[15]
+DSPSIOU             x027y052            0.471    f     3.401          pin: u_ptz_servo_ctrl/mult0_syn_58.p[15]
+net (fo=1)                              0.704          4.105          net: u_ptz_servo_ctrl/mult0_syn_4[15],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_108.ic
+ADDER               x026y051z5          0.540    r     4.645       2  pin: u_ptz_servo_ctrl/add3_syn_108.fco
+net (fo=1)                              0.000          4.645          net: u_ptz_servo_ctrl/add3_syn_92,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_109.fci
+ADDER (reg)         x026y051z6          0.228    f     4.873       3  net: u_ptz_servo_ctrl/pulse_reg[17],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.873               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.013               
+
+Slack               : 15.107ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_106.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.779ns (cell 3.194ns (66%), net 1.585ns (34%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER               x026y051z0          0.059    r     4.433          pin: u_ptz_servo_ctrl/add3_syn_103.fco
+net (fo=1)                              0.000          4.433          net: u_ptz_servo_ctrl/add3_syn_87,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_104.fci
+ADDER               x026y051z1          0.059    r     4.492          pin: u_ptz_servo_ctrl/add3_syn_104.fco
+net (fo=1)                              0.000          4.492          net: u_ptz_servo_ctrl/add3_syn_88,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_105.fci
+ADDER               x026y051z2          0.059    r     4.551          pin: u_ptz_servo_ctrl/add3_syn_105.fco
+net (fo=1)                              0.000          4.551          net: u_ptz_servo_ctrl/add3_syn_89,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_106.fci
+ADDER (reg)         x026y051z3          0.228    f     4.779       3  net: u_ptz_servo_ctrl/pulse_reg[14],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.779               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.107               
+
+Slack               : 15.135ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_108.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.751ns (cell 3.076ns (64%), net 1.675ns (36%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER               x026y051z0          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_103.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_119,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_104.fci_f
+ADDER               x026y051z1          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_104.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_120,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_105.fci_f
+ADDER               x026y051z2          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_105.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_121,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_106.fci_f
+ADDER               x026y051z3          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_106.fco_f
+net (fo=1)                              0.090          4.464          net: u_ptz_servo_ctrl/add3_syn_122,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_107.fci_f
+ADDER               x026y051z4          0.059    r     4.523          pin: u_ptz_servo_ctrl/add3_syn_107.fco
+net (fo=1)                              0.000          4.523          net: u_ptz_servo_ctrl/add3_syn_91,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_108.fci
+ADDER (reg)         x026y051z5          0.228    f     4.751       3  net: u_ptz_servo_ctrl/pulse_reg[16],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.751               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.135               
+
+Slack               : 15.166ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_105.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.720ns (cell 3.135ns (66%), net 1.585ns (34%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER               x026y051z0          0.059    r     4.433          pin: u_ptz_servo_ctrl/add3_syn_103.fco
+net (fo=1)                              0.000          4.433          net: u_ptz_servo_ctrl/add3_syn_87,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_104.fci
+ADDER               x026y051z1          0.059    r     4.492          pin: u_ptz_servo_ctrl/add3_syn_104.fco
+net (fo=1)                              0.000          4.492          net: u_ptz_servo_ctrl/add3_syn_88,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_105.fci
+ADDER (reg)         x026y051z2          0.228    f     4.720       3  net: u_ptz_servo_ctrl/pulse_reg[13],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.720               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.166               
+
+Slack               : 15.194ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_107.fci_f (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.692ns (cell 3.017ns (64%), net 1.675ns (36%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER               x026y051z0          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_103.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_119,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_104.fci_f
+ADDER               x026y051z1          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_104.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_120,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_105.fci_f
+ADDER               x026y051z2          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_105.fco_f
+net (fo=1)                              0.000          4.374          net: u_ptz_servo_ctrl/add3_syn_121,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_106.fci_f
+ADDER               x026y051z3          0.000    f     4.374          pin: u_ptz_servo_ctrl/add3_syn_106.fco_f
+net (fo=1)                              0.090          4.464          net: u_ptz_servo_ctrl/add3_syn_122,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_107.fci_f
+ADDER (reg)         x026y051z4          0.228    f     4.692       3  net: u_ptz_servo_ctrl/pulse_reg[15],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.692               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.194               
+
+Slack               : 15.212ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_102.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.674ns (cell 3.246ns (69%), net 1.428ns (31%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.120    r     2.630       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[5]
+net (fo=1)                              0.000          2.630          net: u_ptz_servo_ctrl/mult0_syn_106[5],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[5]
+DSPSIOU             x027y052            0.585    f     3.215          pin: u_ptz_servo_ctrl/mult0_syn_58.p[5]
+net (fo=1)                              0.514          3.729          net: u_ptz_servo_ctrl/mult0_syn_4[5],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_98.ic
+ADDER               x026y050z3          0.540    r     4.269       2  pin: u_ptz_servo_ctrl/add3_syn_98.fco
+net (fo=1)                              0.000          4.269          net: u_ptz_servo_ctrl/add3_syn_82,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_99.fci
+ADDER               x026y050z4          0.059    r     4.328          pin: u_ptz_servo_ctrl/add3_syn_99.fco
+net (fo=1)                              0.000          4.328          net: u_ptz_servo_ctrl/add3_syn_83,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_100.fci
+ADDER               x026y050z5          0.059    r     4.387          pin: u_ptz_servo_ctrl/add3_syn_100.fco
+net (fo=1)                              0.000          4.387          net: u_ptz_servo_ctrl/add3_syn_84,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_101.fci
+ADDER               x026y050z6          0.059    r     4.446          pin: u_ptz_servo_ctrl/add3_syn_101.fco
+net (fo=1)                              0.000          4.446          net: u_ptz_servo_ctrl/add3_syn_85,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.fci
+ADDER (reg)         x026y050z7          0.228    f     4.674       3  net: u_ptz_servo_ctrl/pulse_reg[10],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.674               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.212               
+
+Slack               : 15.225ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_104.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.661ns (cell 3.076ns (65%), net 1.585ns (35%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER               x026y051z0          0.059    r     4.433          pin: u_ptz_servo_ctrl/add3_syn_103.fco
+net (fo=1)                              0.000          4.433          net: u_ptz_servo_ctrl/add3_syn_87,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_104.fci
+ADDER (reg)         x026y051z1          0.228    f     4.661       3  net: u_ptz_servo_ctrl/pulse_reg[12],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.661               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.225               
+
+Slack               : 15.271ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_101.fci (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.615ns (cell 3.187ns (69%), net 1.428ns (31%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.120    r     2.630       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[5]
+net (fo=1)                              0.000          2.630          net: u_ptz_servo_ctrl/mult0_syn_106[5],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[5]
+DSPSIOU             x027y052            0.585    f     3.215          pin: u_ptz_servo_ctrl/mult0_syn_58.p[5]
+net (fo=1)                              0.514          3.729          net: u_ptz_servo_ctrl/mult0_syn_4[5],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_98.ic
+ADDER               x026y050z3          0.540    r     4.269       2  pin: u_ptz_servo_ctrl/add3_syn_98.fco
+net (fo=1)                              0.000          4.269          net: u_ptz_servo_ctrl/add3_syn_82,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_99.fci
+ADDER               x026y050z4          0.059    r     4.328          pin: u_ptz_servo_ctrl/add3_syn_99.fco
+net (fo=1)                              0.000          4.328          net: u_ptz_servo_ctrl/add3_syn_83,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_100.fci
+ADDER               x026y050z5          0.059    r     4.387          pin: u_ptz_servo_ctrl/add3_syn_100.fco
+net (fo=1)                              0.000          4.387          net: u_ptz_servo_ctrl/add3_syn_84,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_101.fci
+ADDER (reg)         x026y050z6          0.228    f     4.615       3  net: u_ptz_servo_ctrl/pulse_reg[9],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.615               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.271               
+
+Slack               : 15.284ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/add3_syn_103.fci_f (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : setup
+Process             : slow_m40c
+Budget              : 20.000ns { DeriveClock rising@20.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 4.602ns (cell 3.017ns (65%), net 1.585ns (35%))
+Clock Skew          : 0.000ns
+Logic Level         : 3 ( ADDER=2  DSPMULT=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.126    f     0.126          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.914          1.040          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.xa[0]
+DSPSIOU             x027y052            0.470    r     1.510          pin: u_ptz_servo_ctrl/mult0_syn_58.mult_x[0]
+net (fo=1)                              0.000          1.510          net: u_ptz_servo_ctrl/mult0_syn_60[0],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_59.x[0]
+DSPMULT             x027y052            1.247    r     2.757       1  pin: u_ptz_servo_ctrl/mult0_syn_59.p[9]
+net (fo=1)                              0.000          2.757          net: u_ptz_servo_ctrl/mult0_syn_106[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/mult0_syn_58.mult_p[9]
+DSPSIOU             x027y052            0.529    r     3.286          pin: u_ptz_servo_ctrl/mult0_syn_58.p[9]
+net (fo=1)                              0.581          3.867          net: u_ptz_servo_ctrl/mult0_syn_4[9],  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_102.ic
+ADDER               x026y050z7          0.417    r     4.284       2  pin: u_ptz_servo_ctrl/add3_syn_102.fco_f
+net (fo=1)                              0.090          4.374          net: u_ptz_servo_ctrl/add3_syn_118,  ../../ptz_servo_ctrl.v(57)
+                                                                      pin: u_ptz_servo_ctrl/add3_syn_103.fci_f
+ADDER (reg)         x026y051z0          0.228    f     4.602       3  net: u_ptz_servo_ctrl/pulse_reg[11],  ../../ptz_servo_ctrl.v(23)
+--------------------------------------------------------------------  ---------------
+Arrival                                                4.602               
+
+capture edge                           20.000    r    20.000               
+--------------------------------------------------------------------  ---------------
+setup                                  -0.064         19.936               
+clock uncertainty                      -0.050         19.886               
+clock pessimism                         0.000         19.886               
+--------------------------------------------------------------------  ---------------
+Required                                              19.886               
+--------------------------------------------------------------------  ---------------
+Slack                                                 15.284               
+
+
+
+Min Paths
+----------------------------------------------------------------------------------------------------
+Slack               : 0.142ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[6]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/angle_reg[6]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.154ns (cell 0.125ns (81%), net 0.029ns (19%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT5=1 )
+Max Fanout          : 7
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y056z3          0.062    f     0.062          pin: u_ptz_servo_ctrl/angle_reg[6]_syn_2.oqa
+net (fo=7)                              0.029          0.091          net: u_ptz_servo_ctrl/angle_dbg[6],  ../../ptz_servo_ctrl.v(13)
+                                                                      pin: u_ptz_servo_ctrl/angle_reg[6]_syn_2.imf
+LUT5 (reg)          x026y056z3          0.063    f     0.154       1  net: u_ptz_servo_ctrl/angle_dbg[6],  ../../ptz_servo_ctrl.v(13)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.154               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.142               
+
+Slack               : 0.142ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[7]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/angle_reg[7]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.154ns (cell 0.125ns (81%), net 0.029ns (19%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT5=1 )
+Max Fanout          : 6
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y056z7          0.062    f     0.062          pin: u_ptz_servo_ctrl/angle_reg[7]_syn_2.oqa
+net (fo=6)                              0.029          0.091          net: u_ptz_servo_ctrl/angle_dbg[7],  ../../ptz_servo_ctrl.v(13)
+                                                                      pin: u_ptz_servo_ctrl/angle_reg[7]_syn_2.imf
+LUT5 (reg)          x026y056z7          0.063    f     0.154       1  net: u_ptz_servo_ctrl/angle_dbg[7],  ../../ptz_servo_ctrl.v(13)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.154               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.142               
+
+Slack               : 0.169ns
+Begin Point         : state_reg[1]_syn_7.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : state_reg[0]_syn_5.id (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.231ns (cell 0.173ns (74%), net 0.058ns (26%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT6=1 )
+Max Fanout          : 4
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x025y032z1          0.062    f     0.062          pin: state_reg[1]_syn_7.oqa
+net (fo=4)                              0.058          0.120          net: state_reg_syn_1[1],  ../../ptz_top.v(25)
+                                                                      pin: state_reg[0]_syn_5.id
+LUT6 (reg)          x025y032z7          0.111    f     0.231       1  net: state_reg_syn_1[0],  ../../ptz_top.v(25)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.231               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.050          0.062               
+clock pessimism                         0.000          0.062               
+--------------------------------------------------------------------  ---------------
+Required                                               0.062               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.169               
+
+Slack               : 0.171ns
+Begin Point         : state_reg[0]_syn_5.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : state_reg[1]_syn_7.id (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.233ns (cell 0.176ns (75%), net 0.057ns (25%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT6=1 )
+Max Fanout          : 3
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x025y032z7          0.065    r     0.065          pin: state_reg[0]_syn_5.oqb
+net (fo=3)                              0.057          0.122          net: pv_b,  ../../ptz_top.v(16)
+                                                                      pin: state_reg[1]_syn_7.id
+LUT6 (reg)          x025y032z1          0.111    f     0.233       1  net: state_reg_syn_1[1],  ../../ptz_top.v(25)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.233               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.050          0.062               
+clock pessimism                         0.000          0.062               
+--------------------------------------------------------------------  ---------------
+Required                                               0.062               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.171               
+
+Slack               : 0.171ns
+Begin Point         : state_reg[0]_syn_5.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : state_reg[2]_syn_5.id (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.233ns (cell 0.176ns (75%), net 0.057ns (25%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT6=1 )
+Max Fanout          : 3
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x025y032z7          0.065    r     0.065          pin: state_reg[0]_syn_5.oqb
+net (fo=3)                              0.057          0.122          net: pv_b,  ../../ptz_top.v(16)
+                                                                      pin: state_reg[2]_syn_5.id
+LUT6 (reg)          x025y032z2          0.111    f     0.233       1  net: state_reg_syn_1[2],  ../../ptz_top.v(25)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.233               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.050          0.062               
+clock pessimism                         0.000          0.062               
+--------------------------------------------------------------------  ---------------
+Required                                               0.062               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.171               
+
+Slack               : 0.174ns
+Begin Point         : u_ptz_servo_ctrl/pwm_cnt_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/pwm_cnt_reg[0]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.186ns (cell 0.125ns (67%), net 0.061ns (33%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT1=1 )
+Max Fanout          : 4
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y040z0          0.062    f     0.062          pin: u_ptz_servo_ctrl/pwm_cnt_reg[0]_syn_2.oqa
+net (fo=4)                              0.061          0.123          net: u_ptz_servo_ctrl/pwm_cnt[0],  ../../ptz_servo_ctrl.v(22)
+                                                                      pin: u_ptz_servo_ctrl/pwm_cnt_reg[0]_syn_2.imf
+LUT1 (reg)          x026y040z0          0.063    f     0.186       1  net: u_ptz_servo_ctrl/pwm_cnt[0],  ../../ptz_servo_ctrl.v(22)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.186               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.174               
+
+Slack               : 0.175ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[4]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/angle_reg[4]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.187ns (cell 0.125ns (66%), net 0.062ns (34%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT5=1 )
+Max Fanout          : 7
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y056z4          0.062    f     0.062          pin: u_ptz_servo_ctrl/angle_reg[4]_syn_2.oqa
+net (fo=7)                              0.062          0.124          net: u_ptz_servo_ctrl/angle_dbg[4],  ../../ptz_servo_ctrl.v(13)
+                                                                      pin: u_ptz_servo_ctrl/angle_reg[4]_syn_2.imf
+LUT5 (reg)          x026y056z4          0.063    f     0.187       1  net: u_ptz_servo_ctrl/angle_dbg[4],  ../../ptz_servo_ctrl.v(13)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.187               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.175               
+
+Slack               : 0.179ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[0]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/angle_reg[0]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.191ns (cell 0.125ns (65%), net 0.066ns (35%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT3=1 )
+Max Fanout          : 9
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y057z4          0.062    f     0.062          pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.oqa
+net (fo=9)                              0.066          0.128          net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+                                                                      pin: u_ptz_servo_ctrl/angle_reg[0]_syn_2.imf
+LUT3 (reg)          x026y057z4          0.063    f     0.191       1  net: O_led[0]_dup_5,  ../../ptz_top.v(9)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.191               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.179               
+
+Slack               : 0.181ns
+Begin Point         : u_ptz_servo_ctrl/pwm_cnt_reg[19]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/pwm_cnt_reg[17]_syn_2.ic (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.243ns (cell 0.186ns (76%), net 0.057ns (24%))
+Clock Skew          : 0.000ns
+Logic Level         : 2 ( LUT4=2 )
+Max Fanout          : 4
+Clock Uncertainty   : 0.050ns (sdc uncertainty: 0.000ns, default uncertainty: 0.050ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y046z4          0.062    f     0.062          pin: u_ptz_servo_ctrl/pwm_cnt_reg[19]_syn_2.oqa
+net (fo=3)                              0.029          0.091          net: u_ptz_servo_ctrl/pwm_cnt[19],  ../../ptz_servo_ctrl.v(22)
+                                                                      pin: u_ptz_servo_ctrl/pwm_cnt_b[18]_syn_11.ie
+LUT4                x026y046z7          0.052    f     0.143       1  pin: u_ptz_servo_ctrl/pwm_cnt_b[18]_syn_11.ofb
+net (fo=4)                              0.028          0.171          net: u_ptz_servo_ctrl/pwm_cnt_b[18]_syn_4,  NOFILE(0)
+                                                                      pin: u_ptz_servo_ctrl/pwm_cnt_reg[17]_syn_2.ic
+LUT4 (reg)          x026y046z5          0.072    f     0.243       2  net: u_ptz_servo_ctrl/pwm_cnt[16],  ../../ptz_servo_ctrl.v(22)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.243               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.050          0.062               
+clock pessimism                         0.000          0.062               
+--------------------------------------------------------------------  ---------------
+Required                                               0.062               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.181               
+
+Slack               : 0.201ns
+Begin Point         : u_ptz_servo_ctrl/angle_reg[5]_syn_2.clk (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+End Point           : u_ptz_servo_ctrl/angle_reg[5]_syn_2.imf (rising edge triggered by clock DeriveClock  { rise@0.000000ns  fall@10.000000ns  period=20.000000 })
+Check Type          : hold
+Process             : fast_m40c
+Budget              : 0.000ns { DeriveClock rising@0.000ns - DeriveClock rising@0.000ns }
+Data Path Delay     : 0.213ns (cell 0.155ns (72%), net 0.058ns (28%))
+Clock Skew          : 0.000ns
+Logic Level         : 1 ( LUT6=1 )
+Max Fanout          : 6
+Clock Uncertainty   : 0.000ns (sdc uncertainty: 0.000ns, default uncertainty: 0.000ns)
+
+Delay Type          Location             Incr           Path   Level  Netlist Info
+--------------------------------------------------------------------  ---------------
+launch edge                             0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+clk2q               x026y056z1          0.062    f     0.062          pin: u_ptz_servo_ctrl/angle_reg[5]_syn_2.oqa
+net (fo=6)                              0.058          0.120          net: u_ptz_servo_ctrl/angle_dbg[5],  ../../ptz_servo_ctrl.v(13)
+                                                                      pin: u_ptz_servo_ctrl/angle_reg[5]_syn_2.imf
+LUT6 (reg)          x026y056z1          0.093    f     0.213       1  net: u_ptz_servo_ctrl/angle_dbg[5],  ../../ptz_servo_ctrl.v(13)
+--------------------------------------------------------------------  ---------------
+Arrival                                                0.213               
+
+capture edge                            0.000    r     0.000               
+--------------------------------------------------------------------  ---------------
+hold                                    0.012          0.012               
+clock uncertainty                       0.000          0.012               
+clock pessimism                         0.000          0.012               
+--------------------------------------------------------------------  ---------------
+Required                                               0.012               
+--------------------------------------------------------------------  ---------------
+Slack                                                  0.201               
+
+
+Inter clock domain timing
+--------------------------------------------------
+
+IP timing
+--------------------------------------------------
