@@ -2,7 +2,7 @@
 
 module ptz_servo_ctrl #(
     // 请确认云台模块所在时钟域！如果在 pclk 下，通常填 74250000；如果独立 50M，填 50000000
-    parameter CLK_HZ     = 74_250_000, 
+    parameter CLK_HZ     = 25_000_000, 
     
     parameter ANGLE_MAX  = 270,        // 舵机最大角度
     parameter CENTER_CX2 = 128,        // 128空间下，中心点64，乘2为128
@@ -77,21 +77,20 @@ module ptz_servo_ctrl #(
 
             // ---- 目标追踪 (仅在收到有效脉冲时触发) ----
             if (true_face_found) begin
-                // 目标偏右：角度增加 (顺时针)
+                // 目标偏右：角度减少 (反向)
                 if (error > DEADZONE) begin
-                    if (angle + step <= ANGLE_MAX)
-                        angle <= angle + step;
-                    else
-                        angle <= ANGLE_MAX;
-                end
-                // 目标偏左：角度减少 (逆时针)
-                else if (error < -DEADZONE) begin
                     if (angle >= step)
                         angle <= angle - step;
                     else
                         angle <= 9'd0;
                 end
-                // 目标在死区内：角度不变
+                // 目标偏左：角度增加 (反向)
+                else if (error < -DEADZONE) begin
+                    if (angle + step <= ANGLE_MAX)
+                        angle <= angle + step;
+                    else
+                        angle <= ANGLE_MAX;
+                end
             end
             // 如果 target_valid=0，说明没收到包或者丢包，angle 保持原值不动
         end
