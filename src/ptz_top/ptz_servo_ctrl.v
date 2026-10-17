@@ -1,60 +1,99 @@
 `timescale 1ns / 1ps
 
 module ptz_servo_ctrl #(
-    parameter CLK_HZ     = 50_000_000,
-    parameter ANGLE_MAX  = 270,
-    parameter STEP_DEG   = 1,    // 每 50ms 转 1°，想快就改成 2 或 3
-    parameter UPDATE_MS  = 50
+    // 请确认云台模块所在时钟域！如果在 pclk 下，通常填 74250000；如果独立 50M，填 50000000
+    parameter CLK_HZ     = 74_250_000, 
+    
+    parameter ANGLE_MAX  = 270,        // 舵机最大角度
+    parameter CENTER_CX2 = 128,        // 128空间下，中心点64，乘2为128
+    parameter DEADZONE   = 12,         // 死区（形心x2误差），12对应原空间6个像素
+    parameter STEP_DEG   = 2           // 每次收到结果，最多转动的度数（建议2~3度防过冲）
 )(
     input  wire        clk,
-    input  wire        rst_n,
-    input  wire [1:0]  dir,       // 00=停止, 01=左转(角度减小), 10=右转(角度增大)
-    output wire        pwm_out,
-    output wire [8:0]  angle_dbg
+    input  wire        rst_n,          // 低有效复位
+    
+    // 接收来自以太网解析模块的原始信号
+    input  wire        target_valid,   // 单拍有效脉冲
+    input  wire [7:0]  target_x,       // x1 (0~128)
+    input  wire [7:0]  target_y,       // y1 (0~72)
+    input  wire [7:0]  target_w,       // w  (0~128)
+    input  wire [7:0]  target_h,       // h  (0~72)
+    
+    output wire        pwm_out,        // PWM 信号输出
+    output wire [8:0]  angle_dbg       // 当前角度
 );
 
-    localparam PWM_PERIOD  = CLK_HZ / 50;      // 1_000_000
-    localparam PULSE_MIN   = CLK_HZ / 2000;    // 25_000
-    localparam PULSE_MAX   = CLK_HZ / 400;     // 125_000
-    localparam PULSE_RANGE = PULSE_MAX - PULSE_MIN;
-    localparam UPDATE_CNT  = CLK_HZ / 1000 * UPDATE_MS; // 2_500_000
+    // 50Hz PWM: 20ms 周期
+    localparam PWM_PERIOD  = CLK_HZ / 50;        
+    localparam PULSE_MIN   = CLK_HZ / 2000;      // 0.5ms
+    localparam PULSE_MAX   = CLK_HZ / 400;       // 2.5ms
+    localparam PULSE_RANGE = PULSE_MAX - PULSE_MIN; // 脉宽范围
 
-    reg [19:0] pwm_cnt;
-    reg [19:0] pulse_reg;
+    reg [26:0] pwm_cnt;
+    reg [26:0] pulse_reg;
     reg [8:0]  angle;
-    reg [21:0] upd_cnt;
 
+    // =========================================================================
+    // 1. 计算形心误差 (128x72 空间)
+    // =========================================================================
+    // 形心乘2公式: cx2 = 2*x1 + w。例如 x1=10, w=20, 则 cx2 = 40
+    wire [9:0] cx2 = {target_x, 1'b0} + target_w;
+    
+    // 计算误差 (用有符号数)
+    wire signed [10:0] error = $signed({1'b0, cx2}) - $signed(11'd128);
+    wire [10:0] error_abs = error[10] ? (~error + 1'b1) : error;
+
+    // =========================================================================
+    // 2. 判定当前是否真的检测到了人脸
+    // =========================================================================
+    // 根据交接文档：true_found = valid脉冲 && 框宽高>=2
+    wire true_face_found = target_valid && (target_w >= 2) && (target_h >= 2);
+
+    // 计算步长：误差越大走得越多，限幅为 STEP_DEG
+    wire [3:0] step;
+    assign step = (error_abs <= DEADZONE) ? 4'd0 :
+                  (error_abs > 48)        ? STEP_DEG : // 误差大于24个像素(原图240)，给最大步长
+                  ((error_abs >> 2) > STEP_DEG) ? STEP_DEG :
+                  (error_abs >> 2);
+
+    // =========================================================================
+    // 3. 舵机控制逻辑
+    // =========================================================================
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            pwm_cnt   <= 20'd0;
+            pwm_cnt   <= 0;
             pulse_reg <= PULSE_MIN + (135 * PULSE_RANGE) / ANGLE_MAX;
             angle     <= 9'd135;
-            upd_cnt   <= 22'd0;
         end
         else begin
-            // 20ms PWM 周期
-            if (pwm_cnt == PWM_PERIOD - 1) pwm_cnt <= 20'd0;
-            else                           pwm_cnt <= pwm_cnt + 1'b1;
+            // ---- PWM 发生器 (后台一直运行) ----
+            if (pwm_cnt == PWM_PERIOD - 1)
+                pwm_cnt <= 0;
+            else
+                pwm_cnt <= pwm_cnt + 1'b1;
 
-            // 每 50ms 根据方向更新角度（恒定速度）
-            if (upd_cnt == UPDATE_CNT - 1) begin
-                upd_cnt <= 22'd0;
-                case (dir)
-                    2'b01: begin // 左转：角度减小
-                        if (angle >= STEP_DEG) angle <= angle - STEP_DEG;
-                        else                   angle <= 9'd0;
-                    end
-                    2'b10: begin // 右转：角度增大
-                        if (angle + STEP_DEG <= ANGLE_MAX) angle <= angle + STEP_DEG;
-                        else                               angle <= ANGLE_MAX;
-                    end
-                    default: angle <= angle; // 停止：保持不变
-                endcase
+            // ---- 动态更新脉宽 ----
+            pulse_reg <= PULSE_MIN + (angle * (PULSE_RANGE / ANGLE_MAX));
+
+            // ---- 目标追踪 (仅在收到有效脉冲时触发) ----
+            if (true_face_found) begin
+                // 目标偏右：角度增加 (顺时针)
+                if (error > DEADZONE) begin
+                    if (angle + step <= ANGLE_MAX)
+                        angle <= angle + step;
+                    else
+                        angle <= ANGLE_MAX;
+                end
+                // 目标偏左：角度减少 (逆时针)
+                else if (error < -DEADZONE) begin
+                    if (angle >= step)
+                        angle <= angle - step;
+                    else
+                        angle <= 9'd0;
+                end
+                // 目标在死区内：角度不变
             end
-            else upd_cnt <= upd_cnt + 1'b1;
-
-            // 根据当前角度算脉宽（用乘法代替除法，避免时序违例）
-            pulse_reg <= PULSE_MIN + (angle * 370);
+            // 如果 target_valid=0，说明没收到包或者丢包，angle 保持原值不动
         end
     end
 
