@@ -210,6 +210,15 @@ module design_top_wrapper (
     wire        S_delay_osd_last;
     wire        S_delay_osd_user;
 
+    // ---- ★ [P0-5] 画框通路：osd_overlay → osd_box_drawer → delay_osd ----
+    wire [23:0] S_box_data;
+    wire        S_box_de;
+    wire        S_box_last;
+    wire        S_box_user;
+    // 来自 board_a_net_wrapper 的人脸框（pclk 域；板 B 回结果解析而来）
+    wire        S_face_valid;
+    wire [7:0]  S_face_x, S_face_y, S_face_w, S_face_h;
+
     wire[23:0]  S_video_rd_data;
     reg         S_dbg_raw_seen;
     reg         S_dbg_isp_seen;
@@ -531,7 +540,7 @@ module design_top_wrapper (
     //     ② 应用层用官方 udp_loopback，不用 §5.2 那段 4 行组合逻辑回环
     //        （那版不等 request->ack 握手，收不到/回不出正确 UDP 包）
     // =========================================================================
-    wire [2:0] net_led;          // ⚠ 必须先声明再用，否则被隐式声明成 1 位线
+    wire [3:0] net_led;          // ⚠ 必须先声明再用，否则被隐式声明成 1 位线
 
     board_a_net_wrapper u_net (
         .clk_50m            ( I_sys_clk           ),
@@ -550,23 +559,34 @@ module design_top_wrapper (
         .phy1_rgmii_tx_ctl  ( phy1_rgmii_tx_ctl   ),
         .phy1_rgmii_tx_data ( phy1_rgmii_tx_data  ),
         .phy_reset          ( phy_reset           ),
-        .net_led            ( net_led             )
+        .net_led            ( net_led             ),
+
+        // ★ [P0-5] 板 B 回结果 → 人脸框（pclk 域，供 osd_box_drawer 画框）
+        .O_face_valid       ( S_face_valid        ),
+        .O_face_x           ( S_face_x            ),
+        .O_face_y           ( S_face_y            ),
+        .O_face_w           ( S_face_w            ),
+        .O_face_h           ( S_face_h            )
     );
 
     // 板载 LED（原理图 LED0~LED3 = D10/E10/C6/D6，全部高电平点亮）
-    //   led[0] = net_led[0]  PHY 复位已释放 —— 链路可自协商
-    //   led[1] = S_pll_lock  视频 PLL 已锁定
-    //   led[2] = net_led[1]  一整帧 128x72 图像已发完（展宽 ~0.2s）
-    //                        每 6 帧发 1 帧 ≈ 99ms 触发一次 < 展宽 200ms
-    //                        -> 正常工作时应该**常亮**（不是闪）
-    //   led[3] = net_led[2]  ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
-    //                        亮 = 解析不到 192.168.240.2 的 MAC
-    //                        （对面 .2 不在 / 网线不通 / PC 网卡没设成 .2）
-    //                        ★ 这个灯替代了原来的"心跳"，因为第 3 步是**主动**发包，
-    //                          ARP 是否通是当前最有价值的判据。
-    // 第 1 步那句 `{ 2'b00, S_por_arst_n, S_pll_lock }` 是 5 位宽进 4 位口，
-    // 这里改成 4 位并保持 led[0]/led[1] 的原有含义。
-    assign led = { net_led[2], net_led[1], S_pll_lock, net_led[0] };
+    //   【第 3 步调试期】4 个灯全部给网口——视频侧已确认正常，
+    //   而"信号断在链路的哪一环"是当前唯一的问题。
+    //   这 4 个灯能把 板A <-> PC 的链路切成 4 段：
+    //     led[0] D10 = MAC 收到好帧（rx_correct_frame 展宽）-> PC 的包到了没有
+    //     led[1] E10 = MAC 在发帧（temac_tx_valid 展宽）    -> 板子有没有往外发
+    //     led[2] C6  = 一整帧 128x72 已发完（展宽 ~0.2s）   -> 图像通路
+    //     led[3] D6  = ARP 请求没收到回应（展宽）           -> 协议栈报告的 ARP 失败
+    //
+    //   判读（led[0]/led[1] 是分段的关键）：
+    //     灭 + 灭  -> 板子既收不到也发不出：PHY/RGMII 物理层，或 MAC 整体没工作
+    //     亮 + 灭  -> 收得到、发不出：发送侧（MAC TX / TX 时钟 / app 请求占死通路）
+    //     亮 + 亮  -> 在发东西但 PC 不理：发出去的帧不对（RGMII TX 相位/帧格式）
+    //     灭 + 亮  -> 盲发但收不到：接收侧
+    //   正常工作：led[2] 常亮（每 6 帧发一帧 ≈99ms < 展宽 200ms）、led[3] 灭
+    //
+    //   ⚠ 原来 led[1] = S_pll_lock（视频 PLL）。查完网口后记得把它换回来。
+    assign led = net_led;
 
 
 	
@@ -1060,22 +1080,25 @@ isp_top u_isp_top (
     end
 
     // -------------------------------------------------------------------------
-    // vs 延迟 26 拍: vpp 流水线给 de/data 增加 26 拍
-    // (22 拍算法 + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
+    // vs 延迟 **27** 拍: vpp 流水线给 de/data 增加 27 拍
+    // (22 拍算法 + 2 拍 Logo/模式 OSD + **1 拍画框 osd_box_drawer** + 2 拍延迟 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
-    // 将 vs 同步延迟 26 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    // 将 vs 同步延迟 27 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
     //
     // [双边滤波变更] 卡通档引入 8 拍双边滤波, 整条 vpp 对齐由 16 拍放宽到 22 拍,
     //   故同步由 20 拍改为 26 拍 (22 算法 + 2 Logo/模式 OSD + 2 延迟 OSD)。
-    //   ⚠ 今后只要在 vpp → osd_overlay → delay_osd 这条 DE 链路上增删寄存器级,
-    //     必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位(画面横向偏移)。
+    // [P0-5 画框] 在 osd_overlay 与 delay_osd 之间插入 osd_box_drawer(1 拍寄存输出),
+    //   故同步由 26 拍改为 27 拍。
+    //   ⚠ 今后只要在 vpp → osd_overlay → osd_box_drawer → delay_osd 这条 DE 链路上
+    //     增删寄存器级, 必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位
+    //     (画面横向偏移)。
     // -------------------------------------------------------------------------
-    reg [25:0] S_vsync_dly;
+    reg [26:0] S_vsync_dly;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n)
-            S_vsync_dly <= 26'd0;
+            S_vsync_dly <= 27'd0;
         else
-            S_vsync_dly <= {S_vsync_dly[24:0], S_hdmi_out_vsync};
+            S_vsync_dly <= {S_vsync_dly[25:0], S_hdmi_out_vsync};
     end
 
     // =========================================================================
@@ -1136,6 +1159,82 @@ isp_top u_isp_top (
         .O_tdata        ( S_osd_overlay_data )
     );
 
+    // ---- ★ [P0-5] 板 B 回来的人脸框 + 坐标数字：×10 画到 1280x720 显示流上 ----
+    //   插在 osd_overlay（Logo/模式字符）之后、delay_osd 之前。
+    //   注意：CNN 取数口是 vpp_top 的 O_raw_*（在更前面），所以 CNN 永远看不到
+    //   自己画的绿框，不存在"自反馈"。
+    //   ★ 本模块除绿框外，还在右上角以黑底白字叠加
+    //     "X:nnnn Y:nnnn W:nnnn H:nnnn"（27 字符 × 16 像素），
+    //     与绿框共用同一份锁存坐标和保持计时器。
+    //   ⚠ 本模块有 1 拍寄存输出 → 下面 S_vsync_dly 的拍数已同步 +1（26 → 27）。
+    wire        face_v_final;
+    wire [7:0]  face_x_final, face_y_final, face_w_final, face_h_final;
+
+    // ★★ 一键自检开关：把下面这行的注释去掉就打开（改完需重新综合+布线+烧写）★★
+    //   打开后：复位起前 6 秒，每帧画一个固定框 (200,200)-(500,500) 并显示
+    //   "X:0200 Y:0200 W:0300 H:0300"，完全绕开网络；6 秒后自动切回真实坐标。
+    //     6 s 内看得到固定框 → 显示通路 OK，问题只在网络/解析
+    //     6 s 内也看不到框   → 显示通路（画框模块或 OSD 链路拍数）有问题
+    // `define OSD_BOX_TEST
+
+`ifdef OSD_BOX_TEST
+    // ---- 临时自检：仅在仿真/测试显式定义 OSD_BOX_TEST 时，复位后前 ~6 秒
+    //   每帧画一个**固定框**（位置 (20,20) 尺寸 30x30 → 显示 (200,200)-(500,500)）。
+    //   用途：把"画框通路本身通不通"和"网络/解析有没有数据"彻底分开。
+    //     看得到固定框  → 画框模块+插入位置都 OK（那没框就是网络/解析那边的问题）
+    //     连固定框都没有 → 插入的画框模块没生效（或 osd 链路拍数不对）
+    //   综合默认不包含这段逻辑。
+    reg [28:0] st_cnt = 29'd0;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) st_cnt <= 29'd0;
+        else if (st_cnt != 29'd449_999_999) st_cnt <= st_cnt + 29'd1;   // 6s @75MHz
+    end
+    wire st_pulse = (st_cnt != 29'd449_999_999) && S_vpp_out_user;   // 每帧起点触发一次
+    assign face_v_final = S_face_valid | st_pulse;
+    assign face_x_final = st_pulse ? 8'd20 : S_face_x;
+    assign face_y_final = st_pulse ? 8'd20 : S_face_y;
+    assign face_w_final = st_pulse ? 8'd30 : S_face_w;
+    assign face_h_final = st_pulse ? 8'd30 : S_face_h;
+`else
+    assign face_v_final = S_face_valid;
+    assign face_x_final = S_face_x;
+    assign face_y_final = S_face_y;
+    assign face_w_final = S_face_w;
+    assign face_h_final = S_face_h;
+`endif
+
+    osd_box_drawer #(
+        .IN_WIDTH     ( 1280 ),
+        .IN_HEIGHT    ( 720  ),
+        .SCALE_FACTOR ( 10   ),          // 128x72 检测空间 → 1280x720 显示空间
+        .LINE_THICK   ( 3    ),
+        .BOX_COLOR    ( 24'h00FF00 ),    // 亮绿
+        .HOLD_FRAMES  ( 120  ),          // ★ 原 15 帧=0.25s 太短：B 一旦漏检几次框就没了。
+                                         //   120 帧 ≈ 2 秒 @60fps，能跨过连续几次漏检；
+                                         //   想更跟手就调小（60=1s），想更"黏"就调大。
+                                         //   模块内的保持计数器是 8 位，>63 不会被截断。
+        .MIN_WH       ( 8'd2 ),          // 宽或高 < 2（128x72 空间）视为"本帧无检测"
+        // ★ 读数内容：0 = HDMI 屏幕上的真实像素坐标（框左上角 + 宽高，0~1279 / 0~719）
+        //             1 = 板 B 的 128x72 原始格坐标（调试用）
+        .READOUT_RAW_CELLS ( 0 )
+    ) u_box_drawer (
+        .I_clk        ( S_hdmi_pixel_clk  ),
+        .I_rst_n      ( S_hdmi_rst_n      ),
+        .I_tvalid     ( S_osd_overlay_de   ),
+        .I_tuser      ( S_osd_overlay_user ),
+        .I_tlast      ( S_osd_overlay_last ),
+        .I_tdata      ( S_osd_overlay_data ),
+        .I_face_valid ( face_v_final     ),
+        .I_face_x     ( face_x_final     ),
+        .I_face_y     ( face_y_final     ),
+        .I_face_w     ( face_w_final     ),
+        .I_face_h     ( face_h_final     ),
+        .O_tvalid     ( S_box_de          ),
+        .O_tuser      ( S_box_user        ),
+        .O_tlast      ( S_box_last        ),
+        .O_tdata      ( S_box_data        )
+    );
+
     delay_osd #(
         .IMG_WIDTH        ( 1280 ),
         .IMG_HEIGHT       ( 720  ),
@@ -1146,10 +1245,10 @@ isp_top u_isp_top (
         .I_cap_clk         ( S_csi_rx_clk     ),
         .I_cap_rst_n       ( S_rst_n          ),
         .I_cap_frame_start ( S_csi_frame_start ),
-        .I_tuser           ( S_osd_overlay_user ),
-        .I_tlast           ( S_osd_overlay_last ),
-        .I_tvalid          ( S_osd_overlay_de   ),
-        .I_tdata           ( S_osd_overlay_data ),
+        .I_tuser           ( S_box_user ),
+        .I_tlast           ( S_box_last ),
+        .I_tvalid          ( S_box_de   ),
+        .I_tdata           ( S_box_data ),
         .O_tuser           ( S_delay_osd_user ),
         .O_tlast           ( S_delay_osd_last ),
         .O_tvalid          ( S_delay_osd_de   ),
@@ -1165,7 +1264,7 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync_dly[25]   ), // 与 OSD 输出 de 同相位 (延迟 26 拍, 见上方说明)
+        .I_video_in_vs      ( S_vsync_dly[26]   ), // 与 OSD 输出 de 同相位 (延迟 27 拍, 见上方说明)
         .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),

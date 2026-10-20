@@ -56,11 +56,22 @@ module board_a_net_wrapper (
     output wire [3:0]  phy1_rgmii_tx_data,
     output wire        phy_reset,
 
-    // ---- 诊断 LED（高电平点亮），顶层再映射到 led[3:0] ----
-    //   net_led[0] = PHY 复位已释放（≈ 链路可自协商）
-    //   net_led[1] = 一整帧 128x72 图像已发完（展宽 ~0.2s，正常应常亮）
-    //   net_led[2] = ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
-    output wire [2:0]  net_led
+    // ---- 诊断 LED（高电平点亮），顶层直连 led[3:0] ----
+    //   net_led[0] D10 = 收到**任何**帧（temac_rx_valid；ARP/ICMP/UDP 都算）
+    //   net_led[1] E10 = 协议栈在把帧推给 TEMAC（temac_tx_ready）
+    //   net_led[2] C6  = 一整帧 128x72 图像已发完（展宽 ~0.2s，正常应常亮）
+    //   net_led[3] D6  = ⚠ ARP 请求没收到回应（展宽）—— 发不出去时亮
+    output wire [3:0]  net_led,
+
+    // ---- ★ [P0-5] 板 B 回结果 → 人脸框坐标（pclk 域，供 osd_box_drawer 画框）----
+    //   坐标由 udp_clk 域的 rx_result_parser 从 app_rx_* 里解析出来；
+    //   res_valid 脉冲同步到 pclk 后产生 O_face_valid，坐标在两次结果之间长期稳定，
+    //   画框模块在 O_face_valid 当拍才锁存坐标，所以 pclk 侧直接采样即可。
+    output wire        O_face_valid,      // pclk 域单拍脉冲：收到一份新框
+    output wire [7:0]  O_face_x,          // 框左上角 X（128x72 检测空间，0~127）
+    output wire [7:0]  O_face_y,          // 框左上角 Y（0~71）
+    output wire [7:0]  O_face_w,          // 框宽
+    output wire [7:0]  O_face_h           // 框高
 );
 
     // ① 器件分支：必须是 "PH1P"
@@ -72,6 +83,12 @@ module board_a_net_wrapper (
     parameter LOCAL_MAC_ADDRESS  = 48'h020000002401;  // 02:00:00:00:24:01
     parameter DST_UDP_PORT_NUM   = 16'h1A0A;          // 6666（第2步用的 2 是低位端口，PC 侧被占过，改成普通端口）
     parameter DST_IP_ADDRESS     = 32'hC0A8F002;      // 192.168.240.2（板 B 的 IP；电脑当板 B 时把 PC 网卡设成 .2）
+
+    // （彩条测试开关 TEST_PATTERN 已于 2026-10-17 撤销：它与"AE 反向调节"问题相关，
+    //   原因是 TEST_PATTERN=1 会让 vpp 的 raw 取数链变成死逻辑被综合器剪掉，
+    //   整份设计的布局布线随之改变，AE 闭环跑飞。R/G 字节序的修复保留在
+    //   pixel_to_bytes.v 里。）
+
 
     // ---------------------------------------------------------------------
     // 复位：全部由 pll_por 的 10ms 上电复位驱动，不依赖任何引脚
@@ -243,6 +260,33 @@ module board_a_net_wrapper (
         .O_y      (ds_y)
     );
 
+    // =====================================================================
+    // ★ [P0-5·对比度拉伸] 2026-10-17 —— 只作用于**以太网支路**
+    // ---------------------------------------------------------------------
+    //   实测（把板 A 抓到的真人图喂回板 B）：
+    //     · 原始图：亮度 96、对比度(std) 26  →  B 分数 0（完全检不出）
+    //     · 软件把对比度拉到 2.0~2.5 倍并提亮： B 分数 1609 / 1664（远超门限 615）✓
+    //   训练数据（WIDER FACE）是明亮高对比的户外照（std≈82），而室内暗光经
+    //   10x10 块平均后只剩 std≈26 —— 对比度不足是"真人认不出"的主因。
+    //   这里对送 CNN 的每个通道做逐像素映射 y' = clamp(((y-96)*5)>>1 + 126)：
+    //     · cnn_ds10 仍然直连 I_raw_tdata → 视频源没被剪，不会像彩条测试那样
+    //       改变整份设计的布局布线（那次把 AE 搞挂了）；
+    //     · 只改 pixel_to_bytes 的输入 → 不影响 HDMI / 显示 / AE 回路。
+    //   关闭方法：CS_OFF=1（或把 CS_LIFT 设 0 且把增益改成 1）。
+    // =====================================================================
+    // =====================================================================
+    // ★ 2026-10-18 回退说明（按用户要求）
+    //   本文件已回退到 2026-10-17 18:00 之前的状态，移除了两处 10-17 深夜起的改动：
+    //     ① 固定对比度拉伸  y' = clamp((y-96)*2.5 + 126)
+    //        —— 暗光场景有效（分数 0→1631），但亮场景（输入均值>148）会裁剪过曝 ✗
+    //     ② R 通道 2 网格像素对齐（RG_ALIGN，G/B 各延迟 2 像素）
+    //        —— 软件验证分数 1631→2443，但现场复核不稳定
+    //   保留（均为 10-15/10-16 的真修复，与本次回退无关）：
+    //     · img_fifo 清空时机（[修复10] 帧相位对齐）
+    //     · 结果解析器 u_rx_result_parser 及其 CDC / led[3] 诊断
+    //   如需重新启用①②，方案与实测数据见 doc\交接_项目当前状态与回退方案_20261018.md
+    // =====================================================================
+
     // ---- 像素拆字节（R,G,B 三拍）----
     wire [7:0] pb_byte;
     wire       pb_we;
@@ -263,23 +307,93 @@ module board_a_net_wrapper (
     //   实际是生产者限速，FIFO 占用长期低于 ~1800，不会溢出。
     //   ⚠ rdusedw 的位宽是 [ADDR_WIDTH_R:0] = 14 位（含进位），别声明成 13 位
     wire [7:0]  fifo_q;
-    wire [13:0] fifo_cnt;
+    wire [15:0] fifo_cnt;
     wire        fifo_full, fifo_empty;
-    wire        img_we   = pb_we & ~fifo_full;   // 满了就丢（正常不会发生）
-    wire        fifo_rd;                          // 由 tx_frame_sender 驱动
+    // ---- [修复4] FIFO 加深到 32768（要能装下一整帧 27 648 字节）----
+    //   为什么：发送器必须在"按下协议栈 app-TX 接口"之前就持有整帧，否则中途
+    //   要向生产者等数据 -> app_tx_data_valid 长时间举着不放，把协议栈唯一的
+    //   TX 通路占死（**实测：ping 0/4 不通，换成 udp_loopback 就 4/4 通**）。
+    //   资源：8bit x 32768 = 262 144 bit / ~18.7 Kbit每块 ≈ 14 块 ERAM。
+    //   背压阈值 FIFO_HIGH = 31 744（= 32768 - 1024）：
+    //     FIFO_HIGH - 27 648 = 4 096 > 0 => 发送期间写侧被挡、占用只减不增
+    //     => **绝不读空** => must_stall 永不触发 => tx_valid 撤手干净。
+    // =========================================================================
+    // 【诊断开关】USE_NO_APP —— 图像通路照跑，但 FIFO 一个字节都不写
+    // =========================================================================
+    //   0 = 正常：图像写进 img_fifo，发送器会发帧
+    //   1 = 诊断：img_we 钉死为 0，fifo_cnt 恒为 0
+    //             -> 发送器永远卡在 S_FILL，**永不驱动 app_tx_***
+    //             -> 图像通路（cnn_ds10 / pixel_to_bytes / img_fifo）照样例化、照样跑时钟
+    //
+    //   用来判定：ping 不通到底是
+    //     (a) 应用层占用协议栈 app-TX 接口，还是
+    //     (b) img_fifo 这条 pclk<->udp_clk 跨时钟路径本身有问题
+    //   USE_NO_APP=1 能 ping 通 -> 是 (b)，去查 CDC/SDC，别再改发送器
+    //   USE_NO_APP=1 仍不通     -> 是"例化图像通路"这件事本身，继续往下切
+    // -------------------------------------------------------------------------
+    parameter USE_NO_APP = 1'b0;        // ★ 诊断实验时改成 1'b1
+
+    localparam [15:0] FIFO_HIGH = 16'd31744;
+    wire        fifo_block = (fifo_cnt >= FIFO_HIGH);
+    wire        img_we   = pb_we & ~fifo_full & ~fifo_block & ~USE_NO_APP;
+    wire        fifo_rd;                          // 由 image_feeder 驱动（g_image_sender 分支）
+
+    // =====================================================================
+    // ★ [修复10·帧相位对齐] 非采集帧期间清空 img_fifo —— 根治“整帧平移”
+    // ---------------------------------------------------------------------
+    //   现象（实测 2026-10-13）：板 B / PC 收到的图相对 HDMI 有**固定的整帧
+    //   平移**（行 +7、列 −40，即 2808 字节）。把接收图整体平移回去后与 HDMI
+    //   完全重合（归一化互相关 −0.09 → +0.76），角色位置姿态逐点吻合。
+    //
+    //   根因：img_fifo 是**纯流式** FIFO，它的写指针相位和“帧边界”没有任何
+    //   绑定关系。上电复位相对视频帧是异步的，第一次开始写时正好落在帧中间，
+    //   于是整个 FIFO 的读写相位永久偏了 2808 字节；又因为每帧“写 27648、
+    //   读 27648”严格相等，这个偏差恒定不变 —— 表现为**固定的整帧平移**，
+    //   而不是随机错乱。（本文件早就生成了 frame_start_pulse，却一直悬空没用。）
+    //
+    //   修法：门控是“6 帧采 1 帧”，所以每个采集帧之间有 **5 整帧完全没有写入**。
+    //   在这段空闲期把 FIFO 清空，每个采集帧就必然从地址 0 开始写，读侧也必然
+    //   从帧头开始 -> 相位恒为 0，与板 B 怎么收都无关。
+    //
+    //   ⚠ 安全性：cnn_ds10 最后一条纹的排空只有 512 拍，而帧间消隐约 49500 拍
+    //     （720P 约 30 行），所以“上一采集帧的尾数据”在下一个帧起点之前早就写
+    //     完了 —— ~gate 期间清空不会截断任何有效数据。
+    //   ⚠ 只碰图像通路，不碰 ping/ARP/协议栈，不影响被动化修复。
+    // =====================================================================
+    reg fifo_flush_r;
+    always @(posedge I_pclk or negedge pclk_arst_n) begin
+        if (!pclk_arst_n) fifo_flush_r <= 1'b1;   // 复位期间保持清空
+        // ★★ 正式修法（2026-10-15，双板实测定位）：不再"一进 ~gate 就清"，而是推迟到
+        //   空闲期的**最后一帧**（fdiv==5）才清。
+        //   原写法（fifo_flush_r <= ~gate）在采集帧刚结束、垂直消隐那一瞬就把 img_fifo
+        //   复位；而 image_feeder 必须等 fifo_cnt >= NEED_FRAME(27648，整整一帧) 才开喂
+        //   → 整帧刚攒满就被擦掉 → feeder 永远等不到 → 板 A 一个字节都发不出去
+        //   （现象：A 的 led[1]/led[2] 恒灭，双板联调时 B 收不到任何图）。
+        //   推迟之后：feeder 有采集帧之后约 4 个帧周期（≈66ms @60fps）从容读完整帧
+        //   （实际只需约 0.22ms），而 FIFO 仍在下一个采集帧之前被清干净
+        //   → "每个采集帧都从地址 0 开始写"的相位对齐（修复10 的本意）不丢。
+        //   注意判据用 pclk 域的 fdiv，不跨时钟域（比拿 fifo_cnt==0 判断稳）。
+        else              fifo_flush_r <= ~gate && (fdiv == 3'd5);
+    end
+    wire fifo_flush = fifo_flush_r;
+
+    // 2026-10-18 修复【根因#2】：清空那一拍禁止写入。
+    //   gate 拉高后 fifo_flush_r 还会多保持 1 拍，而 p2b 已经开始发第一个字节 ->
+    //   第一个字节"写进去又被清掉"，整个字节流永久偏 1 字节（表现为通道序被左旋一位）。
+    wire img_we_g = img_we & ~fifo_flush;
 
     ram_fifo #(
         .DEVICE        ("PH1P"),
         .DATA_WIDTH_W  (8),
-        .ADDR_WIDTH_W  (12),
+        .ADDR_WIDTH_W  (15),
         .DATA_WIDTH_R  (8),
-        .ADDR_WIDTH_R  (12),
+        .ADDR_WIDTH_R  (15),
         .SHOW_AHEAD_EN (1)
     ) u_img_fifo (
-        .rst        (reset),
+        .rst        (reset | fifo_flush),   // ★ [修复10] 非采集帧期间清空 -> 帧相位恒为 0
         .di         (pb_byte),
         .clkw       (I_pclk),
-        .we         (img_we),
+        .we         (img_we_g),
         .clkr       (udp_clk),
         .re         (fifo_rd),
         .do         (fifo_q),
@@ -288,33 +402,155 @@ module board_a_net_wrapper (
         .wrusedw    (),
         .rdusedw    (fifo_cnt)
     );
+    // =========================================================================
+    // ★ [修复9·最终修法] 被动化：收到过帧、且延迟足够后，才允许 feeder 喂数据
+    // =========================================================================
+    //   实测（Wireshark 抓包，2026-10-11 晚）：板子主动发图时，TX 从开机起
+    //   **完全死锁，一个帧都不发**（连它自己的 ARP 请求「who has .2」都发不出，
+    //   也回不了 PC 的「who has .1」）。
+    //   根因：加密协议栈在「app-TX 请求 + ARP 缓存为空」时内部死锁——
+    //   应用等 app_tx_ack，协议栈等 ARP 应答，而 ARP 请求因 TX 被占发不出去。
+    //   死锁一旦触发就永久卡死，之后连 ping 的 ARP 应答、ICMP 回复全发不出。
+    //
+    //   而所有验证过能用的实现（回环、板B result_sender）都是**被动发**：
+    //   收到包之后才发，对端 MAC 早就学到了，从不触发主动 ARP。
+    //
+    //   修法：feeder 在「收到过至少一个帧」之前，一字节都不喂给 loopback。
+    //   你 ping 板子时，PC 的 ARP 请求（源 IP 就是 .2）会让板子被动学到 .2 的
+    //   MAC；再延迟 100ms 确保 ARP 学完，之后 feeder 动手就不用主动 ARP。
+    // =========================================================================
+    reg        rx_seen;         // 收到过任何帧（temac_rx_valid 已在 udp_clk 域）
+    reg [24:0] rx_delay_cnt;    // 100ms @125MHz = 12_500_000 拍（25 位够）
+    localparam [24:0] RX_DELAY_MS = 25'd12_500_000;
 
-    // ---- 打 20 个 UDP 包 ----
-    //   修正版：首字节与 tx_valid 同拍就绪（见 tx_frame_sender.v 头部说明）
-    //   O_tx_abort：等 ack 超时、主动放弃本帧（超时保护，见 tx_frame_sender.v 注释）
-    wire        snd_frame_done;
-    wire        snd_tx_abort;
-    // 协议栈报告：ARP 请求没收到回应。
-    //   板 A 是**主动**发给 192.168.240.2，必须先 ARP 解析出 .2 的 MAC；
-    //   收不到回应就发不出去，而且会连带把 ping 回复也堵住（同一条 TX 通路）。
-    wire        arp_no_reply;
-    tx_frame_sender u_sender (
-        .I_clk          (udp_clk),
-        .I_rst          (reset),
-        .I_frame_start  (frame_start_pulse),
-        .O_fifo_rd      (fifo_rd),
-        .I_fifo_q       (fifo_q),
-        .I_fifo_cnt     (fifo_cnt),
-        .I_tx_ready     (udp_tx_ready),
-        .I_tx_ack       (app_tx_ack),
-        .O_tx_request   (app_tx_data_request),
-        .O_tx_valid     (app_tx_data_valid),
-        .O_tx_data      (app_tx_data),
-        .O_tx_length    (udp_data_length),
-        .O_busy         (),
-        .O_frame_done   (snd_frame_done),
-        .O_tx_abort     (snd_tx_abort)
-    );
+    always @(posedge udp_clk or negedge net_rst_n) begin
+        if (!net_rst_n) begin
+            rx_seen      <= 1'b0;
+            rx_delay_cnt <= 25'd0;
+        end else begin
+            // ⚠⚠ temac_rx_valid = rx_client_fifo 的 rd_src_rdy_n，是**低有效**！
+            //   0 = 有帧，1 = 空闲。所以"收到帧"要判断 ~temac_rx_valid。
+            //   （之前写反了：if(temac_rx_valid) 在空闲时就把 rx_seen 置 1，
+            //    导致上电即开喂，死锁照旧。）
+            if (~temac_rx_valid) rx_seen <= 1'b1;
+            if (rx_seen && (rx_delay_cnt < RX_DELAY_MS))
+                rx_delay_cnt <= rx_delay_cnt + 25'd1;
+        end
+    end
+    wire feed_enable = rx_seen && (rx_delay_cnt >= RX_DELAY_MS);
+
+    // USE_NO_APP=1 或 还没收到过帧（被动化）时，占用强制为 0 -> feeder 绝不出手
+    wire [15:0] fifo_cnt_g = (USE_NO_APP || !feed_enable) ? 16'd0 : fifo_cnt;
+
+    // =========================================================================
+    // 【二分对照开关】USE_LOOPBACK
+    // =========================================================================
+    //   0 = 第 3 步设计：图像发送器 tx_frame_sender 驱动协议栈的 app TX 接口
+    //   1 = 对照实验   ：官方 udp_loopback 驱动协议栈的 app TX 接口
+    //
+    //   实测结论（2026-10-11）：
+    //     第 2 步 bit（udp_loopback）                          ping 4/4 通
+    //     第 3 步 v2 bit（tx_frame_sender）                    ping 0/4 不通
+    //     对照 bit（本文件 USE_LOOPBACK=1，其余全同第 3 步）   ping 4/4 通 ★
+    //   => 元凶是**应用层占用协议栈 app-TX 接口的方式**，与 RGMII / 引脚 /
+    //      约束 / cnn_ds10 / 视频取数线全都无关。
+    //
+    //   ⚠ 用 generate 切换而不是 mux：保证被选中的模块**独占驱动** app_tx_*，
+    //     不留任何多余组合逻辑。
+    //   ⚠ 未选中的分支里**绝不能 assign** 这些线：arp_no_reply 是协议栈的
+    //     output 口，再 assign 一次 TD 就报
+    //     "net 'arp_no_reply' is constantly driven from multiple places"。
+    // ---------------------------------------------------------------------
+    parameter USE_LOOPBACK = 1'b0;      // ★ 对照实验 = 1'b1；第 3 步设计 = 1'b0
+
+    wire snd_frame_done;
+    wire snd_tx_abort;
+    wire arp_no_reply;
+
+    generate
+    if (USE_LOOPBACK) begin : g_loopback
+
+        // ---- 官方 udp_loopback（内部自带 udp_packet_fifo，与第 2 步同源）----
+        //   ⚠⚠ `.DEVICE(DEVICE)` 必须传！ udp_loopback.v 自己的 DEVICE 默认值是
+        //   "PH1"，而它内部例化 ram_fifo 时用的是它自己的形参（udp_loopback.v:66）。
+        //   不覆盖就会展开成 PH1_LOGIC_ERAM —— 那是**别的器件**的原语，在 PH1P35
+        //   上是黑盒，TD 直接报：
+        //     ERROR: PH1_LOGIC_ERAM(...) is a black box in .../net/ram_fifo.v(267)
+        udp_loopback #(
+            .DEVICE (DEVICE)
+        ) u_loopback (
+            .app_rx_clk          (udp_clk),
+            .app_tx_clk          (udp_clk),
+            .reset               (reset),
+            .app_rx_data         (app_rx_data),
+            .app_rx_data_valid   (app_rx_data_valid),
+            .app_rx_data_length  (app_rx_data_length),
+            .udp_tx_ready        (udp_tx_ready),
+            .app_tx_ack          (app_tx_ack),
+            .app_tx_data         (app_tx_data),
+            .app_tx_data_request (app_tx_data_request),
+            .app_tx_data_valid   (app_tx_data_valid),
+            .udp_data_length     (udp_data_length)
+        );
+        // 本分支不驱动 snd_frame_done / snd_tx_abort（悬空 -> 常量 0），
+        // arp_no_reply 由协议栈驱动。LED 只看 arp_no_reply，无功能影响。
+
+    end else begin : g_image_sender
+
+        // =====================================================================
+        // ★ [修复8·最终方案] 图像发送改用「官方 loopback-reuse」结构
+        // =====================================================================
+        //   实测证明手写 app-TX 状态机（tx_frame_sender）会把加密协议栈卡死
+        //   （ping 0/4、ARP 表空），而官方 udp_loopback 的握手是唯一验证过
+        //   能用的 app-TX 驱动方式。安路官方的"主动发送"（udp_transmit_test.v
+        //   的 TPG 模式）就是：数据发生器 → 灌进 udp_loopback.app_rx_* →
+        //   loopback 原样发出去。
+        //   这里完全照抄这个结构：
+        //     image_feeder 读 img_fifo，拆成 N 个小包，喂给 udp_loopback 的
+        //     收口；udp_loopback 的握手一个字都不自己写。
+        //   板 A 因此可以继续**主动发图**（loopback 只在 feeder 喂数据时才动
+        //   app-TX），板 B 也不需要改。
+        // =====================================================================
+        wire [7:0]  feed_rx_data;
+        wire        feed_rx_valid;
+        wire [15:0] feed_rx_length;
+
+        image_feeder u_feeder (
+            .clk            (udp_clk),
+            .rst            (reset),
+            .frame_start    (frame_start_pulse), // ★ [修复10] 采集帧起点，用于复位发帧状态机
+            .fifo_rd        (fifo_rd),
+            .fifo_q         (fifo_q),
+            .fifo_cnt       (fifo_cnt_g),    // USE_NO_APP=1 时恒 0 -> 永不喂
+            .fifo_empty     (fifo_empty),
+            .loop_rx_data   (feed_rx_data),
+            .loop_rx_valid  (feed_rx_valid),
+            .loop_rx_length (feed_rx_length),
+            .frame_done     (snd_frame_done)
+        );
+
+        udp_loopback #(
+            .DEVICE (DEVICE)
+        ) u_loopback_img (
+            .app_rx_clk          (udp_clk),
+            .app_tx_clk          (udp_clk),
+            .reset               (reset),
+            .app_rx_data         (feed_rx_data),
+            .app_rx_data_valid   (feed_rx_valid),
+            .app_rx_data_length  (feed_rx_length),
+            .udp_tx_ready        (udp_tx_ready),
+            .app_tx_ack          (app_tx_ack),
+            .app_tx_data         (app_tx_data),
+            .app_tx_data_request (app_tx_data_request),
+            .app_tx_data_valid   (app_tx_data_valid),
+            .udp_data_length     (udp_data_length)
+        );
+
+        // 本分支没有 tx_frame_sender 了，snd_tx_abort 悬空（常量 0）
+        // arp_no_reply 由协议栈驱动，不在此赋值。
+    end
+    endgenerate
+
 
     // ---------------------------------------------------------------------
     // UDP/IP 协议栈（安路加密 IP，不可修改，只能例化）
@@ -454,6 +690,65 @@ module board_a_net_wrapper (
         .rx_fifo_status()
     );
 
+    // =====================================================================
+    // ★ [P0-5] 收板 B 的结果包 → 解析出人脸框 → 跨到 pclk 给画框模块
+    // =====================================================================
+    //   协议栈把"目标是本机 UDP 端口 1"的载荷送到 app_rx_*（逐字节 valid）。
+    //   结果包前 9 字节 = AA 55 valid x1 y1 w h score[15:8] score[7:0]，之后分三种：
+    //     · 旧 10 字节包：offset 9 = 0D（帧尾）
+    //     · 板 B 14 字节调试版：offset 9 或 13 = 0D（帧尾）
+    //     · 板 B 现行 149 字节包：offset 9 = pixR，offset 148 = 0D（帧尾）
+    //   rx_result_parser 以 AA 55 帧头为锚点、按字节计数分帧（rx_len 只当"包尾在哪"
+    //   的提示），只有"帧尾 = 0D + valid = 1 + score >= 615"三条同时满足才提交坐标并
+    //   出脉冲；一个帧头只提交一次，提交后跳过本包剩余字节，诊断字节里的 AA 55 不会
+    //   被误当帧头。
+    //   ⚠ 之前那版用 rx_len 白名单（只认 10 / 149）在这块板上一个结果都没提交过，
+    //     表现为"绿框和坐标全都不显示"——app_rx_data_length 在首字节时刻不可靠。
+    //   ⚠ 被拒绝的包不改动已锁存坐标 → 画框模块的"保持"才有意义（漏检时留旧框）。
+    wire        res_valid_udp;
+    wire [7:0]  fx1, fy1, fw, fh;
+    wire [15:0] fscore;                    // 当前只画框，分数暂时不上（留作日后显示）
+    wire        saw_aa;                    // 诊断：收到过 0xAA
+
+    rx_result_parser u_rxp (
+        .clk       (udp_clk),
+        .rst       (reset),
+        .rx_d      (app_rx_data),
+        .rx_v      (app_rx_data_valid),
+        .rx_len    (app_rx_data_length),
+        .res_valid (res_valid_udp),
+        .x1        (fx1),
+        .y1        (fy1),
+        .w         (fw),
+        .h         (fh),
+        .score     (fscore),
+        .saw_aa    (saw_aa)
+    );
+
+    // ⚠ res_valid_udp 只有 1 个 udp_clk 拍（8ns），而 pclk 是 75MHz（13.3ns）——
+    //   把 8ns 脉冲直接拿去采样会**漏掉**（相位不利时整拍落空，画框时有时无甚至全无）。
+    //   所以先在 udp 域把它展宽到 16 拍（128ns），再同步到 pclk 做边沿检测。
+    reg [4:0] rv_stretch;
+    always @(posedge udp_clk or posedge reset) begin
+        if (reset)                   rv_stretch <= 5'd0;
+        else if (res_valid_udp)      rv_stretch <= 5'd16;
+        else if (rv_stretch != 5'd0) rv_stretch <= rv_stretch - 5'd1;
+    end
+    wire res_valid_wide = (rv_stretch != 5'd0);
+
+    // 展宽后的电平同步到 pclk（两级）+ 上升沿检测。坐标变化频率 ≤10Hz、
+    // 两次结果之间长期不变，pclk 侧直接采样（画框模块只在 valid 当拍锁存坐标）。
+    reg rv1, rv2, rv3;
+    always @(posedge I_pclk or negedge I_pclk_rst_n) begin
+        if (!I_pclk_rst_n) begin rv1 <= 1'b0; rv2 <= 1'b0; rv3 <= 1'b0; end
+        else               begin rv1 <= res_valid_wide; rv2 <= rv1; rv3 <= rv2; end
+    end
+    assign O_face_valid = rv2 & ~rv3;      // pclk 域单拍脉冲
+    assign O_face_x     = fx1;
+    assign O_face_y     = fy1;
+    assign O_face_w     = fw;
+    assign O_face_h     = fh;
+
     // ---------------------------------------------------------------------
     // 诊断 LED（高电平点亮）—— 顶层再映射成 led[3:0]
     //
@@ -487,8 +782,71 @@ module board_a_net_wrapper (
         else if (arp_led_cnt != 25'd0)                   arp_led_cnt <= arp_led_cnt - 25'd1;
     end
 
-    assign net_led[0] = phy_reset;                      // PHY 复位已释放 = 链路就绪
-    assign net_led[1] = (tx_led_cnt  != 25'd0);         // 一整帧 128x72 已发完（展宽 ~0.2s）
-    assign net_led[2] = (arp_led_cnt != 25'd0);         // ⚠ ARP 无回应（展宽 ~0.2s）
+    // ---- [修复3] 这四个灯改成"能真正切开链路"的信号 ----
+    //   原来 net_led[0]=phy_reset、net_led[1]=收到UDP载荷、net_led[2]=ARP失败，
+    //   只有 3 位（顶层 led[1] 给的是视频 PLL 锁）。问题：
+    //     * phy_reset 只能说明"PHY 复位释放了"，不含任何收发信息；
+    //     * "收到 UDP 载荷"用的是 app_rx_data_valid —— 它是**协议栈校验通过、
+    //       且目标是本机 UDP 端口 1** 的载荷，ARP/ICMP 一律不计。
+    //       所以它灭**不能**推出"PC 的包没到板子"（这条判读曾经把排查带偏）。
+    //   实测（2026-10-11）：v2 上 LED1(收到帧) 与 LED4(ARP失败) 常亮，
+    //   说明接收侧有帧在 FIFO 里喂不进协议栈 —— 正是 app-TX 接口被占死的表现。
+    // ---------------------------------------------------------------------
+    // 收到**任何**帧：用 temac_rx_valid（rx_client_fifo 已把它同步到 udp_clk 域，
+    //   = ~rd_src_rdy_n，任何到达 MAC 的帧（ARP/ICMP/UDP）都会拉动它）
+    reg [24:0] rx_led_cnt;
+    always @(posedge udp_clk or negedge net_rst_n) begin
+        if (!net_rst_n)                                  rx_led_cnt <= 25'd0;
+        else if (~temac_rx_valid)                        rx_led_cnt <= 25'd25_000_000; // 0=有帧
+        else if (rx_led_cnt != 25'd0)                    rx_led_cnt <= rx_led_cnt - 25'd1;
+    end
+
+    // 应用层有没有在向协议栈申请发送（app_tx_request）
+    //   ★ 这是当前最需要看的信号：
+    //     常亮 = 应用层一直占着协议栈的 TX 接口（疑似正是 ping 不通的原因）
+    //     灭   = 应用层没占用，方向要换
+    //   （原来这里接 temac_tx_ready，信息量不如这个）
+    reg [24:0] txact_led_cnt;
+    always @(posedge udp_clk or negedge net_rst_n) begin
+        if (!net_rst_n)                                  txact_led_cnt <= 25'd0;
+        else if (app_tx_data_request)                    txact_led_cnt <= 25'd25_000_000;
+        else if (txact_led_cnt != 25'd0)                 txact_led_cnt <= txact_led_cnt - 25'd1;
+    end
+
+    assign net_led[0] = (rx_led_cnt    != 25'd0);   // 收到**任何**帧（ARP/ICMP/UDP 都算）
+    assign net_led[1] = (txact_led_cnt != 25'd0);   // ★ 应用层在申请发送（app_tx_request）
+    assign net_led[2] = (tx_led_cnt    != 25'd0);   // 一整帧 128x72 已发完（展宽 ~0.2s）
+    // ---- ★★ 临时四态诊断（2026-10-15 v2，查"没绿框"）----
+    //   常亮        = 解析成功过（res_valid 出现过）→ 绿框应当稳定出现
+    //   快闪(~12Hz) = 收到过 0xAA，但没能凑齐 AA 55 帧头
+    //   慢闪(~4Hz)  = app_rx 有载荷，却连一个 0xAA 都没见着（送来的不是板 B 的载荷）
+    //   灭          = app_rx 压根没动静
+    //   恢复：把下面这段换回   assign net_led[3] = (arp_led_cnt != 25'd0);
+    reg        res_seen, aa_seen;
+    reg [24:0] rxact_cnt;
+    reg [23:0] blink_cnt;
+    reg        blink;
+    always @(posedge udp_clk or posedge reset) begin
+        if (reset) begin
+            res_seen  <= 1'b0;
+            aa_seen   <= 1'b0;
+            rxact_cnt <= 25'd0;
+            blink_cnt <= 24'd0;
+            blink     <= 1'b0;
+        end else begin
+            if (res_valid_udp)           res_seen  <= 1'b1;
+            if (saw_aa)                  aa_seen   <= 1'b1;
+            if (app_rx_data_valid)       rxact_cnt <= 25'd25_000_000;   // 0.2s 展宽
+            else if (rxact_cnt != 25'd0) rxact_cnt <= rxact_cnt - 25'd1;
+            // 见过 0xAA → 快闪；没见过 → 慢闪（一眼能分开）
+            if (blink_cnt == 24'd0) begin
+                blink_cnt <= aa_seen ? 24'd5_000_000 : 24'd16_000_000;
+                blink     <= ~blink;
+            end else begin
+                blink_cnt <= blink_cnt - 24'd1;
+            end
+        end
+    end
+    assign net_led[3] = res_seen ? 1'b1 : ((rxact_cnt != 25'd0) ? blink : 1'b0);
 
 endmodule

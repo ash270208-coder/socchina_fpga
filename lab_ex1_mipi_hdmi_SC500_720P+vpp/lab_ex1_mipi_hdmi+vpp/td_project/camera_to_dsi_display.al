@@ -398,7 +398,6 @@
             </File>
             <File Path="../user_source/hdl_source/osd_box_drawer.v">
                 <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
@@ -657,7 +656,6 @@
             </File>
             <File Path="../user_source/hdl_source/net/udp_loopback.v">
                 <FileInfo>
-                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
@@ -690,10 +688,19 @@
             </File>
             <File Path="../user_source/hdl_source/net/tx_frame_sender.v">
                 <FileInfo>
+                    <Attr Name="AutoExcluded" Val="true"/>
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="107"/>
+                </FileInfo>
+            </File>
+            <File Path="../user_source/hdl_source/net/image_feeder.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="109"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/cnn/cnn_ds10.v">
@@ -702,6 +709,14 @@
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
                     <Attr Name="CompileOrder" Val="108"/>
+                </FileInfo>
+            </File>
+            <File Path="../user_source/hdl_source/net/rx_result_parser.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="110"/>
                 </FileInfo>
             </File>
         </Verilog>

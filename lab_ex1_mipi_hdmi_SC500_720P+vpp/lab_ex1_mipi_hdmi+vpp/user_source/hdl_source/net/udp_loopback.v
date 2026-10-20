@@ -142,7 +142,7 @@ begin
 				end
 			SEND_UDP_DATA: // 2
 				begin
-					if(fifo_read_data_cnt == (udp_data_length_reg_ff2 - 1'b1)) begin
+					if(fifo_read_data_cnt == (udp_data_length - 1'b1)) begin
 						fifo_read_data_cnt 	<= 16'd0;
 						app_tx_data_valid 	<= 1'b0;
 						app_tx_data_read 	<= 1'b0;
