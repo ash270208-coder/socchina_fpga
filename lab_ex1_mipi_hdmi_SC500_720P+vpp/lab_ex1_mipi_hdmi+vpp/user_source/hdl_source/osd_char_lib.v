@@ -72,6 +72,24 @@ module osd_char_lib16 (
                     3'd4: F_ascii8_row=8'b00111000; 3'd5: F_ascii8_row=8'b00111000;
                     3'd6: F_ascii8_row=8'b00111000; default: F_ascii8_row=8'h00;
                 endcase
+                8'h58: case (I_row) // X
+                    3'd0: F_ascii8_row=8'b11000110; 3'd1: F_ascii8_row=8'b01101100;
+                    3'd2: F_ascii8_row=8'b00111000; 3'd3: F_ascii8_row=8'b00111000;
+                    3'd4: F_ascii8_row=8'b00111000; 3'd5: F_ascii8_row=8'b01101100;
+                    3'd6: F_ascii8_row=8'b11000110; default: F_ascii8_row=8'h00;
+                endcase
+                8'h57: case (I_row) // W
+                    3'd0: F_ascii8_row=8'b11000110; 3'd1: F_ascii8_row=8'b11000110;
+                    3'd2: F_ascii8_row=8'b11000110; 3'd3: F_ascii8_row=8'b11010110;
+                    3'd4: F_ascii8_row=8'b11010110; 3'd5: F_ascii8_row=8'b11111110;
+                    3'd6: F_ascii8_row=8'b01101100; default: F_ascii8_row=8'h00;
+                endcase
+                8'h48: case (I_row) // H
+                    3'd0: F_ascii8_row=8'b11000110; 3'd1: F_ascii8_row=8'b11000110;
+                    3'd2: F_ascii8_row=8'b11000110; 3'd3: F_ascii8_row=8'b11111110;
+                    3'd4: F_ascii8_row=8'b11000110; 3'd5: F_ascii8_row=8'b11000110;
+                    3'd6: F_ascii8_row=8'b11000110; default: F_ascii8_row=8'h00;
+                endcase
                 8'h3A: case (I_row) // :
                     3'd1: F_ascii8_row=8'b00110000; 3'd2: F_ascii8_row=8'b00110000;
                     3'd5: F_ascii8_row=8'b00110000; 3'd6: F_ascii8_row=8'b00110000;

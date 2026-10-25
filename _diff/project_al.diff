@@ -1,0 +1,587 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\td_project\\camera_to_dsi_display.al" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\td_project\\camera_to_dsi_display.al"
+index 2194a25..f44f023 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\td_project\\camera_to_dsi_display.al"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\td_project\\camera_to_dsi_display.al"
+@@ -1,3 +1,3 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+-<Project Version="3" Minor="2" Path="C:/Users/19818/Desktop/newest_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp_boardA/td_project">
++<Project Version="3" Minor="2" Path="D:/TD_project/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/td_project">
+     <Project_Created_Time></Project_Created_Time>
+@@ -29,3 +29,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="86"/>
++                    <Attr Name="CompileOrder" Val="75"/>
+                 </FileInfo>
+@@ -40,10 +40,2 @@
+             </File>
+-            <File Path="../user_source/hdl_source/frame_delay_tracker.v">
+-                <FileInfo>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="111"/>
+-                </FileInfo>
+-            </File>
+             <File Path="../user_source/hdl_source/video_out.v">
+@@ -78,3 +70,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="18"/>
++                    <Attr Name="CompileOrder" Val="17"/>
+                 </FileInfo>
+@@ -86,3 +78,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="20"/>
++                    <Attr Name="CompileOrder" Val="19"/>
+                 </FileInfo>
+@@ -94,3 +86,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="21"/>
++                    <Attr Name="CompileOrder" Val="20"/>
+                 </FileInfo>
+@@ -102,3 +94,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="22"/>
++                    <Attr Name="CompileOrder" Val="21"/>
+                 </FileInfo>
+@@ -110,3 +102,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="23"/>
++                    <Attr Name="CompileOrder" Val="22"/>
+                 </FileInfo>
+@@ -118,3 +110,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="24"/>
++                    <Attr Name="CompileOrder" Val="23"/>
+                 </FileInfo>
+@@ -126,3 +118,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="25"/>
++                    <Attr Name="CompileOrder" Val="24"/>
+                 </FileInfo>
+@@ -134,3 +126,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="26"/>
++                    <Attr Name="CompileOrder" Val="25"/>
+                 </FileInfo>
+@@ -142,3 +134,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="27"/>
++                    <Attr Name="CompileOrder" Val="26"/>
+                 </FileInfo>
+@@ -150,3 +142,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="28"/>
++                    <Attr Name="CompileOrder" Val="27"/>
+                 </FileInfo>
+@@ -158,3 +150,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="29"/>
++                    <Attr Name="CompileOrder" Val="28"/>
+                 </FileInfo>
+@@ -166,3 +158,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="30"/>
++                    <Attr Name="CompileOrder" Val="29"/>
+                 </FileInfo>
+@@ -174,3 +166,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="31"/>
++                    <Attr Name="CompileOrder" Val="30"/>
+                 </FileInfo>
+@@ -182,3 +174,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="34"/>
++                    <Attr Name="CompileOrder" Val="33"/>
+                 </FileInfo>
+@@ -190,3 +182,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="35"/>
++                    <Attr Name="CompileOrder" Val="34"/>
+                 </FileInfo>
+@@ -198,3 +190,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="36"/>
++                    <Attr Name="CompileOrder" Val="35"/>
+                 </FileInfo>
+@@ -206,3 +198,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="37"/>
++                    <Attr Name="CompileOrder" Val="36"/>
+                 </FileInfo>
+@@ -214,3 +206,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="38"/>
++                    <Attr Name="CompileOrder" Val="37"/>
+                 </FileInfo>
+@@ -222,3 +214,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="39"/>
++                    <Attr Name="CompileOrder" Val="38"/>
+                 </FileInfo>
+@@ -230,3 +222,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="40"/>
++                    <Attr Name="CompileOrder" Val="39"/>
+                 </FileInfo>
+@@ -238,3 +230,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="41"/>
++                    <Attr Name="CompileOrder" Val="40"/>
+                 </FileInfo>
+@@ -246,3 +238,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="42"/>
++                    <Attr Name="CompileOrder" Val="41"/>
+                 </FileInfo>
+@@ -254,3 +246,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="43"/>
++                    <Attr Name="CompileOrder" Val="42"/>
+                 </FileInfo>
+@@ -262,3 +254,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="44"/>
++                    <Attr Name="CompileOrder" Val="43"/>
+                 </FileInfo>
+@@ -270,3 +262,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="45"/>
++                    <Attr Name="CompileOrder" Val="44"/>
+                 </FileInfo>
+@@ -278,3 +270,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="46"/>
++                    <Attr Name="CompileOrder" Val="45"/>
+                 </FileInfo>
+@@ -286,3 +278,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="47"/>
++                    <Attr Name="CompileOrder" Val="46"/>
+                 </FileInfo>
+@@ -294,3 +286,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="48"/>
++                    <Attr Name="CompileOrder" Val="47"/>
+                 </FileInfo>
+@@ -302,3 +294,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="49"/>
++                    <Attr Name="CompileOrder" Val="48"/>
+                 </FileInfo>
+@@ -311,3 +303,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="50"/>
++                    <Attr Name="CompileOrder" Val="49"/>
+                 </FileInfo>
+@@ -319,3 +311,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="51"/>
++                    <Attr Name="CompileOrder" Val="50"/>
+                 </FileInfo>
+@@ -324,2 +316,3 @@
+                 <FileInfo>
++                    <Attr Name="AutoExcluded" Val="true"/>
+                     <Attr Name="UsedInSyn" Val="true"/>
+@@ -327,3 +320,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="52"/>
++                    <Attr Name="CompileOrder" Val="51"/>
+                 </FileInfo>
+@@ -335,3 +328,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="53"/>
++                    <Attr Name="CompileOrder" Val="52"/>
+                 </FileInfo>
+@@ -343,3 +336,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="56"/>
++                    <Attr Name="CompileOrder" Val="55"/>
+                 </FileInfo>
+@@ -351,3 +344,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="57"/>
++                    <Attr Name="CompileOrder" Val="56"/>
+                 </FileInfo>
+@@ -359,3 +352,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="58"/>
++                    <Attr Name="CompileOrder" Val="57"/>
+                 </FileInfo>
+@@ -367,39 +360,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="59"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/face_track_top.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="60"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/downscaler.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="61"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/integral_image.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="62"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/lbp_detector_engine.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="63"/>
++                    <Attr Name="CompileOrder" Val="58"/>
+                 </FileInfo>
+@@ -411,3 +368,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="68"/>
++                    <Attr Name="CompileOrder" Val="59"/>
+                 </FileInfo>
+@@ -416,2 +373,3 @@
+                 <FileInfo>
++                    <Attr Name="AutoExcluded" Val="true"/>
+                     <Attr Name="UsedInSyn" Val="true"/>
+@@ -419,3 +377,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="69"/>
++                    <Attr Name="CompileOrder" Val="60"/>
+                 </FileInfo>
+@@ -427,3 +385,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="70"/>
++                    <Attr Name="CompileOrder" Val="61"/>
+                 </FileInfo>
+@@ -435,3 +393,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="71"/>
++                    <Attr Name="CompileOrder" Val="62"/>
+                 </FileInfo>
+@@ -443,3 +401,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="72"/>
++                    <Attr Name="CompileOrder" Val="63"/>
+                 </FileInfo>
+@@ -451,3 +409,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="73"/>
++                    <Attr Name="CompileOrder" Val="64"/>
+                 </FileInfo>
+@@ -459,12 +417,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="74"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/lp_filter_3x3.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="75"/>
++                    <Attr Name="CompileOrder" Val="65"/>
+                 </FileInfo>
+@@ -476,3 +425,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="76"/>
++                    <Attr Name="CompileOrder" Val="66"/>
+                 </FileInfo>
+@@ -484,3 +433,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="77"/>
++                    <Attr Name="CompileOrder" Val="67"/>
+                 </FileInfo>
+@@ -492,3 +441,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="78"/>
++                    <Attr Name="CompileOrder" Val="68"/>
+                 </FileInfo>
+@@ -500,3 +449,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="79"/>
++                    <Attr Name="CompileOrder" Val="69"/>
+                 </FileInfo>
+@@ -508,3 +457,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="80"/>
++                    <Attr Name="CompileOrder" Val="70"/>
+                 </FileInfo>
+@@ -516,12 +465,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="81"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="../user_source/hdl_source/lp_filter_3x3_stream.v">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="82"/>
++                    <Attr Name="CompileOrder" Val="71"/>
+                 </FileInfo>
+@@ -533,3 +473,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="83"/>
++                    <Attr Name="CompileOrder" Val="72"/>
+                 </FileInfo>
+@@ -541,3 +481,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="87"/>
++                    <Attr Name="CompileOrder" Val="76"/>
+                 </FileInfo>
+@@ -549,3 +489,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="88"/>
++                    <Attr Name="CompileOrder" Val="77"/>
+                 </FileInfo>
+@@ -557,3 +497,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="89"/>
++                    <Attr Name="CompileOrder" Val="78"/>
+                 </FileInfo>
+@@ -565,3 +505,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="90"/>
++                    <Attr Name="CompileOrder" Val="79"/>
+                 </FileInfo>
+@@ -573,3 +513,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="91"/>
++                    <Attr Name="CompileOrder" Val="80"/>
+                 </FileInfo>
+@@ -581,3 +521,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="92"/>
++                    <Attr Name="CompileOrder" Val="81"/>
+                 </FileInfo>
+@@ -589,3 +529,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="93"/>
++                    <Attr Name="CompileOrder" Val="82"/>
+                 </FileInfo>
+@@ -597,3 +537,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="94"/>
++                    <Attr Name="CompileOrder" Val="83"/>
+                 </FileInfo>
+@@ -605,3 +545,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="95"/>
++                    <Attr Name="CompileOrder" Val="84"/>
+                 </FileInfo>
+@@ -613,3 +553,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="96"/>
++                    <Attr Name="CompileOrder" Val="85"/>
+                 </FileInfo>
+@@ -621,3 +561,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="97"/>
++                    <Attr Name="CompileOrder" Val="86"/>
+                 </FileInfo>
+@@ -629,3 +569,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="98"/>
++                    <Attr Name="CompileOrder" Val="87"/>
+                 </FileInfo>
+@@ -637,3 +577,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="99"/>
++                    <Attr Name="CompileOrder" Val="88"/>
+                 </FileInfo>
+@@ -645,3 +585,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="100"/>
++                    <Attr Name="CompileOrder" Val="89"/>
+                 </FileInfo>
+@@ -653,3 +593,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="101"/>
++                    <Attr Name="CompileOrder" Val="90"/>
+                 </FileInfo>
+@@ -661,3 +601,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="102"/>
++                    <Attr Name="CompileOrder" Val="91"/>
+                 </FileInfo>
+@@ -669,3 +609,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="103"/>
++                    <Attr Name="CompileOrder" Val="92"/>
+                 </FileInfo>
+@@ -677,3 +617,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="104"/>
++                    <Attr Name="CompileOrder" Val="93"/>
+                 </FileInfo>
+@@ -685,3 +625,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="105"/>
++                    <Attr Name="CompileOrder" Val="94"/>
+                 </FileInfo>
+@@ -693,8 +633,7 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="106"/>
++                    <Attr Name="CompileOrder" Val="95"/>
+                 </FileInfo>
+             </File>
+-            <File Path="../user_source/hdl_source/net/tx_frame_sender.v">
++            <File Path="../user_source/hdl_source/net/image_feeder.v">
+                 <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+                     <Attr Name="UsedInSyn" Val="true"/>
+@@ -702,6 +641,6 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="107"/>
++                    <Attr Name="CompileOrder" Val="97"/>
+                 </FileInfo>
+             </File>
+-            <File Path="../user_source/hdl_source/net/image_feeder.v">
++            <File Path="../user_source/hdl_source/cnn/cnn_ds10.v">
+                 <FileInfo>
+@@ -710,6 +649,6 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="109"/>
++                    <Attr Name="CompileOrder" Val="96"/>
+                 </FileInfo>
+             </File>
+-            <File Path="../user_source/hdl_source/cnn/cnn_ds10.v">
++            <File Path="../user_source/hdl_source/net/rx_result_parser.v">
+                 <FileInfo>
+@@ -718,6 +657,30 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="108"/>
++                    <Attr Name="CompileOrder" Val="98"/>
+                 </FileInfo>
+             </File>
+-            <File Path="../user_source/hdl_source/net/rx_result_parser.v">
++            <File Path="../user_source/hdl_source/RGB888_Y888.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true"/>
++                    <Attr Name="UsedInP&R" Val="true"/>
++                    <Attr Name="BelongTo" Val="design_1"/>
++                    <Attr Name="CompileOrder" Val="99"/>
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/hue_scale.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true"/>
++                    <Attr Name="UsedInP&R" Val="true"/>
++                    <Attr Name="BelongTo" Val="design_1"/>
++                    <Attr Name="CompileOrder" Val="100"/>
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/hist_eq_color_top.v">
++                <FileInfo>
++                    <Attr Name="UsedInSyn" Val="true"/>
++                    <Attr Name="UsedInP&R" Val="true"/>
++                    <Attr Name="BelongTo" Val="design_1"/>
++                    <Attr Name="CompileOrder" Val="101"/>
++                </FileInfo>
++            </File>
++            <File Path="../user_source/hdl_source/frame_delay_tracker.v">
+                 <FileInfo>
+@@ -726,3 +689,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="110"/>
++                    <Attr Name="CompileOrder" Val="102"/>
+                 </FileInfo>
+@@ -842,11 +805,2 @@
+             </File>
+-            <File Path="../user_source/ip_source/divider/divider.ipc">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="17"/>
+-                </FileInfo>
+-            </File>
+             <File Path="../user_source/hdl_source/ph1p35_ddr/ddr2/ddr2.xml">
+@@ -856,3 +810,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="19"/>
++                    <Attr Name="CompileOrder" Val="18"/>
+                 </FileInfo>
+@@ -864,3 +818,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="32"/>
++                    <Attr Name="CompileOrder" Val="31"/>
+                 </FileInfo>
+@@ -872,3 +826,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="33"/>
++                    <Attr Name="CompileOrder" Val="32"/>
+                 </FileInfo>
+@@ -880,3 +834,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="54"/>
++                    <Attr Name="CompileOrder" Val="53"/>
+                 </FileInfo>
+@@ -888,39 +842,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="55"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="al_ip/frame_integral_bram/frame_integral_bram.xml">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="64"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="al_ip/rom_weak_lut/rom_weak_lut.xml">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="65"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="al_ip/rom_feature_rects/rom_feature_rects.xml">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="66"/>
+-                </FileInfo>
+-            </File>
+-            <File Path="al_ip/rom_stage_thresh/rom_stage_thresh.xml">
+-                <FileInfo>
+-                    <Attr Name="AutoExcluded" Val="true"/>
+-                    <Attr Name="UsedInSyn" Val="true"/>
+-                    <Attr Name="UsedInP&R" Val="true"/>
+-                    <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="67"/>
++                    <Attr Name="CompileOrder" Val="54"/>
+                 </FileInfo>
+@@ -932,3 +850,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="84"/>
++                    <Attr Name="CompileOrder" Val="73"/>
+                 </FileInfo>
+@@ -940,3 +858,3 @@
+                     <Attr Name="BelongTo" Val="design_1"/>
+-                    <Attr Name="CompileOrder" Val="85"/>
++                    <Attr Name="CompileOrder" Val="74"/>
+                 </FileInfo>

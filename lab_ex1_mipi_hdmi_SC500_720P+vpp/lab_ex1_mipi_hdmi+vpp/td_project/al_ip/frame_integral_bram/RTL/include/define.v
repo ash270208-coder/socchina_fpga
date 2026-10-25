@@ -1,9 +1,0 @@
-`define SDP_RAM_5e6f4a9feab8
-`define CEA_EN_5e6f4a9feab8
-`define OREGSET_A_5e6f4a9feab8
-`define ASYNC_RELEASE_A_5e6f4a9feab8
-`define CEB_EN_5e6f4a9feab8
-`define OUTREG_DISB_5e6f4a9feab8
-`define OREGSET_B_5e6f4a9feab8
-`define COMMON_CLK_5e6f4a9feab8
-`define PH1P_5e6f4a9feab8

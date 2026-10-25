@@ -1,0 +1,70 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\Sobel_edge_detection_top.v" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\Sobel_edge_detection_top.v"
+index a604b54..cc893a2 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\Sobel_edge_detection_top.v"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\Sobel_edge_detection_top.v"
+@@ -12,7 +12,12 @@ module Sobel_edge_detection_top #(
+     input               I_tvalid,
+     input               I_tlast,
+     input               I_tuser,
+-    input      [7:0]    I_grey_tdata,
++    // 【形态统一】和 cartoon_top / hist_eq_color_top 一样吃 RGB，内部自己取亮度 Y。
++    //   为了不影响模式 3 的观感，外面要喂**线性域**的 RGB（gamma 之前的 I_tdata），
++    //   这样算出来的 Y 和改造前完全一致，SOBEL_THRESHOLD=60 不用重调。
++    input      [7:0]    I_red_tdata,
++    input      [7:0]    I_green_tdata,
++    input      [7:0]    I_blue_tdata,
+     
+     
+     output              O_tvalid,
+@@ -21,7 +26,35 @@ module Sobel_edge_detection_top #(
+     output     [7:0]    O_grey_tdata
+ );
+ 
+-    
++    // =========================================================================
++    // 0. RGB -> Y（3 拍）
++    //    控制信号由 RGB888_Y888 一起延迟 3 拍，所以下面 Sobel_edge 直接吃
++    //    y_v/y_l/y_u 即可，不需要另外补控制信号。
++    //    模块总延迟仍是 3 + 5 + 4 + 4 = 16 拍，和改造前完全一样。
++    // =========================================================================
++    wire        y_v, y_l, y_u;
++    wire [7:0]  y_d;
++
++    RGB888_Y888 #(
++        .IMG_WIDTH (IMG_WIDTH),
++        .IMG_HEIGHT(IMG_HEIGHT)
++    ) u_rgb2y (
++        .I_clk          (I_clk),
++        .I_rst_n        (I_rst_n),
++        .I_tlast        (I_tlast),
++        .I_tuser        (I_tuser),
++        .I_red_tdata    (I_red_tdata),
++        .I_green_tdata  (I_green_tdata),
++        .I_blue_tdata   (I_blue_tdata),
++        .I_tvalid       (I_tvalid),
++        .I_tready       (1'b1),
++        .O_tlast        (y_l),
++        .O_tuser        (y_u),
++        .O_y_tdata      (y_d),
++        .O_tvalid       (y_v),
++        .O_tready       ()
++    );
++
+     // 1. Sobel 阶段 (5 拍延迟)
+     
+     wire        sobel_tvalid;
+@@ -37,10 +70,10 @@ module Sobel_edge_detection_top #(
+     ) u_Sobel_edge (
+         .I_clk           (I_clk),
+         .I_rst_n         (I_rst_n),
+-        .I_tvalid        (I_tvalid),
+-        .I_tlast         (I_tlast),
+-        .I_tuser         (I_tuser),
+-        .I_grey_tdata    (I_grey_tdata),
++        .I_tvalid        (y_v),
++        .I_tlast         (y_l),
++        .I_tuser         (y_u),
++        .I_grey_tdata    (y_d),
+         
+         .O_tvalid        (sobel_tvalid),
+         .O_tlast         (sobel_tlast),

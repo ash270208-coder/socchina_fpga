@@ -10,7 +10,7 @@ Module  : awb (防眩光发红 + 轮廓保真修复版)
      零错位架构、消隐期除法器 IP 稳定自适应。
 *****************************************************************/
 // ============================================================================
-// 【资源优化修改】除法器 2 个 -> 1 个
+// 【资源优化修改 1】除法器 2 个 -> 1 个
 // 原设计: 两个 48/32bit 流水线除法器 IP (PIPLE=50) 在 vblank_pulse 同时
 //         并行计算 G/R 与 G/B, 合计约 1150 LUT + 1900 加法器 + 5000 寄存器。
 // 修改后: 单个除法器在消隐期内分时完成两次除法 (先 G/R 再 G/B),
@@ -19,6 +19,26 @@ Module  : awb (防眩光发红 + 轮廓保真修复版)
 //         目标增益锁存时刻由 vblank_pulse+50 变为 vblank_pulse+102,
 //         IIR 平滑仍在下一帧 vblank_pulse 进行, 帧级行为与原设计完全一致。
 //         节省约 575 LUT + 950 加法器 + 2500 寄存器 (~5% slice)。
+//
+// 【资源优化修改 2】除法器由"全流水 IP"换成"顺序实现" divider_seq.v
+//   原 divider IP 是 48 级全流水移位减阵列，布线后报告实测
+//   u_divider = 827 LUT + 948 ripple + 2496 寄存器。
+//   但本模块每帧只用 2 次除法 (vblank 后)，720p60 一帧在 75MHz 下有
+//   约 125 万拍，两次除法各 48 拍只占 0.004% —— 全流水完全是浪费。
+//   换成单减法器的 48 拍循环后：
+//     * 同一上下文实测 divider_seq = 108 LUT + 48 ripple + 231 寄存器
+//     * 分别单独综合对比：原 IP 2162 slice vs 顺序版 232 slice
+//       -> **净省 1930 slice，0 ERAM**
+//     * 算法与位宽完全相同，商/余数逐位一致
+//       （等价性验证见 sim/tb_divider_seq.v：4457 组随机+定向激励 0 失败，
+//         done 延迟固定 48 拍）
+//   ⚠ 随之把状态机里"按固定拍数硬等"的守卫去掉了：
+//     原 `if (done_div && (div_cnt >= DIV_LAT-4))` -> 现 `if (done_div)`
+//     因为换了实现后拍数会变，靠固定拍数硬等必然出错。
+//
+//   目的：为《板A以太网改造_实施计划.md》第 3 步（取数+降采样+发 128x72 图）
+//   腾出 slice 余量 —— 布线后余量 2796，而 cnn_ds10 单独综合要 3369，缺口 573。
+//   参考 docs/板A以太网改造_第2步实施记录.md §5.6
 // ============================================================================
 
 module awb #(   
@@ -101,17 +121,24 @@ module awb #(
     end
 
     /*****************************************************************
-      二、除法器 IP 调用 (分子含 1.25x 提亮)
+      二、除法器调用 (分子含 1.25x 提亮)
       【资源优化】单个除法器分时计算: 先 G/R (div_st=1) 再 G/B (div_st=2)
+      【资源优化 2】全流水 divider IP -> 顺序 divider_seq (见 divider_seq.v)
+        原 IP 是 48 级全流水移位减阵列(PIPLE=50), 实测在布线后报告里占
+        u_divider = 827 LUT + 948 ripple + 2496 寄存器;
+        而这里每帧只用 2 次除法(vblank 后), 720p60 一帧在 75MHz 下有约
+        125 万拍, 两次除法各 48 拍只占 0.004%, 全流水纯属浪费。
+        换成单减法器的 48 拍循环: 同一上下文实测 divider_seq 只要
+        108 LUT + 48 ripple + 231 寄存器, 单独综合对比省 1930 slice。
+        算法/位宽完全相同, 商逐位一致 (tb_divider_seq.v 已验 4457 组 0 错)。
+        ⚠ 因为换掉了实现, 下面等待完成的判断必须是**纯 done_div**,
+          不能再按固定拍数硬等(原来那句 div_cnt >= DIV_LAT-4 已删除)。
     *****************************************************************/
     wire [31:0] frame_g_boost = frame_g + {2'b00, frame_g[31:2]};
 
-    // 与 divider IP 流水级数 PIPLE=50 保持一致
-    localparam DIV_LAT = 50;
-
     reg [31:0] div_den;      // 除数 (frame_r 或 frame_b)
     reg [1:0]  div_st;       // 状态机: 0=IDLE 1=DIV_R 2=DIV_B
-    reg [6:0]  div_cnt;      // 状态内周期计数
+    reg [6:0]  div_cnt;      // 状态内周期计数(仅用于产生 start 脉冲)
     reg        div_start;    // 除法器单周期启动脉冲
 
     wire [47:0] dout_div;    // 除法商
@@ -138,7 +165,7 @@ module awb #(
                 2'd1: begin           // DIV_R: 计算 G/R
                     if (div_cnt == 7'd0)
                         div_start <= 1'b1;    // 操作数已稳定, 发单周期启动脉冲
-                    if (done_div && (div_cnt >= DIV_LAT - 4)) begin
+                    if (done_div) begin
                         // 锁存 G/R 商 -> 安全走廊限幅
                         if (|dout_div[47:20] || dout_div[19:0] > 20'h1F000)
                             target_r <= 20'h1F000;
@@ -155,7 +182,7 @@ module awb #(
                 2'd2: begin           // DIV_B: 计算 G/B
                     if (div_cnt == 7'd0)
                         div_start <= 1'b1;    // 操作数已稳定, 发单周期启动脉冲
-                    if (done_div && (div_cnt >= DIV_LAT - 4)) begin
+                    if (done_div) begin
                         // 锁存 G/B 商 -> 安全走廊限幅
                         if (|dout_div[47:20] || dout_div[19:0] > 20'h32000)
                             target_b <= 20'h32000;
@@ -172,15 +199,23 @@ module awb #(
         end
     end
 
-    // 唯一的除法器实例 (原设计为 2 个)
-    divider u_divider (
+    // 顺序(非流水)除法器: start 后 48 拍出 done，商/余数当拍有效。
+    // 端口与原 divider IP 完全一致，所以这里只是换了模块名。
+    // 详见 divider_seq.v 头部；等价性见 sim/tb_divider_seq.v (4457 组 0 错)。
+    divider_seq #(
+        .PIPLE (50),          // 保留参数名，本模块不使用
+        .W_DEN (32),
+        .W_NUM (48),
+        .W_REM (32)
+    ) u_divider (
         .clk        (I_clk               ),
         .rst        (!I_rst_n            ),
         .start      (div_start           ),
         .denominator(div_den             ),
         .numerator  ({frame_g_boost,16'd0}),
+        .done       (done_div            ),
         .quotient   (dout_div            ),
-        .done       (done_div            )
+        .remainder  (                    )
     );
 
     /*****************************************************************

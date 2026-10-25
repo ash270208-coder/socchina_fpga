@@ -2,8 +2,11 @@
 
 module design_top_wrapper (
     input wire        I_sys_clk,
-    input wire        I_rst_n,
-      
+    // [以太网改造 第1步] 原 input I_rst_n（约束到 R10）已删除。
+    //   R10 在板上铜线是 ETHPHY_TX_EN，必须让给 phy1_rgmii_tx_ctl。
+    //   复位改由 pll_por.v 在 I_sys_clk 域内部产生，见下方 u_pll_por。
+    //   参考 docs/A板以太网改造方案.md §2.4 / §4。
+
     output wire       O_cam_scl,
     inout  wire       IO_cam_sda,
     output wire       O_cam_24m,
@@ -11,7 +14,22 @@ module design_top_wrapper (
       
     inout wire [3:0]  I_button,
 
-    output wire       O_screen_pwm,
+    // [以太网改造 第2步] 原 output O_screen_pwm（约束到 R11）已删除。
+    //   R11 在板上铜线是 ETHPHY_TXD0，必须让给 phy1_rgmii_tx_data[0]。
+    //   外部 HDMI 显示器不需要 FPGA 背光 PWM。
+
+    // ---- 千兆以太网 RGMII（YT8511C，BANK22 3.3V）----
+    // 第1步只声明引脚与 PHY 复位，网络逻辑尚未接入（第2步搬入）。
+    input  wire        phy1_rgmii_rx_clk,
+    input  wire        phy1_rgmii_rx_ctl,
+    input  wire [3:0]  phy1_rgmii_rx_data,
+    output wire        phy1_rgmii_tx_clk,
+    output wire        phy1_rgmii_tx_ctl,     // -> R10
+    output wire [3:0]  phy1_rgmii_tx_data,    // bit0 -> R11
+    output wire        phy_reset,
+
+    output wire [3:0]  led,
+
     output wire       O_tmds_ch0_p,
     output wire       O_tmds_ch1_p,
     output wire       O_tmds_ch2_p,
@@ -113,6 +131,15 @@ module design_top_wrapper (
     wire        S_video_in_wr_busy; 
     wire[1:0]   S_video_out_rp;     
 
+    // ---- ★ [延迟可视化] 真实帧延迟：CSI 采集帧首 / 实际写页 / 实际显示页 ----
+    wire        S_frame_write_start;
+    wire[1:0]   S_frame_write_page;
+    wire        S_video_out_frame_start;
+    wire[1:0]   S_video_out_frame_page;
+    wire        S_frame_delay_valid;
+    wire[3:0]   S_frame_delay_frames;
+    wire[9:0]   S_frame_delay_ms;
+
     wire        S_ddr_user_wr_en;       
     wire        S_ddr_user_rd_en;       
     wire[24:0]  S_ddr_user_addr;        
@@ -171,6 +198,17 @@ module design_top_wrapper (
     wire        S_vpp_out_user;
     wire [2:0]  S_vpp_display_mode;
 
+    // [以太网改造 第3步] CNN 取数：vpp_top 里的 raw_rgb_d[21]（伽马后原图）
+    //   + 与之严格同拍的 tvalid/tuser/tlast，直接送进 board_a_net_wrapper。
+    //   ⚠ 取的是"原图"那一级，**不是** mux 输出 —— 后者会随按键的
+    //     5 档显示模式在灰度/直方图/Sobel/卡通之间变。
+    //   ⚠ 名字必须避开 S_raw_t*：那是 ISP 的原始数据流（[39:0]，本文件第 107 行），
+    //     曾经因为重名导致 HDL-7181 / HDL-8007「net 被多处驱动」。
+    wire [23:0] S_cnn_raw_tdata;
+    wire        S_cnn_raw_tvalid;
+    wire        S_cnn_raw_tuser;
+    wire        S_cnn_raw_tlast;
+
     // 集成 OSD 链: VPP -> Logo/模式 OSD -> 延迟 OSD -> HDMI
     wire [23:0] S_osd_overlay_data;
     wire        S_osd_overlay_de;
@@ -180,6 +218,15 @@ module design_top_wrapper (
     wire        S_delay_osd_de;
     wire        S_delay_osd_last;
     wire        S_delay_osd_user;
+
+    // ---- ★ [P0-5] 画框通路：osd_overlay → osd_box_drawer → delay_osd ----
+    wire [23:0] S_box_data;
+    wire        S_box_de;
+    wire        S_box_last;
+    wire        S_box_user;
+    // 来自 board_a_net_wrapper 的人脸框（pclk 域；板 B 回结果解析而来）
+    wire        S_face_valid;
+    wire [7:0]  S_face_x, S_face_y, S_face_w, S_face_h;
 
     wire[23:0]  S_video_rd_data;
     reg         S_dbg_raw_seen;
@@ -225,12 +272,35 @@ module design_top_wrapper (
     wire        S_lane_error_any;
 
 
-    assign O_screen_pwm = 1'b1;
+    // [以太网改造 第1步] 原 assign O_screen_pwm = 1'b1; 已删除（R11 让给 RGMII TXD0）。
     assign S_video_out_vsync = ~S_hdmi_vsync;
 	
 	
     assign S_rst_n 		= S_pll_lock;
     assign S_hdmi_rst_n = S_pll_lock;
+
+    // =========================================================================
+    // [以太网改造 第1步] PLL 上电复位
+    //   原实现: PLL.reset = ~I_rst_n, 而 I_rst_n 约束在 R10 上——该球板上实际连到
+    //   PHY 的 TX_EN，**没有按键**。所以"复位"只是靠该球的内部弱上拉缓缓拉高，
+    //   上电确实能启动，但复位功能从未生效，且 PLL 一旦失锁就只能断电。
+    //   现在 R10 让给 RGMII，改由 pll_por 在 I_sys_clk(50MHz) 域产生 10ms 上电复位
+    //   窗口（异步复位 / 同步释放），不再依赖任何悬空引脚。
+    //   ⚠ pll_por 必须跑 I_sys_clk，不能跑 PLL 自己的输出（自举依赖）。
+    //   ext_arst_n 预留作运行中软复位，当前不使用，接 1'b1。
+    //   参考 docs/A板以太网改造方案.md §4.2。
+    // =========================================================================
+    wire S_por_rst;
+    wire S_por_arst_n;      // 低有效上电复位 -> 直接作 PHY 的 RESET_N
+
+    pll_por #(
+        .POR_CYCLES ( 32'd500_000 )      // 50MHz × 10ms
+    ) u_pll_por (
+        .clk        ( I_sys_clk   ),
+        .ext_arst_n ( 1'b1        ),
+        .pll_rst    ( S_por_rst   ),
+        .por_arst_n ( S_por_arst_n)
+    );
 
     always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
         if(!S_rst_n)
@@ -445,7 +515,9 @@ module design_top_wrapper (
 	
     PLL u_PLL(
         .refclk      ( I_sys_clk         ),
-        .reset    	 ( ~I_rst_n          ),
+        // [以太网改造 第1步] 原 .reset(~I_rst_n)：I_rst_n 曾约束在 R10（板上实为
+        //   PHY 的 TX_EN，无按键），现改由 pll_por 产生的内部上电复位驱动。
+        .reset    	 ( S_por_rst         ),
         
         .clk0_out    ( S_100m_clk        ),
         .clk1_out    ( S_24m_clk         ),
@@ -456,6 +528,74 @@ module design_top_wrapper (
         .lock        ( S_pll_lock        )
 
     );
+
+    // =========================================================================
+    // [以太网改造 第2步] 网络链路例化（板 A 接入千兆网口）
+    //   独立网络 PLL + RGMII + TEMAC + UDP/IP 协议栈 + 跨时钟 FIFO，
+    //   应用层暂为安路官方 UDP 原样回环（net/udp_loopback.v），
+    //   第 3 步换成「取数 -> 降采样 -> 帧门控 -> 发 20 个 UDP 包」，
+    //   第 4 步再加「收人脸框 -> 画到 HDMI」。
+    //
+    //   视频链路完全不经过本模块：wrapper 不读任何视频信号，也不驱动任何视频
+    //   信号，所以第 1 步已上板验证的画面时序不受影响。
+    //
+    //   复位：por_arst_n 直接来自 pll_por（I_sys_clk 域 10ms 上电复位），
+    //         不占用任何按键，也不依赖 R10（R10 已让给 phy1_rgmii_tx_ctl）。
+    //   PHY 的 RESET_N 由 wrapper 内部用 25MHz 域数 250_000 拍(=10ms) 产生，
+    //         外加 pll_por 的 10ms，实际低电平约 20ms，满足 YT8511C 的 ≥10ms。
+    //
+    //   参考 docs/板A以太网改造_实施计划.md §5，相对其 §5.2 有的两处修正：
+    //     ① DEVICE 必须 "PH1P"（§5.2 原文已是 PH1P，这里保持）
+    //     ② 应用层用官方 udp_loopback，不用 §5.2 那段 4 行组合逻辑回环
+    //        （那版不等 request->ack 握手，收不到/回不出正确 UDP 包）
+    // =========================================================================
+    wire [3:0] net_led;          // ⚠ 必须先声明再用，否则被隐式声明成 1 位线
+
+    board_a_net_wrapper u_net (
+        .clk_50m            ( I_sys_clk           ),
+        .por_arst_n         ( S_por_arst_n        ),
+        // [第3步] 视频取数：pclk 域复位必须用 S_hdmi_rst_n（视频域），不要用网络域的复位
+        .I_pclk             ( S_hdmi_pixel_clk    ),
+        .I_pclk_rst_n       ( S_hdmi_rst_n        ),
+        .I_raw_tvalid       ( S_cnn_raw_tvalid    ),
+        .I_raw_tuser        ( S_cnn_raw_tuser     ),
+        .I_raw_tlast        ( S_cnn_raw_tlast     ),
+        .I_raw_tdata        ( S_cnn_raw_tdata     ),
+        .phy1_rgmii_rx_clk  ( phy1_rgmii_rx_clk   ),
+        .phy1_rgmii_rx_ctl  ( phy1_rgmii_rx_ctl   ),
+        .phy1_rgmii_rx_data ( phy1_rgmii_rx_data  ),
+        .phy1_rgmii_tx_clk  ( phy1_rgmii_tx_clk   ),
+        .phy1_rgmii_tx_ctl  ( phy1_rgmii_tx_ctl   ),
+        .phy1_rgmii_tx_data ( phy1_rgmii_tx_data  ),
+        .phy_reset          ( phy_reset           ),
+        .net_led            ( net_led             ),
+
+        // ★ [P0-5] 板 B 回结果 → 人脸框（pclk 域，供 osd_box_drawer 画框）
+        .O_face_valid       ( S_face_valid        ),
+        .O_face_x           ( S_face_x            ),
+        .O_face_y           ( S_face_y            ),
+        .O_face_w           ( S_face_w            ),
+        .O_face_h           ( S_face_h            )
+    );
+
+    // 板载 LED（原理图 LED0~LED3 = D10/E10/C6/D6，全部高电平点亮）
+    //   【第 3 步调试期】4 个灯全部给网口——视频侧已确认正常，
+    //   而"信号断在链路的哪一环"是当前唯一的问题。
+    //   这 4 个灯能把 板A <-> PC 的链路切成 4 段：
+    //     led[0] D10 = MAC 收到好帧（rx_correct_frame 展宽）-> PC 的包到了没有
+    //     led[1] E10 = MAC 在发帧（temac_tx_valid 展宽）    -> 板子有没有往外发
+    //     led[2] C6  = 一整帧 128x72 已发完（展宽 ~0.2s）   -> 图像通路
+    //     led[3] D6  = ARP 请求没收到回应（展宽）           -> 协议栈报告的 ARP 失败
+    //
+    //   判读（led[0]/led[1] 是分段的关键）：
+    //     灭 + 灭  -> 板子既收不到也发不出：PHY/RGMII 物理层，或 MAC 整体没工作
+    //     亮 + 灭  -> 收得到、发不出：发送侧（MAC TX / TX 时钟 / app 请求占死通路）
+    //     亮 + 亮  -> 在发东西但 PC 不理：发出去的帧不对（RGMII TX 相位/帧格式）
+    //     灭 + 亮  -> 盲发但收不到：接收侧
+    //   正常工作：led[2] 常亮（每 6 帧发一帧 ≈99ms < 展宽 200ms）、led[3] 灭
+    //
+    //   ⚠ 原来 led[1] = S_pll_lock（视频 PLL）。查完网口后记得把它换回来。
+    assign led = net_led;
 
 
 	
@@ -774,6 +914,8 @@ isp_top u_isp_top (
         .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
         .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
         .O_video_out_rp       ( S_video_out_rp        ),
+        .O_frame_write_start  ( S_frame_write_start   ),
+        .O_frame_write_page   ( S_frame_write_page    ),
 
         .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
         .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
@@ -802,6 +944,8 @@ isp_top u_isp_top (
         .O_video_out_rd_busy ( S_video_out_rd_busy  ),
         .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
         .I_video_out_rp      ( S_video_out_rp       ),
+        .O_video_frame_start ( S_video_out_frame_start ),
+        .O_video_frame_page  ( S_video_out_frame_page  ),
  
         .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
         .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
@@ -815,6 +959,32 @@ isp_top u_isp_top (
         .O_vdieo_data        ( S_video_rd_data      )
     );
 
+
+
+    // ---- ★ [延迟可视化] 采集 → HDMI 显示的真实帧延迟跟踪 ----
+    //   CSI 帧首打时间戳/帧序号 → 该帧写入 DDR 时绑定到“实际写入页”
+    //   → 显示帧首用“实际读取页”取模板标签 → 32 位模减 → 请求/应答握手送到像素域。
+    //   ⚠ DDR_CLK_HZ 必须与实际 DDR 用户时钟一致：本工程 u_ph1p35_324_ddr_wrapper 的
+    //     usr_clk 约束周期为 15.000ns = 66.667MHz（见 camera_to_dsi_display_Runs/phy_1/
+    //     final_timing.rpt 的 Clock Summary，clk1）。DDR 时钟配置改动时要同步改这里。
+    frame_delay_tracker #(
+        .DDR_CLK_HZ(66666667)
+    ) u_frame_delay_tracker (
+        .I_ddr_clk             ( S_ddr_clk                 ),
+        .I_ddr_rst_n           ( S_rst_n                   ),
+        .I_csi_clk             ( S_csi_rx_clk              ),
+        .I_csi_rst_n           ( S_rst_n                   ),
+        .I_csi_frame_start     ( S_csi_frame_start         ),
+        .I_write_frame_start   ( S_frame_write_start       ),
+        .I_write_page          ( S_frame_write_page        ),
+        .I_display_frame_start ( S_video_out_frame_start   ),
+        .I_display_page        ( S_video_out_frame_page    ),
+        .I_pixel_clk           ( S_hdmi_pixel_clk          ),
+        .I_pixel_rst_n         ( S_hdmi_rst_n              ),
+        .O_delay_valid         ( S_frame_delay_valid       ),
+        .O_delay_frames        ( S_frame_delay_frames      ),
+        .O_delay_ms            ( S_frame_delay_ms          )
+    );
 
 
     mc_to_user_interface u_mc_to_user_interface(
@@ -949,22 +1119,25 @@ isp_top u_isp_top (
     end
 
     // -------------------------------------------------------------------------
-    // vs 延迟 26 拍: vpp 流水线给 de/data 增加 26 拍
-    // (22 拍算法 + 2 拍 Logo/模式 OSD + 2 拍延迟 OSD),
+    // vs 延迟 **27** 拍: vpp 流水线给 de/data 增加 27 拍
+    // (22 拍算法 + 2 拍 Logo/模式 OSD + **1 拍画框 osd_box_drawer** + 2 拍延迟 OSD),
     // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
-    // 将 vs 同步延迟 26 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    // 将 vs 同步延迟 27 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
     //
     // [双边滤波变更] 卡通档引入 8 拍双边滤波, 整条 vpp 对齐由 16 拍放宽到 22 拍,
     //   故同步由 20 拍改为 26 拍 (22 算法 + 2 Logo/模式 OSD + 2 延迟 OSD)。
-    //   ⚠ 今后只要在 vpp → osd_overlay → delay_osd 这条 DE 链路上增删寄存器级,
-    //     必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位(画面横向偏移)。
+    // [P0-5 画框] 在 osd_overlay 与 delay_osd 之间插入 osd_box_drawer(1 拍寄存输出),
+    //   故同步由 26 拍改为 27 拍。
+    //   ⚠ 今后只要在 vpp → osd_overlay → osd_box_drawer → delay_osd 这条 DE 链路上
+    //     增删寄存器级, 必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位
+    //     (画面横向偏移)。
     // -------------------------------------------------------------------------
-    reg [25:0] S_vsync_dly;
+    reg [26:0] S_vsync_dly;
     always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
         if (!S_hdmi_rst_n)
-            S_vsync_dly <= 26'd0;
+            S_vsync_dly <= 27'd0;
         else
-            S_vsync_dly <= {S_vsync_dly[24:0], S_hdmi_out_vsync};
+            S_vsync_dly <= {S_vsync_dly[25:0], S_hdmi_out_vsync};
     end
 
     // =========================================================================
@@ -990,7 +1163,13 @@ isp_top u_isp_top (
         .O_tuser         ( S_vpp_out_user   ),
         .O_tvalid        ( S_vpp_out_de     ),
         .O_tready        (                  ),
-        .O_display_mode  ( S_vpp_display_mode )
+        .O_display_mode  ( S_vpp_display_mode ),
+
+        // [以太网改造 第3步] CNN 取数口（raw_rgb_d[21] + 同拍控制信号）
+        .O_raw_tdata     ( S_cnn_raw_tdata    ),
+        .O_raw_tvalid    ( S_cnn_raw_tvalid   ),
+        .O_raw_tuser     ( S_cnn_raw_tuser    ),
+        .O_raw_tlast     ( S_cnn_raw_tlast    )
 
     );
 
@@ -1019,20 +1198,119 @@ isp_top u_isp_top (
         .O_tdata        ( S_osd_overlay_data )
     );
 
+    // ---- ★ [P0-5] 板 B 回来的人脸框 + 坐标数字：×10 画到 1280x720 显示流上 ----
+    //   插在 osd_overlay（Logo/模式字符）之后、delay_osd 之前。
+    //   注意：CNN 取数口是 vpp_top 的 O_raw_*（在更前面），所以 CNN 永远看不到
+    //   自己画的绿框，不存在"自反馈"。
+    //   ★ 本模块除绿框外，还在右上角以黑底白字叠加
+    //     "X:nnnn Y:nnnn W:nnnn H:nnnn"（27 字符 × 16 像素），
+    //     与绿框共用同一份锁存坐标和保持计时器。
+    //   ⚠ 本模块有 1 拍寄存输出 → 下面 S_vsync_dly 的拍数已同步 +1（26 → 27）。
+    wire        face_v_final;
+    wire [7:0]  face_x_final, face_y_final, face_w_final, face_h_final;
+
+    // ★★ 一键自检开关：把下面这行的注释去掉就打开（改完需重新综合+布线+烧写）★★
+    //   打开后：复位起前 6 秒，每帧画一个固定框 (200,200)-(500,500) 并显示
+    //   "X:0200 Y:0200 W:0300 H:0300"，完全绕开网络；6 秒后自动切回真实坐标。
+    //     6 s 内看得到固定框 → 显示通路 OK，问题只在网络/解析
+    //     6 s 内也看不到框   → 显示通路（画框模块或 OSD 链路拍数）有问题
+    // `define OSD_BOX_TEST
+
+`ifdef OSD_BOX_TEST
+    // ---- 临时自检：仅在仿真/测试显式定义 OSD_BOX_TEST 时，复位后前 ~6 秒
+    //   每帧画一个**固定框**（位置 (20,20) 尺寸 30x30 → 显示 (200,200)-(500,500)）。
+    //   用途：把"画框通路本身通不通"和"网络/解析有没有数据"彻底分开。
+    //     看得到固定框  → 画框模块+插入位置都 OK（那没框就是网络/解析那边的问题）
+    //     连固定框都没有 → 插入的画框模块没生效（或 osd 链路拍数不对）
+    //   综合默认不包含这段逻辑。
+    reg [28:0] st_cnt = 29'd0;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) st_cnt <= 29'd0;
+        else if (st_cnt != 29'd449_999_999) st_cnt <= st_cnt + 29'd1;   // 6s @75MHz
+    end
+    wire st_pulse = (st_cnt != 29'd449_999_999) && S_vpp_out_user;   // 每帧起点触发一次
+    assign face_v_final = S_face_valid | st_pulse;
+    assign face_x_final = st_pulse ? 8'd20 : S_face_x;
+    assign face_y_final = st_pulse ? 8'd20 : S_face_y;
+    assign face_w_final = st_pulse ? 8'd30 : S_face_w;
+    assign face_h_final = st_pulse ? 8'd30 : S_face_h;
+`else
+    assign face_v_final = S_face_valid;
+    assign face_x_final = S_face_x;
+    assign face_y_final = S_face_y;
+    assign face_w_final = S_face_w;
+    assign face_h_final = S_face_h;
+`endif
+
+    osd_box_drawer #(
+        .IN_WIDTH     ( 1280 ),
+        .IN_HEIGHT    ( 720  ),
+        .SCALE_FACTOR ( 10   ),          // 128x72 检测空间 → 1280x720 显示空间
+        .LINE_THICK   ( 3    ),
+        .BOX_COLOR    ( 24'h00FF00 ),    // 亮绿
+        .HOLD_FRAMES  ( 30  ),          // ★ 原 15 帧=0.25s 太短：B 一旦漏检几次框就没了。
+                                         //   120 帧 ≈ 2 秒 @60fps，能跨过连续几次漏检；
+                                         //   想更跟手就调小（60=1s），想更"黏"就调大。
+                                         //   模块内的保持计数器是 8 位，>63 不会被截断。
+        .MIN_WH       ( 8'd2 ),          // 宽或高 < 2（128x72 空间）视为"本帧无检测"
+        // ★ [2026-10-25 右下贴边根因] 裁剪策略：
+        //     0 = 旧行为（左上不动、右下硬裁）—— 只要 x1+w>128 格 / y1+h>72 格，
+        //         右/下两条边就必然钉在 1279/719 上，读数变成 W=1280-X、H=720-Y
+        //     1 = 保尺寸/保中心，整框平移进屏幕（默认）—— 不再切掉框的任何一边
+        //   详见 docs/画框右下贴边_根因分析.md
+        .FIT_MODE     ( 2'd1 ),
+        // 如果"框还是太大"，在**不改板 B** 的前提下按这几组参数往回收：
+        //   SANITIZE    : h > 1.5w 时按 1.25w 重算（把"整幅高"的假框收回来）
+        //   SHRINK_LOG2 : 0=不收缩 1=×0.5 2=×0.75 3=×0.875（围绕框中心收，脸不会偏）
+        //   MAX_*_CELLS : 最大框（128x72 检测格）
+        //   2026-10-25 上板实测：板 B 现在会把 h 报到上限（h>=72 格 = 整幅高），
+        //   所以先按 70 格 / 72 格封顶；**板 B 的 w/h 恢复正常后请把 MAX_W_CELLS 调回 128**。
+        .SANITIZE     ( 1'b1 ),
+        .SHRINK_LOG2  ( 2'd0 ),
+        .MAX_W_CELLS  ( 8'd70 ),
+        .MAX_H_CELLS  ( 8'd72 ),
+        // ★ 第 2 行读数（板 B 原始格坐标）默认关：板 A 的 slice / 特殊网(clk,CE)
+        //   已经很紧，多一行读数会加重布局（2026-10-25 18:09 曾因此报
+        //   PHY-9052 / PHY-8077）。要看板 B 原始值请用下面的 READOUT_RAW_CELLS。
+        .SHOW_RAW_LINE( 1'b0 ),
+        // ★ 读数内容：0 = HDMI 屏幕上的真实像素坐标（框左上角 + 宽高，0~1279 / 0~719）
+        //             1 = 板 B 的 128x72 原始格坐标（0~255，调试用，零额外逻辑）
+        //   2026-10-25 诊断期临时用 1 —— 看清板 B 到底报了多少格之后请改回 0
+        .READOUT_RAW_CELLS ( 1 )
+    ) u_box_drawer (
+        .I_clk        ( S_hdmi_pixel_clk  ),
+        .I_rst_n      ( S_hdmi_rst_n      ),
+        .I_tvalid     ( S_osd_overlay_de   ),
+        .I_tuser      ( S_osd_overlay_user ),
+        .I_tlast      ( S_osd_overlay_last ),
+        .I_tdata      ( S_osd_overlay_data ),
+        .I_face_valid ( face_v_final     ),
+        .I_face_x     ( face_x_final     ),
+        .I_face_y     ( face_y_final     ),
+        .I_face_w     ( face_w_final     ),
+        .I_face_h     ( face_h_final     ),
+        .O_tvalid     ( S_box_de          ),
+        .O_tuser      ( S_box_user        ),
+        .O_tlast      ( S_box_last        ),
+        .O_tdata      ( S_box_data        )
+    );
+
+    // ---- ★ [延迟可视化] OSD 显示的是“当前显示页”的真实帧龄与毫秒数 ----
+    //   u_frame_delay_tracker 已在像素域给出稳定结果；页标签无效时 delay_valid=0，
+    //   数字区域自动隐藏（不显示伪造值）。
     delay_osd #(
         .IMG_WIDTH        ( 1280 ),
-        .IMG_HEIGHT       ( 720  ),
-        .CLK_FREQ_HZ      ( 75000000 )
+        .IMG_HEIGHT       ( 720  )
     ) u_delay_osd (
         .I_clk             ( S_hdmi_pixel_clk ),
         .I_rst_n           ( S_hdmi_rst_n     ),
-        .I_cap_clk         ( S_csi_rx_clk     ),
-        .I_cap_rst_n       ( S_rst_n          ),
-        .I_cap_frame_start ( S_csi_frame_start ),
-        .I_tuser           ( S_osd_overlay_user ),
-        .I_tlast           ( S_osd_overlay_last ),
-        .I_tvalid          ( S_osd_overlay_de   ),
-        .I_tdata           ( S_osd_overlay_data ),
+        .I_delay_valid     ( S_frame_delay_valid  ),
+        .I_delay_frames    ( S_frame_delay_frames ),
+        .I_delay_ms        ( S_frame_delay_ms     ),
+        .I_tuser           ( S_box_user ),
+        .I_tlast           ( S_box_last ),
+        .I_tvalid          ( S_box_de   ),
+        .I_tdata           ( S_box_data ),
         .O_tuser           ( S_delay_osd_user ),
         .O_tlast           ( S_delay_osd_last ),
         .O_tvalid          ( S_delay_osd_de   ),
@@ -1048,7 +1326,7 @@ isp_top u_isp_top (
         .O_edid_read_valid  (                   ),
         .O_edid_read_data   (                   ),
         .I_video_rgb_enable ( 1'b1              ),
-        .I_video_in_vs      ( S_vsync_dly[25]   ), // 与 OSD 输出 de 同相位 (延迟 26 拍, 见上方说明)
+        .I_video_in_vs      ( S_vsync_dly[26]   ), // 与 OSD 输出 de 同相位 (延迟 27 拍, 见上方说明)
         .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
         .I_video_in_user    ( 1'b0              ),
         .I_video_in_valid   ( 1'b0              ),
