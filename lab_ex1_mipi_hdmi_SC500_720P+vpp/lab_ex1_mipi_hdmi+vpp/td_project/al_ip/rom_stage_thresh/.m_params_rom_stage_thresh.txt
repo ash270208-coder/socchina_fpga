@@ -1,8 +1,0 @@
-DATA_WIDTH_A; 1; 16
-ADDR_WIDTH_A; 1; 5
-DATA_DEPTH_A; 1; 32
-DATA_WIDTH_B; 0; 16
-ADDR_WIDTH_B; 0; 5
-DATA_DEPTH_B; 0; 32
-INIT_FILE; 1; "../stage_threshold.dath"
-FILL_ALL; 1; "NONE"

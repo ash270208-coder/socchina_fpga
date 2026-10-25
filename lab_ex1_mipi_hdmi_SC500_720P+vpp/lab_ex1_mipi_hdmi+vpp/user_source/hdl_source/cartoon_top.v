@@ -43,20 +43,23 @@ module cartoon_top #(
     // =========================================================================
 
     // =========================================================================
-    // 1. RGB888 转 YCbCr444 (提取 Y 灰度 + Cb/Cr)
-    //    流水线延迟：3 拍 (cycle 3 输出)
+    // 1. RGB888 转 Y888（只取亮度 Y）
+    //    流水线延迟：3 拍 (cycle 3 输出)，与原来的 RGB888_YCbCr444 完全一致。
+    //
+    //    【为什么换成 RGB888_Y888】原来这里用 RGB888_YCbCr444，会算 Y+Cb+Cr
+    //    共 9 个乘法器，但本模块只用 Y（Cb/Cr 接出来从没被用到）。换成只算 Y
+    //    的通用模块后：口径一致（全工程三处取亮度都用同一个模块、同一组系数）、
+    //    端口干净、少 6 个乘法器的布线面积。Y 的定点完全没变，所以卡通观感不变。
     // =========================================================================
     wire        tlast_ycbcr;
     wire        tuser_ycbcr;
     wire        tvalid_ycbcr;
     wire [7:0]  y_tdata;
-    wire [7:0]  cb_tdata;
-    wire [7:0]  cr_tdata;
 
-    RGB888_YCbCr444 #(
+    RGB888_Y888 #(
         .IMG_WIDTH (IMG_WIDTH),
         .IMG_HEIGHT(IMG_HEIGHT)
-    ) u_RGB888_YCbCr444 (
+    ) u_rgb2y (
         .I_clk          (I_clk),
         .I_rst_n        (I_rst_n),
         .I_tlast        (I_tlast),
@@ -69,8 +72,6 @@ module cartoon_top #(
         .O_tlast        (tlast_ycbcr),
         .O_tuser        (tuser_ycbcr),
         .O_y_tdata      (y_tdata),
-        .O_cb_tdata     (cb_tdata),
-        .O_cr_tdata     (cr_tdata),
         .O_tvalid       (tvalid_ycbcr),
         .O_tready       ()
     );

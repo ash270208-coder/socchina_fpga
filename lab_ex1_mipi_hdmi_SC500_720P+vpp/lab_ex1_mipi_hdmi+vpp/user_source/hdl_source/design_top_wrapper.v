@@ -131,6 +131,15 @@ module design_top_wrapper (
     wire        S_video_in_wr_busy; 
     wire[1:0]   S_video_out_rp;     
 
+    // ---- ★ [延迟可视化] 真实帧延迟：CSI 采集帧首 / 实际写页 / 实际显示页 ----
+    wire        S_frame_write_start;
+    wire[1:0]   S_frame_write_page;
+    wire        S_video_out_frame_start;
+    wire[1:0]   S_video_out_frame_page;
+    wire        S_frame_delay_valid;
+    wire[3:0]   S_frame_delay_frames;
+    wire[9:0]   S_frame_delay_ms;
+
     wire        S_ddr_user_wr_en;       
     wire        S_ddr_user_rd_en;       
     wire[24:0]  S_ddr_user_addr;        
@@ -905,6 +914,8 @@ isp_top u_isp_top (
         .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
         .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
         .O_video_out_rp       ( S_video_out_rp        ),
+        .O_frame_write_start  ( S_frame_write_start   ),
+        .O_frame_write_page   ( S_frame_write_page    ),
 
         .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
         .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
@@ -933,6 +944,8 @@ isp_top u_isp_top (
         .O_video_out_rd_busy ( S_video_out_rd_busy  ),
         .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
         .I_video_out_rp      ( S_video_out_rp       ),
+        .O_video_frame_start ( S_video_out_frame_start ),
+        .O_video_frame_page  ( S_video_out_frame_page  ),
  
         .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
         .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
@@ -946,6 +959,32 @@ isp_top u_isp_top (
         .O_vdieo_data        ( S_video_rd_data      )
     );
 
+
+
+    // ---- ★ [延迟可视化] 采集 → HDMI 显示的真实帧延迟跟踪 ----
+    //   CSI 帧首打时间戳/帧序号 → 该帧写入 DDR 时绑定到“实际写入页”
+    //   → 显示帧首用“实际读取页”取模板标签 → 32 位模减 → 请求/应答握手送到像素域。
+    //   ⚠ DDR_CLK_HZ 必须与实际 DDR 用户时钟一致：本工程 u_ph1p35_324_ddr_wrapper 的
+    //     usr_clk 约束周期为 15.000ns = 66.667MHz（见 camera_to_dsi_display_Runs/phy_1/
+    //     final_timing.rpt 的 Clock Summary，clk1）。DDR 时钟配置改动时要同步改这里。
+    frame_delay_tracker #(
+        .DDR_CLK_HZ(66666667)
+    ) u_frame_delay_tracker (
+        .I_ddr_clk             ( S_ddr_clk                 ),
+        .I_ddr_rst_n           ( S_rst_n                   ),
+        .I_csi_clk             ( S_csi_rx_clk              ),
+        .I_csi_rst_n           ( S_rst_n                   ),
+        .I_csi_frame_start     ( S_csi_frame_start         ),
+        .I_write_frame_start   ( S_frame_write_start       ),
+        .I_write_page          ( S_frame_write_page        ),
+        .I_display_frame_start ( S_video_out_frame_start   ),
+        .I_display_page        ( S_video_out_frame_page    ),
+        .I_pixel_clk           ( S_hdmi_pixel_clk          ),
+        .I_pixel_rst_n         ( S_hdmi_rst_n              ),
+        .O_delay_valid         ( S_frame_delay_valid       ),
+        .O_delay_frames        ( S_frame_delay_frames      ),
+        .O_delay_ms            ( S_frame_delay_ms          )
+    );
 
 
     mc_to_user_interface u_mc_to_user_interface(
@@ -1209,14 +1248,35 @@ isp_top u_isp_top (
         .SCALE_FACTOR ( 10   ),          // 128x72 检测空间 → 1280x720 显示空间
         .LINE_THICK   ( 3    ),
         .BOX_COLOR    ( 24'h00FF00 ),    // 亮绿
-        .HOLD_FRAMES  ( 120  ),          // ★ 原 15 帧=0.25s 太短：B 一旦漏检几次框就没了。
+        .HOLD_FRAMES  ( 30  ),          // ★ 原 15 帧=0.25s 太短：B 一旦漏检几次框就没了。
                                          //   120 帧 ≈ 2 秒 @60fps，能跨过连续几次漏检；
                                          //   想更跟手就调小（60=1s），想更"黏"就调大。
                                          //   模块内的保持计数器是 8 位，>63 不会被截断。
         .MIN_WH       ( 8'd2 ),          // 宽或高 < 2（128x72 空间）视为"本帧无检测"
+        // ★ [2026-10-25 右下贴边根因] 裁剪策略：
+        //     0 = 旧行为（左上不动、右下硬裁）—— 只要 x1+w>128 格 / y1+h>72 格，
+        //         右/下两条边就必然钉在 1279/719 上，读数变成 W=1280-X、H=720-Y
+        //     1 = 保尺寸/保中心，整框平移进屏幕（默认）—— 不再切掉框的任何一边
+        //   详见 docs/画框右下贴边_根因分析.md
+        .FIT_MODE     ( 2'd1 ),
+        // 如果"框还是太大"，在**不改板 B** 的前提下按这几组参数往回收：
+        //   SANITIZE    : h > 1.5w 时按 1.25w 重算（把"整幅高"的假框收回来）
+        //   SHRINK_LOG2 : 0=不收缩 1=×0.5 2=×0.75 3=×0.875（围绕框中心收，脸不会偏）
+        //   MAX_*_CELLS : 最大框（128x72 检测格）
+        //   2026-10-25 上板实测：板 B 现在会把 h 报到上限（h>=72 格 = 整幅高），
+        //   所以先按 70 格 / 72 格封顶；**板 B 的 w/h 恢复正常后请把 MAX_W_CELLS 调回 128**。
+        .SANITIZE     ( 1'b1 ),
+        .SHRINK_LOG2  ( 2'd0 ),
+        .MAX_W_CELLS  ( 8'd70 ),
+        .MAX_H_CELLS  ( 8'd72 ),
+        // ★ 第 2 行读数（板 B 原始格坐标）默认关：板 A 的 slice / 特殊网(clk,CE)
+        //   已经很紧，多一行读数会加重布局（2026-10-25 18:09 曾因此报
+        //   PHY-9052 / PHY-8077）。要看板 B 原始值请用下面的 READOUT_RAW_CELLS。
+        .SHOW_RAW_LINE( 1'b0 ),
         // ★ 读数内容：0 = HDMI 屏幕上的真实像素坐标（框左上角 + 宽高，0~1279 / 0~719）
-        //             1 = 板 B 的 128x72 原始格坐标（调试用）
-        .READOUT_RAW_CELLS ( 0 )
+        //             1 = 板 B 的 128x72 原始格坐标（0~255，调试用，零额外逻辑）
+        //   2026-10-25 诊断期临时用 1 —— 看清板 B 到底报了多少格之后请改回 0
+        .READOUT_RAW_CELLS ( 1 )
     ) u_box_drawer (
         .I_clk        ( S_hdmi_pixel_clk  ),
         .I_rst_n      ( S_hdmi_rst_n      ),
@@ -1235,16 +1295,18 @@ isp_top u_isp_top (
         .O_tdata      ( S_box_data        )
     );
 
+    // ---- ★ [延迟可视化] OSD 显示的是“当前显示页”的真实帧龄与毫秒数 ----
+    //   u_frame_delay_tracker 已在像素域给出稳定结果；页标签无效时 delay_valid=0，
+    //   数字区域自动隐藏（不显示伪造值）。
     delay_osd #(
         .IMG_WIDTH        ( 1280 ),
-        .IMG_HEIGHT       ( 720  ),
-        .CLK_FREQ_HZ      ( 75000000 )
+        .IMG_HEIGHT       ( 720  )
     ) u_delay_osd (
         .I_clk             ( S_hdmi_pixel_clk ),
         .I_rst_n           ( S_hdmi_rst_n     ),
-        .I_cap_clk         ( S_csi_rx_clk     ),
-        .I_cap_rst_n       ( S_rst_n          ),
-        .I_cap_frame_start ( S_csi_frame_start ),
+        .I_delay_valid     ( S_frame_delay_valid  ),
+        .I_delay_frames    ( S_frame_delay_frames ),
+        .I_delay_ms        ( S_frame_delay_ms     ),
         .I_tuser           ( S_box_user ),
         .I_tlast           ( S_box_last ),
         .I_tvalid          ( S_box_de   ),

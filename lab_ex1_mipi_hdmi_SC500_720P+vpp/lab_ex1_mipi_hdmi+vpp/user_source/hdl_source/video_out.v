@@ -8,6 +8,9 @@ module video_out (
     output wire       O_video_out_rd_busy,  
     input wire        I_video_in_wr_busy,   
     input wire[1:0]   I_video_out_rp,
+    // [延迟可视化] 显示帧首事件 + 本次显示实际读取的 DDR 物理页（DDR 域）
+    output wire       O_video_frame_start,
+    output wire[1:0]  O_video_frame_page,
     output wire       O_ddr_user_rd_en,
     output reg[24:0]  O_ddr_user_addr,
     input wire        I_ddr_user_ready,
@@ -61,6 +64,10 @@ module video_out (
     end
 
     assign S_video_frame_start = ~S_video_vsync_3d & S_video_vsync_2d;
+
+    // [延迟可视化] 延迟不再按固定页号估算，而是用本次显示真正读取的物理页
+    assign O_video_frame_start = S_video_frame_start;
+    assign O_video_frame_page = I_video_out_rp;
 
 
     always @(posedge I_ddr_clk or negedge I_rst_n) begin

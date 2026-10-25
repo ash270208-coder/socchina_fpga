@@ -1,0 +1,13 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\osd_box_drawer.v" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\osd_box_drawer.v"
+index a8501a1..238355e 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\osd_box_drawer.v"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\osd_box_drawer.v"
+@@ -30,7 +30,7 @@ module osd_box_drawer #(
+     parameter SCALE_FACTOR = 10,
+     parameter LINE_THICK   = 3,
+     parameter BOX_COLOR    = 24'h00FF00,
+-    parameter HOLD_FRAMES  = 15,
++    parameter HOLD_FRAMES  = 30,
+     parameter [7:0] MIN_WH = 8'd2,
+     // 右上角 27 格读数显示什么：
+     //   0 = **HDMI 屏幕上的真实像素坐标**（框左上角 x1/y1 与宽高 w/h，范围 0~1279 / 0~719）

@@ -71,11 +71,16 @@ module rx_result_parser(
     reg [7:0]  score_hi, score_lo;
     reg        committed;
 
-    // rx_len is a hint only. 10..150 covers the legacy/debug formats and board
-    // B; anything else (0, a header-inclusive length, garbage) falls back to the
-    // full board-B window instead of dropping the packet.
-    wire        len_plausible = (rx_len >= 16'd10) && (rx_len <= 16'd150);
-    wire [7:0]  hint_end      = len_plausible ? (rx_len[7:0] - 8'd1) : IDX_LAST;
+     // 2026-10-23 FIX: ignore rx_len completely, always use the fixed 149-byte
+    // window. Previously end_idx came from rx_len; if board A's
+    // app_rx_data_length was ever anything other than 149 (10, 14, a stale
+    // value, ...) the parser would hit at_end in the MIDDLE of the packet,
+    // re-arm, and then scan the remaining image bytes as if they were a new
+    // packet. Any AA 55 inside image data would re-lock it and latch pixel
+    // values as x1/y1/w/h -- which shows up as a box with the right position
+    // but an absurd size. With a fixed window the sequence is deterministic:
+    // AA 55 -> latch bytes 2..8 -> commit at byte 148.
+    wire [7:0]  hint_end      = IDX_LAST;
 
     wire        term_ok   = (rx_d == 8'h0D) && !committed &&
                             (vld_byte == 8'h01) &&

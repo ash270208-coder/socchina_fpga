@@ -1,0 +1,21 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\video_in.v" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\video_in.v"
+index 3e421a1..3c6373f 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\video_in.v"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\video_in.v"
+@@ -15,6 +15,7 @@ module video_in (
+     input wire         I_video_out_rd_busy,
+     output wire        O_video_in_wr_busy,
+     output reg[1:0]    O_video_out_rp,     ///读指针
++    // [延迟可视化] 本帧写入流程开始 + 本次实际使用的 DDR 物理写页（DDR 域）
+     output wire        O_frame_write_start,
+     output wire[1:0]   O_frame_write_page,
+ 
+@@ -102,6 +103,8 @@ module video_in (
+     end
+ 
+     assign S_frame_start = ~S_camera_frame_start_extend_3d & S_camera_frame_start_extend_2d;
++
++    // [延迟可视化] 直接用原有写页轮转和帧首逻辑，标签绑定的是“实际写入页”
+     assign O_frame_write_start = S_frame_start;
+     assign O_frame_write_page = S_video_in_wp;
+ 

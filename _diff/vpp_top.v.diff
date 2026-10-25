@@ -1,0 +1,286 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\vpp_top.v" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\vpp_top.v"
+index e1b2c8c..7f15dc0 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\vpp_top.v"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\vpp_top.v"
+@@ -82,63 +82,54 @@ module vpp_top #(
+     end
+ 
+     // =========================================================================
+-    // 2. RGB 转 YCbCr (提取 Y 灰度)
++    // 2. 伽马校正（全工程只做这一次；纯组合逻辑，0 拍延迟）
++    //    传感器/ISP 出来的是线性光，显示器按 sRGB(γ≈2.2) 解读输入，
++    //    这里补上 out = round(255*(in/255)^(1/2.2))，并扣掉黑电平。
++    //
++    //    为什么放在最前面（而不是每档各做一次）：
++    //      gamma 无记忆、0 拍，做一次之后所有档都从"显示域 RGB"出发，
++    //      后面用纯寄存器延迟链取不同拍数即可，不需要第二个 gamma 实例。
++    //      【L1】直方图档也因此能在显示域做均衡（详见 docs/HE_COLOR.md）。
+     // =========================================================================
+-    wire        tlast_ycbcr;
+-    wire        tuser_ycbcr;
+-    wire        tvalid_ycbcr;
+-    wire [7:0]  y_tdata;
+-    wire [7:0]  cb_tdata;
+-    wire [7:0]  cr_tdata;      
+-
+-    RGB888_YCbCr444 #(
+-        .IMG_WIDTH (IMG_WIDTH),
+-        .IMG_HEIGHT(IMG_HEIGHT)
+-    ) u_RGB888_YCbCr444 (
+-        .I_clk          (I_clk),        
+-        .I_rst_n        (I_rst_n),      
+-        .I_tlast        (I_tlast),      
+-        .I_tuser        (I_tuser),      
+-        .I_red_tdata    (I_tdata[23:16]),  
+-        .I_green_tdata  (I_tdata[15:8]),
+-        .I_blue_tdata   (I_tdata[7:0]), 
+-        .I_tvalid       (I_tvalid),     
+-        .I_tready       (I_tready),     
+-        .O_tlast        (tlast_ycbcr),      
+-        .O_tuser        (tuser_ycbcr),      
+-        .O_y_tdata      (y_tdata),
+-        .O_cb_tdata     (cb_tdata),   
+-        .O_cr_tdata     (cr_tdata),   
+-        .O_tvalid       (tvalid_ycbcr),
+-        .O_tready       ()
++    wire [7:0] gamma_r, gamma_g, gamma_b;
++    gamma_lut u_gamma_lut (
++        .I_r    (I_tdata[23:16]),
++        .I_g    (I_tdata[15: 8]),
++        .I_b    (I_tdata[ 7: 0]),
++        .O_r    (gamma_r),
++        .O_g    (gamma_g),
++        .O_b    (gamma_b)
+     );
+ 
+     // =========================================================================
+-    // 3. 直方图均衡化模块
++    // 3. 彩色直方图均衡（特征模块，固定 9 拍）
++    //    形态与 cartoon_top / Sobel_edge_detection_top 对齐：吃 RGB、吐 RGB、
++    //    固定拍数、自包含，可以单独仿真/复用。
++    //      内部 = RGB888_Y888(3) + histogram_equ(3) + hue_scale(3)
++    //    颜色(色相+饱和度)严格不变，只有亮度按 HE 曲线走。
++    //    详见 hist_eq_color_top.v 与 docs/HE_COLOR.md。
+     // =========================================================================
+-    wire        tlast_hisequ;
+-    wire        tuser_hisequ;
+-    wire        tvalid_hisequ;
+-    wire [7:0]  y_equ_tdata;
++    wire [23:0] he_rgb;          // 直方图均衡输出(仍是 24bit RGB)
+ 
+-    histogram_equ #(
++    hist_eq_color_top #(
+         .IMG_WIDTH (IMG_WIDTH),
+         .IMG_HEIGHT(IMG_HEIGHT)
+-    ) u_histogram_equ (
+-        .I_clk              (I_clk),       
+-        .I_rst_n            (I_rst_n),     
+-        .I_tlast            (tlast_ycbcr),     
+-        .I_tuser            (tuser_ycbcr),     
+-        .I_grey_tdata       (y_tdata),
+-        .I_tvalid           (tvalid_ycbcr),    
+-        .O_tlast            (tlast_hisequ),     
+-        .O_tuser            (tuser_hisequ),     
+-        .O_grey_tdata       (y_equ_tdata),
+-        .O_tvalid           (tvalid_hisequ)     
++    ) u_hist_eq_color (
++        .I_clk    (I_clk),
++        .I_rst_n  (I_rst_n),
++        .I_tlast  (I_tlast),
++        .I_tuser  (I_tuser),
++        .I_rgb    ({gamma_r, gamma_g, gamma_b}),
++        .I_tvalid (I_tvalid),
++        // 控制信号不需要:hue_scale 之后 vpp 统一用 sobel_*_d6 那套(同为 22 拍)
++        .O_tlast  (),
++        .O_tuser  (),
++        .O_tvalid (),
++        .O_rgb    (he_rgb)
+     );
+ 
+     // =========================================================================
+-    // 4. Sobel 边缘检测模块 (接 Y 灰度分量)
++    // 4. Sobel 边缘检测（特征模块：吃 RGB、内部取 Y，固定 16 拍）
+     // =========================================================================
+     wire        tlast_sobel;
+     wire        tuser_sobel;
+@@ -152,10 +143,12 @@ module vpp_top #(
+     ) u_Sobel_edge (
+         .I_clk          (I_clk),
+         .I_rst_n        (I_rst_n),
+-        .I_tlast        (tlast_ycbcr),
+-        .I_tuser        (tuser_ycbcr),
+-        .I_grey_tdata   (y_tdata),
+-        .I_tvalid       (tvalid_ycbcr),
++        .I_tlast        (I_tlast),
++        .I_tuser        (I_tuser),
++        .I_red_tdata    (I_tdata[23:16]),
++        .I_green_tdata  (I_tdata[15: 8]),
++        .I_blue_tdata   (I_tdata[ 7: 0]),
++        .I_tvalid       (I_tvalid),
+         .O_tlast        (tlast_sobel),
+         .O_tuser        (tuser_sobel),
+         .O_grey_tdata   (sobel_tdata),
+@@ -163,31 +156,21 @@ module vpp_top #(
+     );
+ 
+     // =========================================================================
+-    // 5. 伽马校正 (全工程只做这一次) + 各模式数据统一对齐到 22 拍延迟
++    // 5. 各模式数据统一对齐到 22 拍延迟（伽马已在 第 2 节统一做过一次）
+     //    (卡通用了 8 拍双边滤波, 整条对齐由 16 拍放宽到 22 拍):
+     //    原图:   伽马后延迟 22 拍                     -> raw_rgb_d[21]
+     //    卡通:   伽马后延迟  1 拍                     -> raw_rgb_d[0]
+     //            (卡通内部固定 21 拍, 1+21 = 22, 与其它档严格同拍)
+     //    灰度:   由伽马后的 RGB 现算 (R+2G+B)/4        -> gray_gam (第 22 拍)
+-    //    直方图: 彩色转换链路见第 6 节 (Y_eq+Cb/Cr -> RGB, 共 22 拍)
++    //    直方图: hist_eq_color_top(9) + chroma_nr(3) + 补 10 拍 = 22 拍
+     //    Sobel:  sobel_tdata 与 tvalid_sobel 补 6 拍 -> 第 22 拍
+     //
+-    //    【只用一个伽马】伽马是无记忆的组合逻辑(0 拍), 所以放在最前面做一次,
+-    //    后面用两条纯寄存器延迟链分别取第 1 拍(卡通)与第 22 拍(原图)即可,
+-    //    不需要第二个伽马实例。
++    //    【只有一个伽马实例】它在 第 2 节, 纯组合(0 拍), 从最前面做一次; 后面用两条
++    //    纯寄存器延迟链分别取第 1 拍(卡通)与第 22 拍(原图)即可, 不需要第二个实例。
++    //    (L1 之后连直方图档也用它, 所以 6b 节那个 he 专用 gamma 已删除)
+     //    注意: raw_rgb_d 里装的已经是"伽马校正后"的数据, 名字沿用原来的,
+     //          不要再把它当线性原图使用。
+     // =========================================================================
+-    wire [7:0] gamma_r, gamma_g, gamma_b;
+-    gamma_lut u_gamma_lut (
+-        .I_r (I_tdata[23:16]),
+-        .I_g (I_tdata[15: 8]),
+-        .I_b (I_tdata[ 7: 0]),
+-        .O_r (gamma_r),
+-        .O_g (gamma_g),
+-        .O_b (gamma_b)
+-    );
+-
+     reg [23:0] raw_rgb_d [0:21];
+     integer i;
+ 
+@@ -206,112 +189,34 @@ module vpp_top #(
+     end
+ 
+     // =========================================================================
+-    // 6. 直方图均衡彩色输出链路 (均衡 Y + 原色度, 恢复彩色):
+-    //    y_equ(6拍) 与 Cb/Cr(3拍, 补 3 拍 = 6拍) 对齐 -> YCbCr444_RGB888(3拍, =9拍)
+-    //    -> gamma(0拍) -> chroma_nr(3拍) -> 再补 10 拍 = 22 拍, 与 Sobel(补6拍后) 对齐
+-    //    (直方图内部已加对比度限制/裁剪, 见 histogram_equ.v 的 CLIP_DIV 参数)
++    // 6. 直方图档：色度降噪 + 补拍对齐
++    //    hist_eq_color_top(9) + chroma_nr(3) = 12 拍，再补 10 拍 = 22 拍。
++    //    Y/HE/保色缩放都已经收进第 3 节那个特征模块里了，这里只剩"降噪 + 对齐"。
+     // =========================================================================
+-    wire [7:0]  he_r_tdata;
+-    wire [7:0]  he_g_tdata;
+-    wire [7:0]  he_b_tdata;
+-
+-    // 模式 2 专用: gamma(0 拍) + 色度降噪(3 拍)，例化见 6b 节
+-    wire [7:0]  he_gamma_r, he_gamma_g, he_gamma_b;
+-    wire [23:0] he_gamma_rgb = {he_gamma_r, he_gamma_g, he_gamma_b};
+     wire [23:0] he_nr_rgb;
+-
+-    reg [7:0]   cb_d [0:2];
+-    reg [7:0]   cr_d [0:2];
+-    reg         he_tvalid_d [0:2];
+-    reg         he_tlast_d  [0:2];
+-    reg         he_tuser_d  [0:2];
+-    // he_rgb_d 补 10 拍: 9(转换) + 3(chroma_nr) + 10 = 22 拍
+     reg [23:0]  he_rgb_d [0:9];
+ 
+     always @(posedge I_clk or negedge I_rst_n) begin
+         if (!I_rst_n) begin
+-            for (i = 0; i < 3; i = i + 1) begin
+-                cb_d[i]        <= 8'd0;
+-                cr_d[i]        <= 8'd0;
+-                he_tvalid_d[i] <= 1'b0;
+-                he_tlast_d[i]  <= 1'b0;
+-                he_tuser_d[i]  <= 1'b0;
+-            end
+             for (i = 0; i < 10; i = i + 1)
+                 he_rgb_d[i] <= 24'd0;
+         end
+         else begin
+-            // Cb/Cr 及控制信号补 3 拍, 与 y_equ (6 拍) 对齐
+-            cb_d[0]        <= cb_tdata;
+-            cr_d[0]        <= cr_tdata;
+-            he_tvalid_d[0] <= tvalid_ycbcr;
+-            he_tlast_d[0]  <= tlast_ycbcr;
+-            he_tuser_d[0]  <= tuser_ycbcr;
+-            for (i = 0; i < 2; i = i + 1) begin
+-                cb_d[i+1]        <= cb_d[i];
+-                cr_d[i+1]        <= cr_d[i];
+-                he_tvalid_d[i+1] <= he_tvalid_d[i];
+-                he_tlast_d[i+1]  <= he_tlast_d[i];
+-                he_tuser_d[i+1]  <= he_tuser_d[i];
+-            end
+-
+-            // 转换后的 RGB (9 拍) -> 模式2 专用 gamma(0 拍) -> chroma_nr(3 拍)
+-            // = 12 拍, 再补 10 拍 -> 22 拍, 与 Sobel 路径对齐
+             he_rgb_d[0] <= he_nr_rgb;
+             for (i = 0; i < 9; i = i + 1)
+                 he_rgb_d[i+1] <= he_rgb_d[i];
+         end
+     end
+ 
+-    YCbCr444_RGB888 #(
+-        .IMG_WIDTH (IMG_WIDTH),
+-        .IMG_HEIGHT(IMG_HEIGHT)
+-    ) u_YCbCr444_RGB888 (
+-        .I_clk         (I_clk),
+-        .I_rst_n       (I_rst_n),
+-        .I_tlast       (he_tlast_d[2]),
+-        .I_tuser       (he_tuser_d[2]),
+-        .I_y_tdata     (y_equ_tdata),
+-        .I_cb_tdata    (cb_d[2]),
+-        .I_cr_tdata    (cr_d[2]),
+-        .I_tvalid      (he_tvalid_d[2]),
+-        .I_tready      (1'b1),
+-        .O_tlast       (),
+-        .O_tuser       (),
+-        .O_red_tdata   (he_r_tdata),
+-        .O_green_tdata (he_g_tdata),
+-        .O_blue_tdata  (he_b_tdata),
+-        .O_tvalid      (),
+-        .O_tready      ()
+-    );
+-
+-    // =========================================================================
+-    // 6b. 模式 2 的色调域统一 + 色度降噪 (A+E+G 里的 E、G)
+-    //     原先模式 2 是"均衡后的 Y + 原始 Cb/Cr"直接转 RGB 输出，两个问题：
+-    //       ① 别的档都过 gamma_lut（扣黑电平 + γ2.2），只有它不过 -> 色调域不一致；
+-    //       ② 它的 Cb/Cr 没过色度降噪 -> 彩色噪点直接可见。
+-    //     现在补上：gamma_lut 纯组合(0 拍)，chroma_nr 内部 3 拍，
+-    //     所以整条链路仍然落在第 22 拍（见上面 he_rgb_d 的说明）。
+-    //     (信号声明在 6 节开头)
+-    // =========================================================================
+-    gamma_lut u_gamma_lut_he (
+-        .I_r (he_r_tdata),
+-        .I_g (he_g_tdata),
+-        .I_b (he_b_tdata),
+-        .O_r (he_gamma_r),
+-        .O_g (he_gamma_g),
+-        .O_b (he_gamma_b)
+-    );
+-
+     chroma_nr u_chroma_nr_he (
+         .I_clk   (I_clk),
+         .I_rst_n (I_rst_n),
+-        .I_rgb   (he_gamma_rgb),
++        .I_rgb   (he_rgb),
+         .O_rgb   (he_nr_rgb)
+     );
+ 
+     // =========================================================================
+-    // 6c. 卡通化图像风格化 (Cartoon Top)
++    // 6c. 卡通化图像风格化（特征模块：吃 RGB、内部取 Y，固定 21 拍）
+     //
+     // 【时序对齐 —— 关键，别乱改】
+     //   整条 vpp 流水线的输出必须落在第 22 拍:
+@@ -446,7 +351,7 @@ module vpp_top #(
+                 mux_tuser  = sobel_u_d6;
+                 mux_tvalid = sobel_v_d6;
+             end
+-            3'b010: begin // 模式 2: 直方图均衡化 (已过 gamma + 色度降噪, 22 拍对齐)
++            3'b010: begin // 模式 2: 直方图均衡 (显示域 HE + RGB 保色缩放, 22 拍对齐)
+                 mux_tdata  = he_rgb_d[9];
+                 mux_tlast  = sobel_l_d6;
+                 mux_tuser  = sobel_u_d6;

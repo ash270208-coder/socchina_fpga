@@ -1,0 +1,13 @@
+# tools/wb_tune -- ModelSim / Python 临时产物
+msim/
+_lib*/
+modelsim.ini
+transcript
+_info
+_vmake
+dut_out.hex
+__pycache__/
+*.wlf
+
+# vectors/*.hex 与 gains.npy 是生成物，但要留着方便复现 TB，故不忽略
+# out/*.png 是文档引用的对比图，必须提交

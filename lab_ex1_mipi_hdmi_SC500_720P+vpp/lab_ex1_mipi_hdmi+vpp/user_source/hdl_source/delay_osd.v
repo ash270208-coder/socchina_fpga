@@ -14,23 +14,19 @@
 module delay_osd #(
     parameter IMG_WIDTH        = 1024,
     parameter IMG_HEIGHT       = 600,
-    parameter [3:0] LAG_FRAMES = 4'd2,
-    parameter integer LAG_SHIFT = 1,
     parameter [11:0] DIGIT_X   = 12'd8,
     parameter [11:0] DIGIT_Y0  = 12'd196,
     parameter [11:0] DIGIT_Y1  = 12'd216,
     // 字符步进取 17 像素：16 像素字模 + 1 像素间隔，约为原 34 像素
     // 排版步进的一半；左端 DIGIT_X 保持不变。
     parameter [11:0] PITCH_X   = 12'd17,
-    parameter integer CLK_FREQ_HZ = 52000000,
-    parameter [15:0] DEFAULT_FRAME_MS = 16'd33,
     parameter [23:0] COLOR_DLY = 24'hFFF200
 )(
     input  wire        I_clk,
     input  wire        I_rst_n,
-    input  wire        I_cap_clk,
-    input  wire        I_cap_rst_n,
-    input  wire        I_cap_frame_start,
+    input  wire        I_delay_valid,
+    input  wire [3:0]  I_delay_frames,
+    input  wire [9:0]  I_delay_ms,
     input  wire        I_tuser,
     input  wire        I_tlast,
     input  wire        I_tvalid,
@@ -46,85 +42,7 @@ module delay_osd #(
     localparam [11:0] DIGIT_W  = 12'd16;
     localparam [11:0] DIGIT_H  = 12'd16;
     localparam [11:0] FRAME_W  = 12'd16;
-    localparam [3:0]  LAG_DISP   = (LAG_FRAMES > 4'd9) ? 4'd9 : LAG_FRAMES;
-    localparam [15:0] MS_DIV_MINUS1 = CLK_FREQ_HZ / 1000 - 1;
-
-    //---------------------------------------------------------
-    // 跨时钟域：采集帧首 → 显示域
-    //---------------------------------------------------------
-    reg cap_start_d, cap_toggle;
-    always @(posedge I_cap_clk or negedge I_cap_rst_n) begin
-        if (!I_cap_rst_n) begin
-            cap_start_d <= 1'b0;
-            cap_toggle  <= 1'b0;
-        end
-        else begin
-            cap_start_d <= I_cap_frame_start;
-            if (I_cap_frame_start & ~cap_start_d)
-                cap_toggle <= ~cap_toggle;
-        end
-    end
-    reg cap_sync1, cap_sync2, cap_sync3;
-    always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            cap_sync1 <= 1'b0; cap_sync2 <= 1'b0; cap_sync3 <= 1'b0;
-        end
-        else begin
-            cap_sync1 <= cap_toggle;
-            cap_sync2 <= cap_sync1;
-            cap_sync3 <= cap_sync2;
-        end
-    end
-    wire cap_event = cap_sync2 ^ cap_sync3;
-
-    //---------------------------------------------------------
-    // 1ms 计时器
-    //---------------------------------------------------------
-    reg [15:0] ms_cnt;
-    reg        ms_tick;
-    always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            ms_cnt  <= 16'd0;
-            ms_tick <= 1'b0;
-        end
-        else if (ms_cnt == MS_DIV_MINUS1) begin
-            ms_cnt  <= 16'd0;
-            ms_tick <= 1'b1;
-        end
-        else begin
-            ms_cnt  <= ms_cnt + 16'd1;
-            ms_tick <= 1'b0;
-        end
-    end
-
-    //---------------------------------------------------------
-    // 帧周期实测
-    //---------------------------------------------------------
-    reg [15:0] ms_run, frame_ms;
-    reg        frame_ms_vld;
-    always @(posedge I_clk or negedge I_rst_n) begin
-        if (!I_rst_n) begin
-            ms_run       <= 16'd0;
-            frame_ms     <= DEFAULT_FRAME_MS;
-            frame_ms_vld <= 1'b0;
-        end
-        else if (cap_event) begin
-            if ((ms_run >= 16'd10) && (ms_run <= 16'd100)) begin
-                if (!frame_ms_vld) begin
-                    frame_ms     <= ms_run;
-                    frame_ms_vld <= 1'b1;
-                end
-                else if ((ms_run > frame_ms + 16'd2) || (ms_run + 16'd2 < frame_ms))
-                    frame_ms <= ms_run;
-            end
-            ms_run <= 16'd0;
-        end
-        else if (ms_tick)
-            ms_run <= (ms_run >= 16'd200) ? 16'd200 : (ms_run + 16'd1);
-    end
-
-    wire [15:0] delay_ms_raw = frame_ms << LAG_SHIFT;
-    wire [15:0] delay_ms     = (delay_ms_raw > 16'd999) ? 16'd999 : delay_ms_raw;
+    wire [3:0] delay_frames_disp = (I_delay_frames > 4'd9) ? 4'd9 : I_delay_frames;
 
     //---------------------------------------------------------
     // double-dabble: 10bit → 3 BCD
@@ -144,7 +62,7 @@ module delay_osd #(
             F_bin2bcd3 = sh[21:10];
         end
     endfunction
-    wire [11:0] delay_bcd = F_bin2bcd3(delay_ms[9:0]);
+    wire [11:0] delay_bcd = F_bin2bcd3(I_delay_ms);
     wire [3:0] bcd_hund = delay_bcd[11:8];
     wire [3:0] bcd_ten  = delay_bcd[7:4];
     wire [3:0] bcd_ones = delay_bcd[3:0];
@@ -231,8 +149,8 @@ module delay_osd #(
             else if (x_r1 >= DIGIT_X + 5*PITCH_X && x_r1 < DIGIT_X + 5*PITCH_X + DIGIT_W) begin
                 dly_on = 1'b1; dly_char = 8'h3A; dly_dx = x_r1 - DIGIT_X - 5*PITCH_X;
             end
-            else if (x_r1 >= DIGIT_X + 6*PITCH_X && x_r1 < DIGIT_X + 6*PITCH_X + DIGIT_W) begin
-                dly_on = 1'b1; dly_char = 8'h30 | {4'h0, LAG_DISP};
+            else if (I_delay_valid && x_r1 >= DIGIT_X + 6*PITCH_X && x_r1 < DIGIT_X + 6*PITCH_X + DIGIT_W) begin
+                dly_on = 1'b1; dly_char = 8'h30 | {4'h0, delay_frames_disp};
                 dly_dx = x_r1 - DIGIT_X - 6*PITCH_X;
             end
             // 汉字“帧”，宽 16，与 ASCII 字符同高
@@ -263,15 +181,15 @@ module delay_osd #(
             else if (x_r1 >= DIGIT_X + 5*PITCH_X && x_r1 < DIGIT_X + 5*PITCH_X + DIGIT_W) begin
                 dly_on = 1'b1; dly_char = 8'h3A; dly_dx = x_r1 - DIGIT_X - 5*PITCH_X;
             end
-            else if (x_r1 >= DIGIT_X + 6*PITCH_X && x_r1 < DIGIT_X + 6*PITCH_X + DIGIT_W) begin
+            else if (I_delay_valid && x_r1 >= DIGIT_X + 6*PITCH_X && x_r1 < DIGIT_X + 6*PITCH_X + DIGIT_W) begin
                 dly_on = 1'b1; dly_char = 8'h30 | {4'h0, bcd_hund};
                 dly_dx = x_r1 - DIGIT_X - 6*PITCH_X;
             end
-            else if (x_r1 >= DIGIT_X + 7*PITCH_X && x_r1 < DIGIT_X + 7*PITCH_X + DIGIT_W) begin
+            else if (I_delay_valid && x_r1 >= DIGIT_X + 7*PITCH_X && x_r1 < DIGIT_X + 7*PITCH_X + DIGIT_W) begin
                 dly_on = 1'b1; dly_char = 8'h30 | {4'h0, bcd_ten};
                 dly_dx = x_r1 - DIGIT_X - 7*PITCH_X;
             end
-            else if (x_r1 >= DIGIT_X + 8*PITCH_X && x_r1 < DIGIT_X + 8*PITCH_X + DIGIT_W) begin
+            else if (I_delay_valid && x_r1 >= DIGIT_X + 8*PITCH_X && x_r1 < DIGIT_X + 8*PITCH_X + DIGIT_W) begin
                 dly_on = 1'b1; dly_char = 8'h30 | {4'h0, bcd_ones};
                 dly_dx = x_r1 - DIGIT_X - 8*PITCH_X;
             end

@@ -55,6 +55,9 @@ proc prepare { step } {
   upvar phyWildParams phyWildParams
   upvar alRun alRun
   upvar singleRun singleRun
+  upvar sp sp
+  upvar ADCList ADCList
+  upvar SDCList SDCList
   set command "import_device $device_name -package $package_name"; if { [info exists speed] } { append command " -speed ${speed}" }; eval $command
   if { ![info exists singleRun] } {
     if { [info exists alRun] } { 
@@ -74,6 +77,13 @@ proc prepare { step } {
     set_param [lindex $wildParams $i] [lindex $wildParams [expr $i + 1]] [lindex $wildParams [expr $i + 2]]
   }
   if { [info exists singleRun] } report_param
+  if { [info exists sp] } {
+    if { [info exists ADCList] } { foreach adc $ADCList { read_adc $adc } }
+    if { [info exists SDCList] } {
+      clear_sdc -user
+      foreach sdc $SDCList { read_sdc $sdc }
+    }
+  }
 }
 proc read_design_fun {} {
   upvar prj_name prj_name
@@ -113,6 +123,10 @@ proc opt_rtl_fun {} {
 
 
 ### Editable zone for opt_rtl ###
+  upvar chipDebugger chipDebugger
+  if { ![info exists chipDebugger] } {
+     insert_debugger
+  } else { insert_debugger $chipDebugger }
   optimize_rtl
   report_area -file ${prj_name}_rtl.area
 #################################
@@ -131,7 +145,7 @@ proc opt_gate_fun {} {
   update_timing
   report_timing_status -file ${prj_name}_gate.ts
   report_timing_summary -file ${prj_name}_gate.timing
-  flow_status -file gate_flow.status -append_files {gate.qor}
+  flow_status -file flow.status
 ##################################
 
   export_db ${prj_name}_gate.db
@@ -140,18 +154,28 @@ proc opt_place_fun {} {
   upvar prj_name prj_name
   upvar cwcList cwcList
   upvar singleRun singleRun
+  upvar chipDebugger chipDebugger
   upvar bkaADCList bkaADCList
+  upvar arr_filter arr_filter
+  upvar arr_pwns arr_pwns
+  upvar arr_cong arr_cong
   if { ![info exists singleRun] } { commit_param -step place }
-  if { [info exists bkaADCList] } { foreach adc $bkaADCList { read_adc $adc } }
-  insert_debugger 
+  if { ![info exists chipDebugger] } {
+     insert_debugger
+  } else { insert_debugger $chipDebugger }
+  if { [info exists bkaADCList] } { 
+     clear_inst_adc
+     foreach adc $bkaADCList { read_adc $adc } 
+  }
 
 ### Editable zone for opt_place ###
   place
   update_timing -mode manhattan
   report_timing_summary -file ${prj_name}_place.timing
   report_area -io_info -file ${prj_name}_phy.area
-  flow_status -file place_flow.status -append_files {place.qor}
+  flow_status -file place_flow.status
   report_clock_utilization -file place_clock_utilization.txt
+  if { [string equal $arr_filter true] } { flow_continue_check -step place -wns $arr_pwns -congestion $arr_cong }
 ###################################
 
   export_db ${prj_name}_place.db
@@ -159,16 +183,30 @@ proc opt_place_fun {} {
 proc opt_route_fun {} {
   upvar prj_name prj_name
   upvar singleRun singleRun
+  upvar arr_filter arr_filter
+  upvar arr_rwns arr_rwns
+  upvar drHoldFix drHoldFix
   if { ![info exists singleRun] } { commit_param -step route }
 
 ### Editable zone for opt_route ###
+  if { [string equal $arr_filter on] && [string equal $drHoldFix on] } { 
+    set_param route fix_hold off
+    set_param flow qor_monitor off
+  }
   route
+  if { [string equal $arr_filter on] && [string equal $drHoldFix on] } {
+    flow_continue_check -step route -wns $arr_rwns -name ${prj_name}
+    fix_hold
+    set_param route fix_hold on
+    set_param flow qor_monitor on
+    report_qor -step route -file route.qor
+  }
   report_area -io_info -file ${prj_name}_phy.area
   update_timing -mode final
   report_timing_status -file ${prj_name}_phy.ts
   report_timing_summary -file ${prj_name}_pr.timing
   report_timing_exception -file ${prj_name}_exception.timing
-  flow_status -file route_flow.status -append_files {place.qor route.qor}
+  flow_status -file route_flow.status
   report_clock_utilization -file route_clock_utilization.txt
 ###################################
 
@@ -187,9 +225,11 @@ proc bitgen_fun {} {
 ### Editable zone for bitgen ###
   bitgen -bit $prj_name.bit
 ################################
-
- setup_debugger
- export_bitgen_param -file .bitgen_param.f 
+  upvar chipDebugger chipDebugger
+  if { ![info exists chipDebugger] } {
+    setup_debugger
+  } else { setup_debugger $chipDebugger }
+  export_bitgen_param -file .bitgen_param.f 
 }
 foreach s [lrange $stepList $l $r] {
   step_begin $s

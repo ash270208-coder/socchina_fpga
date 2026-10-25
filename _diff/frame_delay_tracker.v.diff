@@ -1,0 +1,47 @@
+﻿diff --git "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\frame_delay_tracker.v" "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\frame_delay_tracker.v"
+index 8c57d76..01c535a 100644
+--- "a/C:\\Users\\jingzifu\\Desktop\\lab_ex1_mipi_hdmi+vpp_boardA\\lab_ex1_mipi_hdmi+vpp_boardA\\user_source\\hdl_source\\frame_delay_tracker.v"
++++ "b/D:\\TD_project\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi_SC500_720P+vpp\\lab_ex1_mipi_hdmi+vpp\\user_source\\hdl_source\\frame_delay_tracker.v"
+@@ -1,5 +1,17 @@
+ `timescale 1ns / 1ps
+-
++//=============================================================
++// frame_delay_tracker.v
++// “采集 → HDMI 显示”真实帧延迟测量（物理 DDR 页标签法）
++//
++//   1) CSI 帧首（CSI 时钟域）→ toggle → 三级同步 → DDR 时钟域事件；
++//   2) DDR 域维护 32 位 ms_counter（按 DDR_CLK_HZ 分频）和 32 位 frame_seq；
++//   3) video_in 写帧首时，把“该帧的采集时间戳/帧序号”绑定到实际写入的物理页；
++//   4) video_out 显示帧首时，用实际读取的物理页索引取回标签，做 32 位模减法；
++//   5) 结果经“请求/应答 toggle”握手送到 HDMI 像素域，供 delay_osd 显示。
++//
++// 说明：只跟踪 4 个物理页；页被复用时旧标签被覆盖。CSI 帧首与 DDR 写帧首
++// 配不上对时，受影响页置无效，不输出伪造延迟（宁可不显示，也不显示错值）。
++//=============================================================
+ module frame_delay_tracker #(
+     parameter integer DDR_CLK_HZ = 66666667
+ )(
+@@ -173,6 +185,7 @@ module frame_delay_tracker #(
+         display_frame_age     = 32'd0;
+         display_ms_age        = 32'd0;
+ 
++        // 同一页同时读写的瞬间，页内容可能新旧混合，本拍结果判为无效。
+         if (selected_page_valid &&
+             !(I_write_frame_start && (I_write_page == I_display_page))) begin
+             display_result_valid = 1'b1;
+@@ -187,6 +200,7 @@ module frame_delay_tracker #(
+     reg [9:0] source_ms;
+     reg source_valid;
+     reg request_toggle;
++    reg ack_toggle;
+     reg ack_sync1, ack_sync2;
+     reg [3:0] pending_frames;
+     reg [9:0] pending_ms;
+@@ -230,7 +244,6 @@ module frame_delay_tracker #(
+     end
+ 
+     reg request_sync1, request_sync2, request_seen;
+-    reg ack_toggle;
+     always @(posedge I_pixel_clk or negedge I_pixel_rst_n) begin
+         if (!I_pixel_rst_n) begin
+             request_sync1 <= 1'b0;

@@ -1,0 +1,10 @@
+﻿exp,variant,mean_sat,mean_chroma,clipped,mean_luma
+E1,0 roundtrip only (no HE),0.1342,9.64,0.0000,147.96
+E1,"1 current: HE(Y), Cb/Cr kept",0.1910,9.33,0.1264,126.65
+E1,2 HE + chroma x (Y'/Y),0.1394,4.97,0.0000,126.59
+E1,3 HE + fixed sat x1.4,0.2146,12.59,0.1265,127.38
+E1,4 HE blended 0.5 + chroma,0.1324,7.31,0.0000,137.25
+E2,0 base (gamma only),0.1318,9.65,0.0000,148.58
+E2,1 HE in linear then gamma,0.1598,11.09,0.1048,154.49
+E2,2 HE in display domain,0.1910,9.33,0.1264,126.65
+E2,3 disp-HE + chroma x(Y'/Y),0.1394,4.97,0.0000,126.59

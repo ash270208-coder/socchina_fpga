@@ -1,0 +1,395 @@
+﻿diff --git a/README.md b/README.md
+index 319da17..b230d03 100644
+--- a/README.md
++++ b/README.md
+@@ -33,6 +33,9 @@
+ | [`docs/训练记录.md`](docs/训练记录.md) | 可复现训练配方 + 踩坑表 | CNN · 板 B |
+ | [`docs/LBP评估与替代方案.md`](docs/LBP评估与替代方案.md) | LBP 级联为什么不行（原方案评估） | LBP |
+ | [`docs/BOARD_SPLIT.md`](docs/BOARD_SPLIT.md) | 双板分工、板 A/B 文件分类、回退方法 | 双板 |
++| [`docs/WB_GRAY_TUNING.md`](docs/WB_GRAY_TUNING.md) | **原图档"发灰"**：黑电平扣错位置的根因、改哪两个参数、阈值速查表 | 画质 · 板 A |
++| [`docs/发灰修复_改动全记录.md`](docs/发灰修复_改动全记录.md) | 上述修复的**改动全记录**（逐处 before/after + 完整 diff + 影响面清单），供第三方复核 | 画质 · 板 A |
++| [`tools/wb_tune/`](tools/wb_tune/) | AWB+γ 逐位 Python 模型、before/after 对比、ModelSim TB、实测判据脚本 | 工具 |
+ | [`docs/A板以太网改造方案.md`](docs/A板以太网改造方案.md) | **板 A 加以太网**：R10/R11 冲突解法、RGMII 引脚表、复位方案、资源账 | 双板 · 板 A |
+ | [`docs/TIMING_OSD_ANALYSIS.md`](docs/TIMING_OSD_ANALYSIS.md) | OSD 时序违例根因与加固方案 | 双板 · 时序 |
+ | [`rom_data/README.md`](rom_data/README.md) | ROM / 查表数据文件逐个说明 | 数据 |
+@@ -486,3 +489,51 @@ LBP级联分类器思路（Multi Block LBP）
+ | 提交 | 内容 |
+ |---|---|
+ | `（待提交）` | 合并 fang 自动曝光（ae_auto/brightness_stats）+ 修复 8 帧平均位宽 bug + 抗极限环控制律 + CDC false path |
++
++### 2026.10.24
++**主题：原图档"发灰"—— 不是白平衡的锅，是黑电平扣错了位置**
++
++#### 一、结论
++
++「发灰」这个现象里约 4/5 是**黑电平**造成的，1/5 才是白平衡的账；而白平衡做不好，根子还是同一个黑电平。
++详见 [`docs/WB_GRAY_TUNING.md`](docs/WB_GRAY_TUNING.md)。
++
++黑电平（≈12 LSB）原本留在 AWB 输入里，被两件事同时坑：
++
++1. **污染了 AWB 的帧统计量**：灰世界要 `G/R`、`G/B` 比值，三通道同加一个常数会把比值压向 1
++   → 增益恒偏小 → 被"安全走廊"钳在下沿（1.5625 / 2.4375）→ **AWB 从来没有真正收敛过** → 偏绿、低饱和；
++2. **被 R/B 增益一起放大**：AWB 输出域的黑底是 (21, 15, 33)，而 `gamma_lut` 只扣 (21, 12, 33)
++   → G 残 3 LSB，被 γ2.2 放大成 `gamma(3)=34` → **纯黑显示成 RGB(0,34,0) 的暗绿灰雾**。
++
++实测回传帧（`tools/py_recv.bin`）指纹吻合：`R/G=0.939 < B/G=0.962 < 1`（R 欠校正更多）、
++暗部占比 0.35、饱和度 0.092。
++
++#### 二、改动（2 个文件 + 4 个参数）
++
++| 文件 | 改动 |
++|---|---|
++| `awb.v` | 新增 `PEDESTAL=12`，在**乘法与帧统计之前**饱和扣除；走廊/平抑阈值全部参数化（默认值不变）；`target_r/target_b` 声明上移（原"先用后声明"ModelSim 报错，TD 侥幸能过） |
++| `gamma_lut.v` | `BLK_G` 改成 parameter 且**默认 0**（黑电平已在上游扣掉，不能再扣一次） |
++
++纯组合、**0 拍延迟**，`TUSER_LEAD=24` 的零错位架构未动。
++回退：`PEDESTAL=0` + `BLK_G=12` 即恢复旧行为（两个值必须成对，不能同时非零）。
++
++#### 三、验证
++
++- **ModelSim `tb_wb_gray` PASS**：真 RTL（awb+gamma）vs Python 逐位模型，32 点全 OK，传感器黑 → (0,0,0)
++- **720P 场景对比**：旧 RTL 增益被钳在走廊下沿、屏上暗部 (0,39,0)、平均色差 12.40 LSB；
++  修复后增益落在 1.6523/2.8359、暗部 (0,0,0)、色差 **2.63 LSB**（降到 1/5）
++- 产出 `tools/wb_tune/out/before_after.png`（参考 / 旧 / 新 三联图）
++
++#### 四、连带影响（上板注意）
++
++1. **AE 会自己多曝光一格**：黑电平不再算"信号"后，AE 多曝光约 10 LSB ≈ **+40%（约 +3 dB）**，
++   噪声反而变小；上板后**不要**再手动加增益。
++2. 走廊不再被钳死，`CORR_R/B` 现在是活的——若现场仍偏色，按 `measure.py` 的 `R/G`、`B/G` 调走廊。
++3. `src/awb.v` 是旧变体，不参与 TD 综合，别改错文件。
++
++#### 五、提交记录
++
++| 提交 | 内容 |
++|---|---|
++| `（待提交）` | fix(gray): 黑电平前移到 awb 入口 + gamma BLK_G=0 + 走廊/平抑参数化 + ModelSim TB |
+diff --git a/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/awb.v b/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/awb.v
+index b4cc323..9e56fd5 100644
+--- a/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/awb.v
++++ b/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/awb.v
+@@ -8,6 +8,22 @@ Module  : awb (防眩光发红 + 轮廓保真修复版)
+      灯泡轮廓分明，不再过曝虚化成一大团死光；
+   3. 【保留原有优良特性】：Q8 紧凑位宽乘法省 50% 逻辑、TUSER_LEAD(=24)
+      零错位架构、消隐期除法器 IP 稳定自适应。
++
++【2026.10 发灰修复 · 一条必须先读的因果链】（详见 docs/WB_GRAY_TUNING.md）
++  症状：原图档看起来"发灰 + 泛绿"，像蒙了一层雾。
++  根因不在白平衡算法本身，而在**黑电平扣错了地方**：
++    * awb.v 用 `frame_r/g/b` 三个 32bit 累加器算灰世界增益，而这三个和里
++      含传感器的黑电平底（实测 8bit 域 ≈ 12 LSB）；
++    * 本工程 AE 的 TARGET_Y = 50，也就是说每通道均值本来就只有 ~50 LSB，
++      黑电平占了 G 的 19%、B 的 35%；
++    * 灰世界要的是 G/R 与 G/B 的比值，三通道同加一个常数会把比值**压向 1**
++      → 算出来的增益恒偏小 → 被下面"安全走廊"钳在最小值 → AWB 实际上
++      从来没有真正收敛过，画面就永远是"未校正"的颜色（偏绿、低饱和）；
++    * 同一份黑电平又被 R/B 增益放大（x1.25xKr / x1.25xKb），到 gamma_lut
++      再按 12/21/33 扣，扣不干净 → 纯黑被 γ2.2 抬成 ~34/255 的灰。
++  修法：把黑电平挪到**本模块入口**扣掉（组合逻辑、0 拍延迟、不动时序），
++      统计和像素同时变干净；gamma_lut.v 的 BLK_G 同步改成 0。
++      参数 PEDESTAL 就是唯一的旋钮，设 0 可一键回到旧行为。
+ *****************************************************************/
+ // ============================================================================
+ // 【资源优化修改 1】除法器 2 个 -> 1 个
+@@ -43,7 +59,28 @@ Module  : awb (防眩光发红 + 轮廓保真修复版)
+ 
+ module awb #(   
+     parameter IMG_HEIGHT = 1080,
+-    parameter IMG_WIDTH  = 1920
++    parameter IMG_WIDTH  = 1920,
++
++    // =====================================================================
++    // 可调参数区（要调画面就只改这里，别去改下面的魔数）
++    // =====================================================================
++    // 黑电平：传感器盖镜头时的 8bit 读数。SC500 实测 ≈ 12。
++    //   必须在乘法之前扣 —— 否则它会同时污染帧统计量（导致增益偏小、偏绿）
++    //   和被增益放大后的黑底（导致 gamma 之后抬成灰雾）。
++    //   设 0 = 关闭，退回旧行为（此时 gamma_lut.v 的 BLK_G 要带回 12）。
++    parameter [7:0]   PEDESTAL   = 8'd12,
++    // R/B 增益"安全走廊"（Q16）：钳住极端场景，防止全黑/全白时增益跑飞。
++    //   现在黑电平已经扣干净，增益能真正落在走廊中间，不再被顶在边界上。
++    parameter [19:0]  CORR_R_LO  = 20'h19000,   // 1.5625x
++    parameter [19:0]  CORR_R_HI  = 20'h1F000,   // 1.9375x
++    parameter [19:0]  CORR_B_LO  = 20'h27000,   // 2.4375x
++    parameter [19:0]  CORR_B_HI  = 20'h32000,   // 3.1250x
++    // 高光平抑（防光圈发红/发糊）。阈值越大画面越"敢"保留高光颜色；
++    // 台灯仍发红就把 HALO_ZONE 调回 196，偏灰就往上调（220~240）。
++    parameter [7:0]   HALO_ZONE  = 8'd196,      // G >= 此值进入平抑区
++    parameter [7:0]   HALO_R_UP  = 8'd16,       // 平抑区 R <= G + HALO_R_UP
++    parameter [7:0]   HALO_B_DN  = 8'd24,       // 平抑区 B >= G - HALO_B_DN
++    parameter [7:0]   SPECULAR   = 8'd248       // G >= 此值判为镜面高光 -> 纯白
+ ) 
+ (
+     input                   I_clk,
+@@ -73,10 +110,30 @@ module awb #(
+     reg [8:0]  vblank_cnt;
+     reg        vblank_pulse;
+ 
+-    // 抽样第 0 像素统计全图均值
+-    wire [7:0] s_r = I_tdata[16+:8];
+-    wire [7:0] s_g = I_tdata[8+:8];
+-    wire [7:0] s_b = I_tdata[0+:8];
++    // =========================================================================
++    // 0.5 【黑电平扣除】—— 必须在乘法与统计之前，纯组合、0 拍延迟
++    //    sat 减法：x > PEDESTAL ? x-PEDESTAL : 0
++    //    12 个减法器摊在 4 个像素 x 3 个通道上，LUT 代价极小；
++    //    放在这里以后，帧统计 frame_r/g/b 和下面的乘法链看到的是同一份
++    //    "去底"数据，灰世界比值不会被常数压低（发绿/发灰的真正根因）。
++    // =========================================================================
++    function [7:0] sub_ped;
++        input [7:0] x;
++        begin
++            sub_ped = (x > PEDESTAL) ? (x - PEDESTAL) : 8'd0;
++        end
++    endfunction
++
++    // 拆分 4 个并行像素（每个 tdata 里 4 个像素，R/G/B 各 8bit）
++    wire [7:0] p0_r = sub_ped(I_tdata[16+:8]), p0_g = sub_ped(I_tdata[8+:8]),  p0_b = sub_ped(I_tdata[0+:8]);
++    wire [7:0] p1_r = sub_ped(I_tdata[40+:8]), p1_g = sub_ped(I_tdata[32+:8]), p1_b = sub_ped(I_tdata[24+:8]);
++    wire [7:0] p2_r = sub_ped(I_tdata[64+:8]), p2_g = sub_ped(I_tdata[56+:8]), p2_b = sub_ped(I_tdata[48+:8]);
++    wire [7:0] p3_r = sub_ped(I_tdata[88+:8]), p3_g = sub_ped(I_tdata[80+:8]), p3_b = sub_ped(I_tdata[72+:8]);
++
++    // 抽样第 0 像素统计全图均值（已去黑电平，与像素通路完全一致）
++    wire [7:0] s_r = p0_r;
++    wire [7:0] s_g = p0_g;
++    wire [7:0] s_b = p0_b;
+ 
+     // 当 valid 连续 128 周期为低，进入场消隐期 (VBLANK)
+     always @(posedge I_clk or negedge I_rst_n) begin
+@@ -136,6 +193,14 @@ module awb #(
+     *****************************************************************/
+     wire [31:0] frame_g_boost = frame_g + {2'b00, frame_g[31:2]};
+ 
++    // 目标增益 / 平滑后的当前增益 —— 声明提前到这里，因为下面的除法器状态机
++    // 复位分支就要用（原来的声明在第 3 节，属"先用后声明"，TD 能过但 ModelSim
++    // 按 Verilog-2001 判为隐式线网报错；挪上来功能完全不变）。
++    reg [19:0] target_r;
++    reg [19:0] target_b;
++    reg [19:0] cur_gain_r;
++    reg [19:0] cur_gain_b;
++
+     reg [31:0] div_den;      // 除数 (frame_r 或 frame_b)
+     reg [1:0]  div_st;       // 状态机: 0=IDLE 1=DIV_R 2=DIV_B
+     reg [6:0]  div_cnt;      // 状态内周期计数(仅用于产生 start 脉冲)
+@@ -150,8 +215,8 @@ module awb #(
+             div_cnt   <= 7'd0;
+             div_start <= 1'b0;
+             div_den   <= 32'd1000;
+-            target_r  <= 20'h1C000;   // 1.75x
+-            target_b  <= 20'h2C000;   // 2.75x
++            target_r  <= (CORR_R_LO + CORR_R_HI) / 2;   // 走廊中点
++            target_b  <= (CORR_B_LO + CORR_B_HI) / 2;
+         end else begin
+             div_start <= 1'b0;        // 默认低, 需要时在分支内置 1 (单周期脉冲)
+             case (div_st)
+@@ -166,11 +231,11 @@ module awb #(
+                     if (div_cnt == 7'd0)
+                         div_start <= 1'b1;    // 操作数已稳定, 发单周期启动脉冲
+                     if (done_div) begin
+-                        // 锁存 G/R 商 -> 安全走廊限幅
+-                        if (|dout_div[47:20] || dout_div[19:0] > 20'h1F000)
+-                            target_r <= 20'h1F000;
+-                        else if (dout_div[19:0] < 20'h19000)
+-                            target_r <= 20'h19000;
++                        // 锁存 G/R 商 -> 安全走廊限幅 (参数见文件头)
++                        if (|dout_div[47:20] || dout_div[19:0] > CORR_R_HI)
++                            target_r <= CORR_R_HI;
++                        else if (dout_div[19:0] < CORR_R_LO)
++                            target_r <= CORR_R_LO;
+                         else
+                             target_r <= dout_div[19:0];
+                         div_den <= frame_b;   // 第 2 次除法: G/B
+@@ -183,11 +248,11 @@ module awb #(
+                     if (div_cnt == 7'd0)
+                         div_start <= 1'b1;    // 操作数已稳定, 发单周期启动脉冲
+                     if (done_div) begin
+-                        // 锁存 G/B 商 -> 安全走廊限幅
+-                        if (|dout_div[47:20] || dout_div[19:0] > 20'h32000)
+-                            target_b <= 20'h32000;
+-                        else if (dout_div[19:0] < 20'h27000)
+-                            target_b <= 20'h27000;
++                        // 锁存 G/B 商 -> 安全走廊限幅 (参数见文件头)
++                        if (|dout_div[47:20] || dout_div[19:0] > CORR_B_HI)
++                            target_b <= CORR_B_HI;
++                        else if (dout_div[19:0] < CORR_B_LO)
++                            target_b <= CORR_B_LO;
+                         else
+                             target_b <= dout_div[19:0];
+                         div_st <= 2'd0;
+@@ -221,16 +286,13 @@ module awb #(
+     /*****************************************************************
+       三、安全走廊限幅与平滑滤波
+       (目标增益 target_r/target_b 的更新已并入除法器状态机, 此处仅做 IIR 平滑)
++      target 与 cur_gain 的声明已上移到第 2 节开头
++      (原来"先用后声明", TD 能过但 ModelSim 按 Verilog-2001 报隐式线网)
+     *****************************************************************/
+-    reg [19:0] target_r;
+-    reg [19:0] target_b;
+-    reg [19:0] cur_gain_r;
+-    reg [19:0] cur_gain_b;
+-
+     always @(posedge I_clk or negedge I_rst_n) begin
+         if (!I_rst_n) begin
+-            cur_gain_r <= 20'h1C000; 
+-            cur_gain_b <= 20'h2C000;
++            cur_gain_r <= (CORR_R_LO + CORR_R_HI) / 2;
++            cur_gain_b <= (CORR_B_LO + CORR_B_HI) / 2;
+         end else if (vblank_pulse) begin
+             cur_gain_r <= cur_gain_r - (cur_gain_r >> 4) + (target_r >> 4);
+             cur_gain_b <= cur_gain_b - (cur_gain_b >> 4) + (target_b >> 4);
+@@ -243,11 +305,7 @@ module awb #(
+     wire [9:0] gain_r_q8 = cur_gain_r[17:8]; 
+     wire [9:0] gain_b_q8 = cur_gain_b[17:8];
+ 
+-    // 拆分 4 像素
+-    wire [7:0] p0_r = I_tdata[16+:8], p0_g = I_tdata[8+:8],  p0_b = I_tdata[0+:8];
+-    wire [7:0] p1_r = I_tdata[40+:8], p1_g = I_tdata[32+:8], p1_b = I_tdata[24+:8];
+-    wire [7:0] p2_r = I_tdata[64+:8], p2_g = I_tdata[56+:8], p2_b = I_tdata[48+:8];
+-    wire [7:0] p3_r = I_tdata[88+:8], p3_g = I_tdata[80+:8], p3_b = I_tdata[72+:8];
++    // 拆分 4 像素（p0..p3 已在 0.5 节定义：已扣黑电平）
+ 
+     // G 通道 1.25x 提亮
+     wire [8:0] p0_g_bst = p0_g + {2'b00, p0_g[7:2]};
+@@ -291,34 +349,34 @@ module awb #(
+     wire [7:0] p3_r_raw = (|r3_m[17:16]) ? 8'd255 : r3_m[15:8];
+     wire [7:0] p3_b_raw = (|b3_m[17:16]) ? 8'd255 : b3_m[15:8];
+ 
+-    // 1. 中心极亮区强行纯白 (>=248)
+-    wire p0_specular = (g0_d >= 8'd248);
+-    wire p1_specular = (g1_d >= 8'd248);
+-    wire p2_specular = (g2_d >= 8'd248);
+-    wire p3_specular = (g3_d >= 8'd248);
++    // 1. 中心极亮区强行纯白 (参数 SPECULAR, 默认 248)
++    wire p0_specular = (g0_d >= SPECULAR);
++    wire p1_specular = (g1_d >= SPECULAR);
++    wire p2_specular = (g2_d >= SPECULAR);
++    wire p3_specular = (g3_d >= SPECULAR);
+ 
+-    // 2. 光晕区高光上限计算 (R <= G + 16, 保证红光不抢跑饱和，轮廓分明不发红！)
+-    wire [8:0] p0_r_cap = g0_d + 9'd16;
+-    wire [8:0] p1_r_cap = g1_d + 9'd16;
+-    wire [8:0] p2_r_cap = g2_d + 9'd16;
+-    wire [8:0] p3_r_cap = g3_d + 9'd16;
++    // 2. 光晕区高光上限计算 (R <= G + HALO_R_UP, 保证红光不抢跑饱和，轮廓分明不发红！)
++    wire [8:0] p0_r_cap = {1'b0, g0_d} + {1'b0, HALO_R_UP};
++    wire [8:0] p1_r_cap = {1'b0, g1_d} + {1'b0, HALO_R_UP};
++    wire [8:0] p2_r_cap = {1'b0, g2_d} + {1'b0, HALO_R_UP};
++    wire [8:0] p3_r_cap = {1'b0, g3_d} + {1'b0, HALO_R_UP};
+ 
+     wire [7:0] p0_r_lim = (p0_r_cap > 9'd255) ? 8'd255 : p0_r_cap[7:0];
+     wire [7:0] p1_r_lim = (p1_r_cap > 9'd255) ? 8'd255 : p1_r_cap[7:0];
+     wire [7:0] p2_r_lim = (p2_r_cap > 9'd255) ? 8'd255 : p2_r_cap[7:0];
+     wire [7:0] p3_r_lim = (p3_r_cap > 9'd255) ? 8'd255 : p3_r_cap[7:0];
+ 
+-    // 光晕区蓝光下限计算 (B >= G - 24, 保证蓝光不掉队泛黄)
+-    wire [7:0] p0_b_flr = (g0_d >= 8'd24) ? (g0_d - 8'd24) : 8'd0;
+-    wire [7:0] p1_b_flr = (g1_d >= 8'd24) ? (g1_d - 8'd24) : 8'd0;
+-    wire [7:0] p2_b_flr = (g2_d >= 8'd24) ? (g2_d - 8'd24) : 8'd0;
+-    wire [7:0] p3_b_flr = (g3_d >= 8'd24) ? (g3_d - 8'd24) : 8'd0;
+-
+-    // 当 G >= 196 时进入光晕平抑状态
+-    wire p0_halo_zone = (g0_d >= 8'd196);
+-    wire p1_halo_zone = (g1_d >= 8'd196);
+-    wire p2_halo_zone = (g2_d >= 8'd196);
+-    wire p3_halo_zone = (g3_d >= 8'd196);
++    // 光晕区蓝光下限计算 (B >= G - HALO_B_DN, 保证蓝光不掉队泛黄)
++    wire [7:0] p0_b_flr = (g0_d >= HALO_B_DN) ? (g0_d - HALO_B_DN) : 8'd0;
++    wire [7:0] p1_b_flr = (g1_d >= HALO_B_DN) ? (g1_d - HALO_B_DN) : 8'd0;
++    wire [7:0] p2_b_flr = (g2_d >= HALO_B_DN) ? (g2_d - HALO_B_DN) : 8'd0;
++    wire [7:0] p3_b_flr = (g3_d >= HALO_B_DN) ? (g3_d - HALO_B_DN) : 8'd0;
++
++    // 当 G >= HALO_ZONE 时进入光晕平抑状态
++    wire p0_halo_zone = (g0_d >= HALO_ZONE);
++    wire p1_halo_zone = (g1_d >= HALO_ZONE);
++    wire p2_halo_zone = (g2_d >= HALO_ZONE);
++    wire p3_halo_zone = (g3_d >= HALO_ZONE);
+ 
+     // 综合裁决输出 (纯白区 / 平抑区 / 正常色彩区)
+     wire [7:0] p0_r_clp = p0_specular ? 8'd255 : (p0_halo_zone && (p0_r_raw > p0_r_lim) ? p0_r_lim : p0_r_raw);
+diff --git a/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/gamma_lut.v b/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/gamma_lut.v
+index 7b372c4..174efc1 100644
+--- a/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/gamma_lut.v
++++ b/lab_ex1_mipi_hdmi_SC500_720P+vpp/lab_ex1_mipi_hdmi+vpp/user_source/hdl_source/gamma_lut.v
+@@ -9,21 +9,26 @@
+ //   2..5x darker than they should (a dark face ends up almost black).
+ //   This module applies the missing  out = round(255*(in/255)^(1/2.2))  step.
+ //
+-//   Pure combinational (0 clock latency), so it does NOT disturb the 16-cycle
++//   Pure combinational (0 clock latency), so it does NOT disturb the 22-cycle
+ //   delay alignment of the other display modes in vpp_top.v.
+ //
+-// BLACK LEVEL (fixed constant now):
+-//   The sensor has a dark pedestal. Measured on this board: about 12 in the
+-//   8-bit domain (= 48 LSB at 10 bit). It must be removed, otherwise gamma
+-//   turns that pedestal into grey fog and black never gets black.
+-//   R/B carry the AWB-multiplied pedestal (~1.75x / ~2.75x of G), so their
+-//   subtraction is scaled accordingly -- subtracting the same number from all
+-//   three channels would tint the shadows.
+-//   The button-selectable presets have been REMOVED; this is a fixed constant.
++// BLACK LEVEL (2026.10: MOVED TO awb.v -- this stage must now be 0!)
++//   The sensor has a dark pedestal (~12 in the 8-bit domain = 48 LSB at 10 bit).
++//   It used to be removed HERE, i.e. *after* AWB had already multiplied it by
++//   1.25*Kr / 1.25*Kb.  That was wrong in two ways:
++//     1) the residual (pedestal*gain - the fixed 12/21/33) was lifted to grey by
++//        gamma 2.2  ->  "画面发灰";
++//     2) AWB itself folded that pedestal into its frame means, which compressed
++//        frame_g/frame_r and frame_g/frame_b and pinned the gains on the
++//        corridor edge -> the picture was never really white balanced
++//        (greenish, low saturation).
++//   The pedestal is now subtracted at the awb.v input (its parameter PEDESTAL),
++//   so this module must subtract NOTHING.  BLK_G survives only as an escape
++//   hatch: set awb.v PEDESTAL=0 and BLK_G=12 to get the old behaviour back.
++//   Measurements: docs/WB_GRAY_TUNING.md
+ //
+ // TO CHANGE THE CURVE: edit the gamma_map table below.
+ // The values are round(255*(x/255)^(1/2.2)) for x = 0..255.
+-// TO CHANGE THE BLACK LEVEL: edit BLK_G in section 1 below.
+ //=============================================================================
+ // 【中文说明】
+ //   为什么要加这个模块:
+@@ -36,20 +41,22 @@
+ //   关键点:
+ //     1) 三个通道共用同一条曲线, 所以色调比例不变, 不会像直方图均衡那样
+ //        在暗部把颜色丢掉变成黑白;
+-//     2) 纯组合逻辑, 0 拍延迟, 不会打乱 vpp_top 里各模式对齐的 16 拍延时。
++//     2) 纯组合逻辑, 0 拍延迟, 不会打乱 vpp_top 里各模式对齐的 22 拍延时。
+ //
+-//   黑电平 (BLK_G, 已固定为常数):
+-//     实测本机最佳值 = 12 (8bit 域), 也就是 10bit 域的 48 LSB。
+-//     必须扣掉, 否则伽马会把这点"底"抬成灰雾, 画面黑不下去。
+-//     注意: R/B 的黑电平要按 AWB 增益(约 1.75x / 2.75x)等比放大后再扣 ——
+-//     因为 AWB 把这个底也一起乘过了; 三个通道扣同一个数, 暗部会偏色。
+-//     原来的按键档位已经删除, 现在是一个常数, 第 4 颗按键已腾空。
+-//     以后更干净的做法: 把这个扣除挪到源头(raw10_unpacket_2lane, 在 AWB
+-//     之前扣掉), 那时把这里 BLK_G 改成 0 即可。
++//   黑电平 (2026.10 起已挪到 awb.v, 这里默认 0):
++//     以前在这里扣 12/21/33, 但那已经是 AWB 把黑电平乘过增益之后的域:
++//       - 扣不干净, 剩下的几级被 γ2.2 放大成 ~34/255 的灰雾(发灰);
++//       - R/B 的扣除系数还是写死的 1.75/2.75, 增益一变就对不上, 暗部会偏色。
++//     现在 awb.v 在乘法之前用参数 PEDESTAL 扣掉干净的 12:
++//       黑白两端都对, 而且 AWB 的帧统计也不再被这个常数污染, 增益才真正收敛。
++//     BLK_G 保留成参数只是为了回退: awb.v 的 PEDESTAL 设 0 时, 把它设回 12。
+ //
+ //   要改曲线形状: 只改下面 gamma_map 那张表即可。
+ //=============================================================================
+-module gamma_lut (
++module gamma_lut #(
++    // 黑电平基准 (8bit 域, G 通道)。默认 0 = 已在 awb.v 里扣过(正确做法)。
++    parameter [7:0] BLK_G = 8'd0
++) (
+     input  wire [7:0] I_r,        // linear R (8 bit, after AWB)
+     input  wire [7:0] I_g,        // linear G
+     input  wire [7:0] I_b,        // linear B
+@@ -59,10 +66,9 @@ module gamma_lut (
+ );
+ 
+     //-------------------------------------------------------------------------
+-    // 1. black level: FIXED constant (G channel domain) -- measured on board
+-    //    (was a button-selectable preset, the button is now free again)
++    // 1. black level: BLK_G is 0 by default -- awb.v already did the subtraction
++    //    (non-zero only if you deliberately revert awb.v PEDESTAL to 0)
+     //-------------------------------------------------------------------------
+-    localparam [7:0] BLK_G = 8'd12;   // = 48 LSB in the 10-bit domain
+     wire [7:0] blk_g = BLK_G;
+     wire [7:0] blk_r = blk_g + (blk_g >> 1) + (blk_g >> 2);          // ~ x1.75
+     wire [7:0] blk_b = blk_g + blk_g + (blk_g >> 1) + (blk_g >> 2);  // ~ x2.75
