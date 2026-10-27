@@ -1,0 +1,1392 @@
+
+
+module design_top_wrapper (
+    input wire        I_sys_clk,
+    // [以太网改造 第1步] 原 input I_rst_n（约束到 R10）已删除。
+    //   R10 在板上铜线是 ETHPHY_TX_EN，必须让给 phy1_rgmii_tx_ctl。
+    //   复位改由 pll_por.v 在 I_sys_clk 域内部产生，见下方 u_pll_por。
+    //   参考 docs/A板以太网改造方案.md §2.4 / §4。
+
+    output wire       O_cam_scl,
+    inout  wire       IO_cam_sda,
+    output wire       O_cam_24m,
+    output wire       O_cam_rst,
+      
+    inout wire [3:0]  I_button,
+
+    // [以太网改造 第2步] 原 output O_screen_pwm（约束到 R11）已删除。
+    //   R11 在板上铜线是 ETHPHY_TXD0，必须让给 phy1_rgmii_tx_data[0]。
+    //   外部 HDMI 显示器不需要 FPGA 背光 PWM。
+
+    // ---- 千兆以太网 RGMII（YT8511C，BANK22 3.3V）----
+    // 第1步只声明引脚与 PHY 复位，网络逻辑尚未接入（第2步搬入）。
+    input  wire        phy1_rgmii_rx_clk,
+    input  wire        phy1_rgmii_rx_ctl,
+    input  wire [3:0]  phy1_rgmii_rx_data,
+    output wire        phy1_rgmii_tx_clk,
+    output wire        phy1_rgmii_tx_ctl,     // -> R10
+    output wire [3:0]  phy1_rgmii_tx_data,    // bit0 -> R11
+    output wire        phy_reset,
+
+    output wire [3:0]  led,
+
+    output wire       O_tmds_ch0_p,
+    output wire       O_tmds_ch1_p,
+    output wire       O_tmds_ch2_p,
+    output wire       O_tmds_clk_p,
+
+    inout wire        IO_rx_clk_pad_n, 
+    inout wire        IO_rx_clk_pad_p, 
+    inout wire[3:0]   IO_rx_data_pad_n,
+    inout wire[3:0]   IO_rx_data_pad_p,
+
+    output wire[12:0] ddr_addr,
+    output wire[ 1:0] ddr_ba,
+    output wire[ 0:0] ddr_cke,
+    output wire[ 0:0] ddr_odt,
+    output wire[ 0:0] ddr_cs_n,
+    output wire       ddr_ras_n,
+    output wire       ddr_cas_n,
+    output wire       ddr_we_n,
+    output wire[ 0:0] ddr_ck_p,
+    output wire[ 0:0] ddr_ck_n,
+    inout wire[1:0]   ddr_dm,
+    inout wire[15:0]  ddr_dq,
+    inout wire[1:0]   ddr_dqs_p,
+    inout wire[1:0]   ddr_dqs_n   
+);
+
+
+    wire        	S_100m_clk;
+    wire        	S_24m_clk;
+    wire        	S_aux_50m_clk;
+	wire        	S_10m_clk;
+		
+	wire        	S_pll_lock;
+    wire        	S_rst_n;
+	
+	wire [15:0] 	S_ae;
+    wire [15:0] 	S_ag;
+    wire 			S_cam_cfg_done;
+    wire 			S_ae_cfg_done;
+    wire 			S_ae_req; 
+
+    // ---- 自动曝光 (fang 分支合并): 手动/自动 双路 + MUX ----
+    reg          S_ae_manual_mode;    // 0=自动(默认) 1=手动, 按键4 切换
+    wire [15:0]  S_ae_manual;
+    wire [15:0]  S_ag_manual;
+    wire         S_ae_req_manual;
+    wire [15:0]  S_ae_auto;
+    wire [15:0]  S_ag_auto;
+    wire         S_ae_req_auto;
+    wire [7:0]   S_avg_y_pix;         // 帧平均亮度 (HDMI 域统计)
+    wire         S_frame_done_pix;    // 帧统计完成脉冲 (HDMI 域)
+    wire [7:0]   S_avg_y_s2;          // avg_y 两级同步到 24M 域
+    wire         S_frame_done_24m;    // frame_done 展宽同步边沿还原 (24M 域)
+	
+	wire        	S_csi_rx_clk;  
+    wire        	S_hs_rx_valid;  
+    wire[15:0]  	S_hs_rx_data;   
+	wire[1:0]   	S_lane_error;
+	
+	wire        	S_csi_frame_start;       
+	wire        	S_csi_frame_end;         
+	wire        	S_csi_valid;             
+	wire[31:0]  	S_csi_data;  
+		
+	wire        	S_raw10_frame_start; 
+	wire        	S_raw10_frame_end;   
+	wire        	S_raw10_valid;       
+	wire [39:0] 	S_raw10_data;
+		
+	wire 			S_axis_tlast;  
+	wire 			S_axis_tuser;  
+	wire [39:0]		S_axis_tdata;  
+	wire 			S_axis_tvalid; 
+	
+	wire [39:0]		S_raw_tdata ;
+	wire			S_raw_tlast ;
+	wire 			S_raw_tvalid;
+	wire 			S_raw_tuser ;
+	
+	wire			S_ISP_O_tready;
+	wire [127:0]	S_ISP_O_tdata ;
+	wire 			S_ISP_O_tlast ;
+	wire 			S_ISP_O_tuser ;
+	wire 			S_ISP_O_tvalid; 
+	
+
+    wire        S_ddr_clk;
+    wire        S_hdmi_pixel_clk;
+    wire        S_hdmi_serial_clk;
+    wire        S_hdmi_rst_n;
+    wire        S_video_out_rst_n;
+
+
+    wire        S_vi_128b_frame_start;
+    wire        S_vi_128b_valid;      
+    wire[127:0] S_vi_128b_data;    
+    
+    wire        S_video_out_rd_busy;
+    wire        S_video_in_wr_busy; 
+    wire[1:0]   S_video_out_rp;     
+
+    // ---- ★ [延迟可视化] 真实帧延迟：CSI 采集帧首 / 实际写页 / 实际显示页 ----
+    wire        S_frame_write_start;
+    wire[1:0]   S_frame_write_page;
+    wire        S_video_out_frame_start;
+    wire[1:0]   S_video_out_frame_page;
+    wire        S_frame_delay_valid;
+    wire[3:0]   S_frame_delay_frames;
+    wire[9:0]   S_frame_delay_ms;
+    wire        S_capture_fps_valid;
+    wire[9:0]   S_capture_fps_tenths;
+
+    wire        S_ddr_user_wr_en;       
+    wire        S_ddr_user_rd_en;       
+    wire[24:0]  S_ddr_user_addr;        
+    wire[127:0] S_ddr_user_wr_data;     
+    wire        S_ddr_user_ready;       
+    wire        S_ddr_user_rd_valid;    
+    wire[127:0] S_ddr_user_rd_data;     
+
+    wire        S_vi_ddr_wr_en;   
+    wire[24:0]  S_vi_ddr_wr_addr; 
+    wire[127:0] S_vi_ddr_wr_data;
+    wire        S_vi_ddr_wr_ready;
+
+    wire        S_vo_ddr_rd_en;   
+    wire[24:0]  S_vo_ddr_rd_addr; 
+    wire        S_vo_ddr_rd_ready;
+    wire        S_vo_dbg_fifo_rst;
+    wire        S_vo_dbg_ddr_rd_valid;
+    wire        S_vo_dbg_fifo_rd_en;
+    wire        S_vo_dbg_fifo_empty;
+
+    wire        S_init_calib_complete; 
+    wire[24:0]  S_mc_app_addr;          
+    wire[2:0]   S_mc_app_cmd;           
+    wire        S_mc_app_en;            
+    wire[127:0] S_mc_app_wdf_data;      
+    wire        S_mc_app_wdf_end;       
+    wire[15:0]  S_mc_app_wdf_mask;      
+    wire        S_mc_app_wdf_wren;      
+    wire[127:0] S_mc_app_rd_data;       
+    wire        S_mc_app_rd_data_end;   
+    wire        S_mc_app_rd_data_valid; 
+    wire        S_mc_app_rdy;           
+    wire        S_mc_app_wdf_rdy;       
+    wire        S_mc_dbg_fifo_afull;
+    wire        S_mc_dbg_app_rdy;
+    wire        S_mc_dbg_wdf_rdy;
+    wire        S_mc_dbg_cmd_pop;
+
+    wire        S_hdmi_vsync;
+    wire        S_hdmi_hsync;
+    wire        S_hdmi_de;
+    wire        S_hdmi_user;
+    wire        S_hdmi_last;
+    wire        S_video_out_vsync;
+    wire        S_hdmi_window_rd_en;
+    wire        S_hdmi_out_vsync;
+    wire        S_hdmi_out_hsync;
+    wire        S_hdmi_out_de;
+    wire[23:0]  S_hdmi_out_data;
+
+    // VPP 输出信号
+    wire [23:0] S_vpp_out_data;
+    wire        S_vpp_out_de;
+    wire        S_vpp_out_last;
+    wire        S_vpp_out_user;
+    wire [2:0]  S_vpp_display_mode;
+
+    // [以太网改造 第3步] CNN 取数：vpp_top 里的 raw_rgb_d[21]（伽马后原图）
+    //   + 与之严格同拍的 tvalid/tuser/tlast，直接送进 board_a_net_wrapper。
+    //   ⚠ 取的是"原图"那一级，**不是** mux 输出 —— 后者会随按键的
+    //     5 档显示模式在灰度/直方图/Sobel/卡通之间变。
+    //   ⚠ 名字必须避开 S_raw_t*：那是 ISP 的原始数据流（[39:0]，本文件第 107 行），
+    //     曾经因为重名导致 HDL-7181 / HDL-8007「net 被多处驱动」。
+    wire [23:0] S_cnn_raw_tdata;
+    wire        S_cnn_raw_tvalid;
+    wire        S_cnn_raw_tuser;
+    wire        S_cnn_raw_tlast;
+
+    // 集成 OSD 链: VPP -> Logo/模式 OSD -> 延迟 OSD -> HDMI
+    wire [23:0] S_osd_overlay_data;
+    wire        S_osd_overlay_de;
+    wire        S_osd_overlay_last;
+    wire        S_osd_overlay_user;
+    wire [23:0] S_delay_osd_data;
+    wire        S_delay_osd_de;
+    wire        S_delay_osd_last;
+    wire        S_delay_osd_user;
+
+    // ---- ★ [P0-5] 画框通路：osd_overlay → osd_box_drawer → delay_osd ----
+    wire [23:0] S_box_data;
+    wire        S_box_de;
+    wire        S_box_last;
+    wire        S_box_user;
+    // 来自 board_a_net_wrapper 的人脸框（pclk 域；板 B 回结果解析而来）
+    wire        S_face_valid;
+    wire [7:0]  S_face_x, S_face_y, S_face_w, S_face_h;
+
+    wire[23:0]  S_video_rd_data;
+    reg         S_dbg_raw_seen;
+    reg         S_dbg_isp_seen;
+    reg         S_dbg_ddr_wr_seen;
+    reg         S_dbg_ddr_rd_seen;
+    reg         S_dbg_cam_cfg_seen;
+    reg         S_dbg_hs_seen;
+    reg         S_dbg_csi_seen;
+    reg         S_dbg_raw10_seen;
+    reg         S_dbg_isp_fs_seen;
+    reg         S_dbg_isp_valid_seen;
+    reg         S_dbg_ddr_req_seen;
+    reg         S_dbg_ddr_ready_seen;
+    reg [1:0]   S_dbg_raw_seen_sync;
+    reg [1:0]   S_dbg_isp_seen_sync;
+    reg [1:0]   S_dbg_ddr_wr_seen_sync;
+    reg [1:0]   S_dbg_ddr_rd_seen_sync;
+    reg [1:0]   S_dbg_cam_cfg_seen_sync;
+    reg [1:0]   S_dbg_hs_seen_sync;
+    reg [1:0]   S_dbg_csi_seen_sync;
+    reg [1:0]   S_dbg_raw10_seen_sync;
+    reg [1:0]   S_dbg_isp_fs_seen_sync;
+    reg [1:0]   S_dbg_isp_valid_seen_sync;
+    reg [1:0]   S_dbg_ddr_req_seen_sync;
+    reg [1:0]   S_dbg_ddr_ready_seen_sync;
+    reg         S_dbg_video_nonzero_seen;
+    reg         S_dbg_rd_req_seen;
+    reg         S_dbg_rd_valid_seen;
+    reg         S_dbg_rd_nonzero_seen;
+    reg [1:0]   S_dbg_rd_req_seen_sync;
+    reg [1:0]   S_dbg_rd_valid_seen_sync;
+    reg [1:0]   S_dbg_rd_nonzero_seen_sync;
+    reg         S_dbg_mc_init_seen;
+    reg         S_dbg_mc_app_rdy_seen;
+    reg         S_dbg_mc_wdf_rdy_seen;
+    reg         S_dbg_mc_cmd_pop_seen;
+    reg [1:0]   S_dbg_mc_init_seen_sync;
+    reg [1:0]   S_dbg_mc_app_rdy_seen_sync;
+    reg [1:0]   S_dbg_mc_wdf_rdy_seen_sync;
+    reg [1:0]   S_dbg_mc_cmd_pop_seen_sync;
+    wire[3:0]   S_hdmi_debug_status;
+    wire        S_lane_error_any;
+
+
+    // [以太网改造 第1步] 原 assign O_screen_pwm = 1'b1; 已删除（R11 让给 RGMII TXD0）。
+    assign S_video_out_vsync = ~S_hdmi_vsync;
+	
+	
+    assign S_rst_n 		= S_pll_lock;
+    assign S_hdmi_rst_n = S_pll_lock;
+
+    // =========================================================================
+    // [以太网改造 第1步] PLL 上电复位
+    //   原实现: PLL.reset = ~I_rst_n, 而 I_rst_n 约束在 R10 上——该球板上实际连到
+    //   PHY 的 TX_EN，**没有按键**。所以"复位"只是靠该球的内部弱上拉缓缓拉高，
+    //   上电确实能启动，但复位功能从未生效，且 PLL 一旦失锁就只能断电。
+    //   现在 R10 让给 RGMII，改由 pll_por 在 I_sys_clk(50MHz) 域产生 10ms 上电复位
+    //   窗口（异步复位 / 同步释放），不再依赖任何悬空引脚。
+    //   ⚠ pll_por 必须跑 I_sys_clk，不能跑 PLL 自己的输出（自举依赖）。
+    //   ext_arst_n 预留作运行中软复位，当前不使用，接 1'b1。
+    //   参考 docs/A板以太网改造方案.md §4.2。
+    // =========================================================================
+    wire S_por_rst;
+    wire S_por_arst_n;      // 低有效上电复位 -> 直接作 PHY 的 RESET_N
+
+    pll_por #(
+        .POR_CYCLES ( 32'd500_000 )      // 50MHz × 10ms
+    ) u_pll_por (
+        .clk        ( I_sys_clk   ),
+        .ext_arst_n ( 1'b1        ),
+        .pll_rst    ( S_por_rst   ),
+        .por_arst_n ( S_por_arst_n)
+    );
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_raw_seen <= 1'b0;
+        else if(S_raw10_frame_start | S_axis_tvalid)
+            S_dbg_raw_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_isp_seen <= 1'b0;
+        else if(S_ISP_O_tuser | S_ISP_O_tvalid)
+            S_dbg_isp_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_ddr_wr_seen <= 1'b0;
+        else if(S_vi_ddr_wr_en)
+            S_dbg_ddr_wr_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_ddr_rd_seen <= 1'b0;
+        else if(S_ddr_user_rd_valid)
+            S_dbg_ddr_rd_seen <= 1'b1;
+    end
+
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_cam_cfg_seen <= 1'b0;
+        else if(S_cam_cfg_done)
+            S_dbg_cam_cfg_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_hs_seen <= 1'b0;
+        else if(S_hs_rx_valid)
+            S_dbg_hs_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_csi_seen <= 1'b0;
+        else if(S_csi_frame_start | S_csi_valid)
+            S_dbg_csi_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_raw10_seen <= 1'b0;
+        else if(S_raw10_frame_start | S_raw10_valid)
+            S_dbg_raw10_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_isp_fs_seen <= 1'b0;
+        else if(S_ISP_O_tuser)
+            S_dbg_isp_fs_seen <= 1'b1;
+    end
+
+    always @(posedge S_csi_rx_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_isp_valid_seen <= 1'b0;
+        else if(S_ISP_O_tvalid)
+            S_dbg_isp_valid_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_ddr_req_seen <= 1'b0;
+        else if(S_vi_ddr_wr_en)
+            S_dbg_ddr_req_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_ddr_ready_seen <= 1'b0;
+        else if(S_ddr_user_ready)
+            S_dbg_ddr_ready_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
+        if(!S_video_out_rst_n)
+            S_dbg_rd_req_seen <= 1'b0;
+        else if(S_video_out_vsync)
+            S_dbg_rd_req_seen <= 1'b0;
+        else if(S_vo_ddr_rd_en)
+            S_dbg_rd_req_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_video_out_rst_n) begin
+        if(!S_video_out_rst_n)
+            S_dbg_rd_valid_seen <= 1'b0;
+        else if(S_video_out_vsync)
+            S_dbg_rd_valid_seen <= 1'b0;
+        else if(S_ddr_user_rd_valid)
+            S_dbg_rd_valid_seen <= 1'b1;
+    end
+
+    always @(posedge S_hdmi_pixel_clk or negedge S_video_out_rst_n) begin
+        if(!S_video_out_rst_n)
+            S_dbg_rd_nonzero_seen <= 1'b0;
+        else if(S_video_out_vsync)
+            S_dbg_rd_nonzero_seen <= 1'b0;
+        else if(S_hdmi_window_rd_en && (S_video_rd_data != 24'd0))
+            S_dbg_rd_nonzero_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_mc_init_seen <= 1'b0;
+        else if(S_init_calib_complete)
+            S_dbg_mc_init_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_mc_app_rdy_seen <= 1'b0;
+        else if(S_mc_dbg_app_rdy)
+            S_dbg_mc_app_rdy_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_mc_wdf_rdy_seen <= 1'b0;
+        else if(S_mc_dbg_wdf_rdy)
+            S_dbg_mc_wdf_rdy_seen <= 1'b1;
+    end
+
+    always @(posedge S_ddr_clk or negedge S_rst_n) begin
+        if(!S_rst_n)
+            S_dbg_mc_cmd_pop_seen <= 1'b0;
+        else if(S_mc_dbg_cmd_pop)
+            S_dbg_mc_cmd_pop_seen <= 1'b1;
+    end
+
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if(!S_hdmi_rst_n) begin
+            S_dbg_cam_cfg_seen_sync <= 2'b00;
+            S_dbg_hs_seen_sync      <= 2'b00;
+            S_dbg_csi_seen_sync     <= 2'b00;
+            S_dbg_raw10_seen_sync   <= 2'b00;
+            S_dbg_raw_seen_sync    <= 2'b00;
+            S_dbg_isp_seen_sync    <= 2'b00;
+            S_dbg_ddr_wr_seen_sync <= 2'b00;
+            S_dbg_ddr_rd_seen_sync <= 2'b00;
+            S_dbg_isp_fs_seen_sync  <= 2'b00;
+            S_dbg_isp_valid_seen_sync <= 2'b00;
+            S_dbg_ddr_req_seen_sync <= 2'b00;
+            S_dbg_ddr_ready_seen_sync <= 2'b00;
+            S_dbg_video_nonzero_seen <= 1'b0;
+            S_dbg_rd_req_seen_sync <= 2'b00;
+            S_dbg_rd_valid_seen_sync <= 2'b00;
+            S_dbg_rd_nonzero_seen_sync <= 2'b00;
+            S_dbg_mc_init_seen_sync <= 2'b00;
+            S_dbg_mc_app_rdy_seen_sync <= 2'b00;
+            S_dbg_mc_wdf_rdy_seen_sync <= 2'b00;
+            S_dbg_mc_cmd_pop_seen_sync <= 2'b00;
+        end
+        else begin
+            S_dbg_cam_cfg_seen_sync <= {S_dbg_cam_cfg_seen_sync[0], S_dbg_cam_cfg_seen};
+            S_dbg_hs_seen_sync      <= {S_dbg_hs_seen_sync[0],      S_dbg_hs_seen};
+            S_dbg_csi_seen_sync     <= {S_dbg_csi_seen_sync[0],     S_dbg_csi_seen};
+            S_dbg_raw10_seen_sync   <= {S_dbg_raw10_seen_sync[0],   S_dbg_raw10_seen};
+            S_dbg_raw_seen_sync    <= {S_dbg_raw_seen_sync[0],    S_dbg_raw_seen};
+            S_dbg_isp_seen_sync    <= {S_dbg_isp_seen_sync[0],    S_dbg_isp_seen};
+            S_dbg_ddr_wr_seen_sync <= {S_dbg_ddr_wr_seen_sync[0], S_dbg_ddr_wr_seen};
+            S_dbg_ddr_rd_seen_sync <= {S_dbg_ddr_rd_seen_sync[0], S_dbg_ddr_rd_seen};
+            S_dbg_isp_fs_seen_sync  <= {S_dbg_isp_fs_seen_sync[0],  S_dbg_isp_fs_seen};
+            S_dbg_isp_valid_seen_sync <= {S_dbg_isp_valid_seen_sync[0], S_dbg_isp_valid_seen};
+            S_dbg_ddr_req_seen_sync <= {S_dbg_ddr_req_seen_sync[0], S_dbg_ddr_req_seen};
+            S_dbg_ddr_ready_seen_sync <= {S_dbg_ddr_ready_seen_sync[0], S_dbg_ddr_ready_seen};
+            S_dbg_rd_req_seen_sync <= {S_dbg_rd_req_seen_sync[0], S_dbg_rd_req_seen};
+            S_dbg_rd_valid_seen_sync <= {S_dbg_rd_valid_seen_sync[0], S_dbg_rd_valid_seen};
+            S_dbg_rd_nonzero_seen_sync <= {S_dbg_rd_nonzero_seen_sync[0], S_dbg_rd_nonzero_seen};
+            S_dbg_mc_init_seen_sync <= {S_dbg_mc_init_seen_sync[0], S_dbg_mc_init_seen};
+            S_dbg_mc_app_rdy_seen_sync <= {S_dbg_mc_app_rdy_seen_sync[0], S_dbg_mc_app_rdy_seen};
+            S_dbg_mc_wdf_rdy_seen_sync <= {S_dbg_mc_wdf_rdy_seen_sync[0], S_dbg_mc_wdf_rdy_seen};
+            S_dbg_mc_cmd_pop_seen_sync <= {S_dbg_mc_cmd_pop_seen_sync[0], S_dbg_mc_cmd_pop_seen};
+            if(S_hdmi_window_rd_en && (S_video_rd_data != 24'd0))
+                S_dbg_video_nonzero_seen <= 1'b1;
+        end
+    end
+
+    assign S_lane_error_any = |S_lane_error;
+
+    assign S_vo_dbg_fifo_rst = 1'b0;
+    assign S_vo_dbg_ddr_rd_valid = 1'b0;
+    assign S_vo_dbg_fifo_rd_en = 1'b0;
+    assign S_vo_dbg_fifo_empty = 1'b0;
+    assign S_mc_dbg_fifo_afull = 1'b0;
+    assign S_mc_dbg_app_rdy = 1'b0;
+    assign S_mc_dbg_wdf_rdy = 1'b0;
+    assign S_mc_dbg_cmd_pop = 1'b0;
+
+    assign S_hdmi_debug_status = {
+        (|S_ddr_user_rd_data),
+        S_ddr_user_rd_valid,
+        S_vo_ddr_rd_en,
+        S_vi_ddr_wr_en
+    };
+	
+	assign O_cam_rst 	= 1'b1;
+    assign O_cam_24m 	= S_24m_clk;
+	
+	
+	
+	
+    PLL u_PLL(
+        .refclk      ( I_sys_clk         ),
+        // [以太网改造 第1步] 原 .reset(~I_rst_n)：I_rst_n 曾约束在 R10（板上实为
+        //   PHY 的 TX_EN，无按键），现改由 pll_por 产生的内部上电复位驱动。
+        .reset    	 ( S_por_rst         ),
+        
+        .clk0_out    ( S_100m_clk        ),
+        .clk1_out    ( S_24m_clk         ),
+
+        .clk4_out    ( S_hdmi_pixel_clk  ),
+        .clk5_out    ( S_hdmi_serial_clk ),
+
+        .lock        ( S_pll_lock        )
+
+    );
+
+    // =========================================================================
+    // [以太网改造 第2步] 网络链路例化（板 A 接入千兆网口）
+    //   独立网络 PLL + RGMII + TEMAC + UDP/IP 协议栈 + 跨时钟 FIFO，
+    //   应用层暂为安路官方 UDP 原样回环（net/udp_loopback.v），
+    //   第 3 步换成「取数 -> 降采样 -> 帧门控 -> 发 20 个 UDP 包」，
+    //   第 4 步再加「收人脸框 -> 画到 HDMI」。
+    //
+    //   视频链路完全不经过本模块：wrapper 不读任何视频信号，也不驱动任何视频
+    //   信号，所以第 1 步已上板验证的画面时序不受影响。
+    //
+    //   复位：por_arst_n 直接来自 pll_por（I_sys_clk 域 10ms 上电复位），
+    //         不占用任何按键，也不依赖 R10（R10 已让给 phy1_rgmii_tx_ctl）。
+    //   PHY 的 RESET_N 由 wrapper 内部用 25MHz 域数 250_000 拍(=10ms) 产生，
+    //         外加 pll_por 的 10ms，实际低电平约 20ms，满足 YT8511C 的 ≥10ms。
+    //
+    //   参考 docs/板A以太网改造_实施计划.md §5，相对其 §5.2 有的两处修正：
+    //     ① DEVICE 必须 "PH1P"（§5.2 原文已是 PH1P，这里保持）
+    //     ② 应用层用官方 udp_loopback，不用 §5.2 那段 4 行组合逻辑回环
+    //        （那版不等 request->ack 握手，收不到/回不出正确 UDP 包）
+    // =========================================================================
+    wire [3:0] net_led;          // ⚠ 必须先声明再用，否则被隐式声明成 1 位线
+
+    board_a_net_wrapper u_net (
+        .clk_50m            ( I_sys_clk           ),
+        .por_arst_n         ( S_por_arst_n        ),
+        // [第3步] 视频取数：pclk 域复位必须用 S_hdmi_rst_n（视频域），不要用网络域的复位
+        .I_pclk             ( S_hdmi_pixel_clk    ),
+        .I_pclk_rst_n       ( S_hdmi_rst_n        ),
+        .I_raw_tvalid       ( S_cnn_raw_tvalid    ),
+        .I_raw_tuser        ( S_cnn_raw_tuser     ),
+        .I_raw_tlast        ( S_cnn_raw_tlast     ),
+        .I_raw_tdata        ( S_cnn_raw_tdata     ),
+        .phy1_rgmii_rx_clk  ( phy1_rgmii_rx_clk   ),
+        .phy1_rgmii_rx_ctl  ( phy1_rgmii_rx_ctl   ),
+        .phy1_rgmii_rx_data ( phy1_rgmii_rx_data  ),
+        .phy1_rgmii_tx_clk  ( phy1_rgmii_tx_clk   ),
+        .phy1_rgmii_tx_ctl  ( phy1_rgmii_tx_ctl   ),
+        .phy1_rgmii_tx_data ( phy1_rgmii_tx_data  ),
+        .phy_reset          ( phy_reset           ),
+        .net_led            ( net_led             ),
+
+        // ★ [P0-5] 板 B 回结果 → 人脸框（pclk 域，供 osd_box_drawer 画框）
+        .O_face_valid       ( S_face_valid        ),
+        .O_face_x           ( S_face_x            ),
+        .O_face_y           ( S_face_y            ),
+        .O_face_w           ( S_face_w            ),
+        .O_face_h           ( S_face_h            )
+    );
+
+    // 板载 LED（原理图 LED0~LED3 = D10/E10/C6/D6，全部高电平点亮）
+    //   【第 3 步调试期】4 个灯全部给网口——视频侧已确认正常，
+    //   而"信号断在链路的哪一环"是当前唯一的问题。
+    //   这 4 个灯能把 板A <-> PC 的链路切成 4 段：
+    //     led[0] D10 = MAC 收到好帧（rx_correct_frame 展宽）-> PC 的包到了没有
+    //     led[1] E10 = MAC 在发帧（temac_tx_valid 展宽）    -> 板子有没有往外发
+    //     led[2] C6  = 一整帧 128x72 已发完（展宽 ~0.2s）   -> 图像通路
+    //     led[3] D6  = ARP 请求没收到回应（展宽）           -> 协议栈报告的 ARP 失败
+    //
+    //   判读（led[0]/led[1] 是分段的关键）：
+    //     灭 + 灭  -> 板子既收不到也发不出：PHY/RGMII 物理层，或 MAC 整体没工作
+    //     亮 + 灭  -> 收得到、发不出：发送侧（MAC TX / TX 时钟 / app 请求占死通路）
+    //     亮 + 亮  -> 在发东西但 PC 不理：发出去的帧不对（RGMII TX 相位/帧格式）
+    //     灭 + 亮  -> 盲发但收不到：接收侧
+    //   正常工作：led[2] 常亮（每 6 帧发一帧 ≈99ms < 展宽 200ms）、led[3] 灭
+    //
+    //   ⚠ 原来 led[1] = S_pll_lock（视频 PLL）。查完网口后记得把它换回来。
+    assign led = net_led;
+
+
+	
+
+  
+    // =========================================================================
+    // AE 手动/自动 模式切换按键 (I_button[3], 物理按键4)
+    //   20ms 去抖 + 下降沿翻转 S_ae_manual_mode
+    //   0 = 自动 (上电默认), 1 = 手动
+    // =========================================================================
+    localparam [19:0] BTN_DEB_MAX = 20'd479_999;   // 20ms @ 24MHz
+
+    reg  [19:0] btn_deb_cnt;
+    reg         btn_deb_state;
+    reg         btn_deb_prev;
+
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            btn_deb_cnt      <= 20'd0;
+            btn_deb_state    <= 1'b1;      // 按键低有效, 空闲为高
+            btn_deb_prev     <= 1'b1;
+            S_ae_manual_mode <= 1'b0;      // 上电默认自动
+        end else begin
+            // ---- 去抖 ----
+            if (I_button[3] == btn_deb_state) begin
+                btn_deb_cnt <= 20'd0;
+            end else if (btn_deb_cnt == BTN_DEB_MAX) begin
+                btn_deb_cnt   <= 20'd0;
+                btn_deb_state <= I_button[3];
+            end else begin
+                btn_deb_cnt <= btn_deb_cnt + 1'b1;
+            end
+
+            // ---- 下降沿 (= 按下) 翻转模式 ----
+            btn_deb_prev <= btn_deb_state;
+            if (btn_deb_prev && !btn_deb_state)
+                S_ae_manual_mode <= ~S_ae_manual_mode;
+        end
+    end
+
+  ae_set u_ae_set (
+      .I_clk(S_24m_clk),
+      .I_rst(~S_rst_n),
+      .I_btn({2'b11, I_button[1], I_button[0]}),
+      .I_cam_cfg_done(S_cam_cfg_done),
+      .I_ae_cfg_done(S_ae_cfg_done),
+      .O_ae_req( S_ae_req_manual),
+      .O_ae( S_ae_manual),
+      .O_ag( S_ag_manual)
+  );
+
+    assign S_ae     = S_ae_manual_mode ? S_ae_manual     : S_ae_auto;
+    assign S_ag     = S_ae_manual_mode ? S_ag_manual     : S_ag_auto;
+    assign S_ae_req = S_ae_manual_mode ? S_ae_req_manual : S_ae_req_auto;
+
+    // =========================================================================
+    // AE 模式（自动/手动）两级同步到 HDMI 像素域，供 OSD 提示使用
+    //   S_ae_manual_mode 在 24 MHz 域翻转，osd_overlay 在 75 MHz 像素域采样；
+    //   这里只做 2 级触发器同步（单比特电平信号，不需要握手）。
+    //   osd_overlay 内部按帧起始锁存它，模式变化时重启"显示 3 秒"计时。
+    //
+    //   S_ae_osd_ready 同理：摄像头寄存器表 + AE 表首次配置完（画面真的出来了）
+    //   时粘滞置 1，再同步到像素域，让 OSD 提示从"画面出现"重新开始算 3 秒。
+    //   ⚠ 必须粘滞：O_ae_cfg_done 在每次 AE 更新期间会短暂拉低，
+    //     直接用它会让提示在每次自动曝光调整时闪一下。
+    // =========================================================================
+    reg  [1:0] S_ae_manual_pix_sync;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)
+            S_ae_manual_pix_sync <= 2'b00;
+        else
+            S_ae_manual_pix_sync <= {S_ae_manual_pix_sync[0], S_ae_manual_mode};
+    end
+    wire S_ae_manual_pix = S_ae_manual_pix_sync[1];
+
+    reg S_ae_osd_ready_24m;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n)
+            S_ae_osd_ready_24m <= 1'b0;
+        else if (S_cam_cfg_done & S_ae_cfg_done)
+            S_ae_osd_ready_24m <= 1'b1;
+    end
+
+    reg  [1:0] S_ae_osd_ready_sync;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)
+            S_ae_osd_ready_sync <= 2'b00;
+        else
+            S_ae_osd_ready_sync <= {S_ae_osd_ready_sync[0], S_ae_osd_ready_24m};
+    end
+    wire S_ae_osd_ready_pix = S_ae_osd_ready_sync[1];
+
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // 自动曝光: 亮度统计 (HDMI 域, 统计 DDR 回读帧的平均亮度 Y)
+    // =========================================================================
+    // user/last 延迟链寄存器 (声明提前, 供亮度统计与 VPP 共用;
+    // 原声明位置在本模块靠后处, 移到这里避免先使用后声明的隐式网冲突)
+    reg S_vpp_user_d1, S_vpp_user_d2, S_vpp_user_d3;
+    reg S_vpp_last_d1, S_vpp_last_d2, S_vpp_last_d3;
+
+    wire [17:0] S_y_sum = S_hdmi_out_data[23:16] * 8'd54
+                        + S_hdmi_out_data[15:8]  * 8'd183
+                        + S_hdmi_out_data[7:0]   * 8'd18;
+    wire [7:0]  S_y_pix = S_y_sum[15:8];
+
+    brightness_stats #(
+        .IMG_WIDTH  (1280),
+        .IMG_HEIGHT (720)
+    ) u_brightness_stats (
+        .I_clk         (S_hdmi_pixel_clk),
+        .I_rst_n       (S_hdmi_rst_n),
+        .I_tlast       (S_vpp_last_d3),
+        .I_tuser       (S_vpp_user_d3),
+        .I_y_tdata     (S_y_pix),
+        .I_tvalid      (S_hdmi_out_de),
+        .I_tready      (1'b1),
+        .O_avg_y       (S_avg_y_pix),
+        .O_frame_done  (S_frame_done_pix)
+    );
+
+    // ---- avg_y 两级同步到 24M 域 ----
+    reg [7:0] S_avg_y_s1, S_avg_y_s2_r;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_avg_y_s1  <= 8'd0;
+            S_avg_y_s2_r<= 8'd0;
+        end else begin
+            S_avg_y_s1  <= S_avg_y_pix;
+            S_avg_y_s2_r<= S_avg_y_s1;
+        end
+    end
+    assign S_avg_y_s2 = S_avg_y_s2_r;
+
+    // ---- frame_done 展宽 + 同步 + 边沿还原 ----
+    reg [7:0] S_fd_ext;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)         S_fd_ext <= 8'd0;
+        else if (S_frame_done_pix) S_fd_ext <= 8'hFF;
+        else if (S_fd_ext != 8'd0) S_fd_ext <= S_fd_ext - 1'b1;
+    end
+    wire S_fd_wide = |S_fd_ext;
+
+    reg S_fd_s1, S_fd_s2, S_fd_s3;
+    always @(posedge S_24m_clk or negedge S_rst_n) begin
+        if (!S_rst_n) begin
+            S_fd_s1 <= 1'b0;
+            S_fd_s2 <= 1'b0;
+            S_fd_s3 <= 1'b0;
+        end else begin
+            S_fd_s1 <= S_fd_wide;
+            S_fd_s2 <= S_fd_s1;
+            S_fd_s3 <= S_fd_s2;
+        end
+    end
+    assign S_frame_done_24m = S_fd_s2 & ~S_fd_s3;
+
+    // =========================================================================
+    // 自动曝光: 传感器曝光时间闭环控制 (24M 域, 迟滞+限速防闪烁)
+    // =========================================================================
+    ae_auto #(
+        .TARGET_Y (100),
+        .AE_MAX   (1990),
+        .AE_MIN   (4),
+        .AE_INIT  (500),
+        .HYST     (20),
+        .KP       (1),
+        .STEP_MAX (30),       // 限速 ±30 行/次 (抗极限环)
+        .AG_VALUE (80),
+        .UPDATE_HOLD (3)      // 每 4 帧最多变更一次, 等待传感器环回延迟
+    ) u_ae_auto (
+        .I_clk        ( S_24m_clk           ),
+        .I_rst_n      ( S_rst_n             ),
+        .I_enable     ( ~S_ae_manual_mode   ),   // 手动模式时禁用
+        .I_avg_y      ( S_avg_y_s2          ),
+        .I_frame_done ( S_frame_done_24m    ),
+        .I_cfg_done   ( S_cam_cfg_done & S_ae_cfg_done ),
+        .O_ae         ( S_ae_auto           ),
+        .O_ag         ( S_ag_auto           ),
+        .O_ae_req     ( S_ae_req_auto       )
+    );
+  
+    // SC500CS factory HD mode: 1280x720@60, RAW10, 2-Lane, 480 Mbps/Lane.
+    uicfgcs500_720p #(
+      .CLK_DIV(24000000 / 100000 - 1)
+  ) u_uicfgcs500 (
+      .I_clk(S_24m_clk),  //系统时钟输入
+      .I_rst_n(S_rst_n),  //系统复位输入
+      .I_ae_req(S_ae_req),
+      .I_ae(S_ae),
+      .I_ag(S_ag),
+      .O_cam_scl(O_cam_scl),  //I2C总线，SCL时钟
+      .IO_cam_sda(IO_cam_sda),  //I2C总线，SDA数据
+      .O_cfg_done(S_cam_cfg_done),  //摄像头寄存器初始化完成
+      .O_ae_cfg_done(S_ae_cfg_done)  //AE配置完成
+  );
+	
+    mipi_dphy_rx_ph1p_mipiio_wrapper#(
+        .DPHY_RX_LOCATION      ( "DPHY0" ),
+        .HS_EQUALIZER          ( "0dB"   ),//"0dB","1.5dB","3dB","4.5dB","6dB","7.5dB","9dB","10.5dB"
+        .HS_VGA_GAIN           ( "8dB" ),//"-3dB","-1.5dB","0dB","1.5dB","3dB","4.5dB","6dB","7.5dB"
+        .LANE_NUM              ( 2       ),
+        .BYTE_NUM              ( 1       )
+    )u_mipi_dphy_rx_ph1p_mipiio_wrapper(
+        .I_lp_clk              ( S_100m_clk       ),
+        .I_rst                 ( ~S_rst_n         ),
+
+        .I_clk_lane_in_delay   ( 6'd0             ),
+        .I_data_lane0_in_delay ( 6'd0             ),
+        .I_data_lane1_in_delay ( 6'd0             ),
+        .I_data_lane2_in_delay ( 6'd0             ),
+        .I_data_lane3_in_delay ( 6'd0             ),
+
+        .I_lane_invert         ( 4'b0000          ),
+     
+        .O_hs_rx_clk           ( S_csi_rx_clk     ),
+        .O_hs_rx_valid         ( S_hs_rx_valid    ),
+        .O_hs_rx_data          ( S_hs_rx_data     ),
+      
+        .O_lp_rx_lane0_p       (  ),
+        .O_lp_rx_lane0_n       (  ),
+      
+        .I_lp_tx_en            ( 1'b0             ),
+        .I_lp_tx_lane0_p       ( 1'b1             ),
+        .I_lp_tx_lane0_n       ( 1'b1             ),
+      
+        .O_lane_match_error    (                  ),
+        .O_lane_error          ( S_lane_error     ),
+      
+        .IO_rx_clk_pad_n       ( IO_rx_clk_pad_n  ),
+        .IO_rx_clk_pad_p       ( IO_rx_clk_pad_p  ),
+        .IO_rx_data_pad_n      ( IO_rx_data_pad_n ),
+        .IO_rx_data_pad_p      ( IO_rx_data_pad_p )
+    );
+	
+	
+ //  cwc cwc_inst
+ //(
+ //    .probe0(S_hs_rx_valid),
+ //    .probe1(S_hs_rx_data),
+ //    .probe2(S_lane_error),
+ //    .clk(S_csi_rx_clk)
+ //);
+
+ //csi 解码为RAW数据
+csi_unpacket_2lane u_csi_unpacket(
+.I_clk                 ( S_csi_rx_clk       ),
+.I_rst_n               ( S_rst_n        	),
+.I_hs_valid            ( S_hs_rx_valid     ),
+.I_hs_data             ( S_hs_rx_data      ),
+
+.O_csi_frame_start     ( S_csi_frame_start ),
+.O_csi_frame_end       ( S_csi_frame_end   ),
+.O_csi_valid           ( S_csi_valid       ),
+.O_csi_data            ( S_csi_data        )
+);
+
+
+//解码为RAW8
+raw10_unpacket_2lane u_raw10_unpacket (
+.I_clk  (S_csi_rx_clk),
+.I_rst_n(S_rst_n),
+
+.I_csi_frame_start(S_csi_frame_start),
+.I_csi_frame_end  (S_csi_frame_end),
+.I_csi_valid      (S_csi_valid),
+.I_csi_data       (S_csi_data),
+
+.O_raw10_frame_start(S_raw10_frame_start),
+.O_raw10_frame_end  (S_raw10_frame_end),
+.O_raw10_valid      (S_raw10_valid),
+.O_raw10_data       (S_raw10_data)
+  );
+
+
+//将数据转为stream流
+uial2axis #(
+.IMG_WIDTH(1280),
+.IMG_HEIGHT(720),
+.INPUT_DATA_WIDTH(40)
+) 
+u_uial2axis (
+.I_native_clk(S_csi_rx_clk),
+.I_rst_n     (S_rst_n),
+.I_data      (S_raw10_data       ),
+.I_data_valid(S_raw10_valid      ),
+.I_data_start(S_raw10_frame_start),
+.I_data_end  (S_raw10_frame_end  ),
+.axis_tvalid (S_axis_tvalid),
+.axis_tdata  (S_axis_tdata ),
+.axis_tuser  (S_axis_tuser ),
+.axis_tlast  (S_axis_tlast )
+);
+	
+
+// The sensor already produces a real 1280x720 frame.  Do not pass it through
+// the legacy fixed 1024x600 image_correction crop; keep line/frame markers
+// aligned with the factory sensor output.
+assign S_raw_tdata  = S_axis_tdata;
+assign S_raw_tlast  = S_axis_tlast;
+assign S_raw_tvalid = S_axis_tvalid;
+assign S_raw_tuser  = S_axis_tuser;
+
+
+//cwc1 cwc1_Inst
+//  (
+//      .probe0(S_axis_tuser),
+//      .probe1(S_axis_tvalid),
+//      .probe2(S_axis_tlast),
+//      .probe3(S_axis_tdata),
+//      .probe4(S_ISP_O_tuser),
+//      .probe5(S_ISP_O_tvalid),
+//      .probe6(S_ISP_O_tlast),
+//      .probe7(S_ISP_O_tdata),
+//      .probe8 (S_raw_tdata ),
+//      .probe9 (S_raw_tlast ),
+//      .probe10(S_raw_tvalid),
+//      .probe11(S_raw_tuser ),
+//      .clk(S_csi_rx_clk)
+//  );
+
+
+//ISP算法顶层模块
+isp_top u_isp_top (
+.axi4s_video_aclk(S_csi_rx_clk),
+.I_rst_n         (S_rst_n),
+.I_tlast         (S_raw_tlast	),
+.I_tuser         (S_raw_tuser	),
+.I_tdata         (S_raw_tdata	),
+.I_tvalid        (S_raw_tvalid	),
+.I_tdest         (),
+.O_tready        (S_ISP_O_tready),
+.O_tdata         (S_ISP_O_tdata ),
+.O_tlast         (S_ISP_O_tlast ),
+.O_tuser         (S_ISP_O_tuser ),
+.O_tvalid        (S_ISP_O_tvalid),
+.I_tready        ()
+  );
+
+
+    video_in u_video_in(
+        .I_rst_n              (  S_rst_n             ),
+
+        .I_camera_clk         ( S_csi_rx_clk          ),
+        .I_camera_frame_start ( S_ISP_O_tuser  ),
+        .I_camera_valid       ( S_ISP_O_tvalid ),
+        .I_camera_data        ( S_ISP_O_tdata  ),
+        .I_mipi_rx_error      ( 1'b0			      ),
+
+        .I_ddr_clk            ( S_ddr_clk             ),
+		.I_display_pause      ( 1'b0                  ),
+        .I_video_out_rd_busy  ( S_video_out_rd_busy   ),
+        .O_video_in_wr_busy   ( S_video_in_wr_busy    ),
+        .O_video_out_rp       ( S_video_out_rp        ),
+        .O_frame_write_start  ( S_frame_write_start   ),
+        .O_frame_write_page   ( S_frame_write_page    ),
+
+        .O_ddr_user_wr_en     ( S_vi_ddr_wr_en        ),
+        .O_ddr_user_addr      ( S_vi_ddr_wr_addr      ),
+        .O_ddr_user_wr_data   ( S_vi_ddr_wr_data      ),
+        .I_ddr_user_ready     ( S_ddr_user_ready      )
+    );
+
+
+
+    assign S_ddr_user_wr_en    = S_vi_ddr_wr_en;
+
+    assign S_ddr_user_rd_en    = S_vo_ddr_rd_en;
+
+    assign S_ddr_user_addr     = S_vi_ddr_wr_en ? S_vi_ddr_wr_addr :
+                                 S_vo_ddr_rd_en ? S_vo_ddr_rd_addr : 'd0;
+
+    assign S_ddr_user_wr_data  = S_vi_ddr_wr_data;
+
+
+    assign S_video_out_rst_n = S_hdmi_rst_n;
+
+    video_out u_video_out(
+        .I_rst_n             ( S_video_out_rst_n    ),
+        .I_ddr_clk           ( S_ddr_clk            ),
+ 
+        .O_video_out_rd_busy ( S_video_out_rd_busy  ),
+        .I_video_in_wr_busy  ( S_video_in_wr_busy   ),
+        .I_video_out_rp      ( S_video_out_rp       ),
+        .O_video_frame_start ( S_video_out_frame_start ),
+        .O_video_frame_page  ( S_video_out_frame_page  ),
+ 
+        .O_ddr_user_rd_en    ( S_vo_ddr_rd_en       ),
+        .O_ddr_user_addr     ( S_vo_ddr_rd_addr     ),
+        .I_ddr_user_ready    ( S_ddr_user_ready     ),
+        .I_ddr_user_rd_valid ( S_ddr_user_rd_valid  ),
+        .I_ddr_user_rd_data  ( S_ddr_user_rd_data   ),
+
+        .I_dsi_clk           ( S_hdmi_pixel_clk     ),
+        .I_video_vsync       ( S_video_out_vsync    ),
+        .I_video_rd_en       ( S_hdmi_window_rd_en  ),
+        .O_vdieo_data        ( S_video_rd_data      )
+    );
+
+
+
+    // ---- ★ [延迟可视化] 采集 → HDMI 显示的真实帧延迟跟踪 ----
+    //   CSI 帧首打时间戳/帧序号 → 该帧写入 DDR 时绑定到“实际写入页”
+    //   → 显示帧首用“实际读取页”取模板标签 → 32 位模减 → 请求/应答握手送到像素域。
+    //   ⚠ DDR_CLK_HZ 必须与实际 DDR 用户时钟一致：本工程 u_ph1p35_324_ddr_wrapper 的
+    //     usr_clk 约束周期为 15.000ns = 66.667MHz（见 camera_to_dsi_display_Runs/phy_1/
+    //     final_timing.rpt 的 Clock Summary，clk1）。DDR 时钟配置改动时要同步改这里。
+    frame_delay_tracker #(
+        .DDR_CLK_HZ(66666667)
+    ) u_frame_delay_tracker (
+        .I_ddr_clk             ( S_ddr_clk                 ),
+        .I_ddr_rst_n           ( S_rst_n                   ),
+        .I_csi_clk             ( S_csi_rx_clk              ),
+        .I_csi_rst_n           ( S_rst_n                   ),
+        .I_csi_frame_start     ( S_csi_frame_start         ),
+        .I_write_frame_start   ( S_frame_write_start       ),
+        .I_write_page          ( S_frame_write_page        ),
+        .I_display_frame_start ( S_video_out_frame_start   ),
+        .I_display_page        ( S_video_out_frame_page    ),
+        .I_pixel_clk           ( S_hdmi_pixel_clk          ),
+        .I_pixel_rst_n         ( S_hdmi_rst_n              ),
+        .O_delay_valid         ( S_frame_delay_valid       ),
+        .O_delay_frames        ( S_frame_delay_frames      ),
+        .O_delay_ms            ( S_frame_delay_ms          ),
+        .O_fps_valid           ( S_capture_fps_valid       ),
+        .O_fps_tenths          ( S_capture_fps_tenths       )
+    );
+
+
+    mc_to_user_interface u_mc_to_user_interface(
+        .I_clk                   ( S_ddr_clk               ),
+        .I_rst_n                 ( S_rst_n                 ),
+
+        .I_ddr_user_wr_en        ( S_ddr_user_wr_en        ),
+        .I_ddr_user_rd_en        ( S_ddr_user_rd_en        ),
+        .I_ddr_user_addr         ( S_ddr_user_addr         ),
+        .I_ddr_user_wr_data      ( S_ddr_user_wr_data      ),
+        .O_ddr_user_ready        ( S_ddr_user_ready        ),
+        .O_ddr_user_rd_valid     ( S_ddr_user_rd_valid     ),
+        .O_ddr_user_rd_data      ( S_ddr_user_rd_data      ),
+            
+        .O_mc_app_en             ( S_mc_app_en             ),
+        .O_mc_app_addr           ( S_mc_app_addr           ),
+        .O_mc_app_cmd            ( S_mc_app_cmd            ),
+        .I_mc_app_rdy            ( S_mc_app_rdy            ),
+        .O_mc_app_wdf_wren       ( S_mc_app_wdf_wren       ),
+        .O_mc_app_wdf_data       ( S_mc_app_wdf_data       ),
+        .O_mc_app_wdf_end        ( S_mc_app_wdf_end        ),
+        .O_mc_app_wdf_mask       ( S_mc_app_wdf_mask       ),
+        .I_mc_app_wdf_rdy        ( S_mc_app_wdf_rdy        ),
+        .I_mc_app_rd_data        ( S_mc_app_rd_data        ),
+        .I_mc_app_rd_data_end    ( S_mc_app_rd_data_end    ),
+        .I_mc_app_rd_data_valid  ( S_mc_app_rd_data_valid  )
+    );
+
+
+
+    ph1p35_324_ddr_wrapper u_ph1p35_324_ddr_wrapper(
+        .I_sys_clk              ( I_sys_clk              ),
+        .I_sys_rst_n            ( S_rst_n                ),
+
+        .O_ddr_clk              ( S_ddr_clk              ),
+        .O_init_calib_complete  ( S_init_calib_complete  ),
+        .I_mc_app_addr          ( S_mc_app_addr          ),
+        .I_mc_app_cmd           ( S_mc_app_cmd           ),
+        .I_mc_app_en            ( S_mc_app_en            ),
+        .I_mc_app_wdf_data      ( S_mc_app_wdf_data      ),
+        .I_mc_app_wdf_end       ( S_mc_app_wdf_end       ),
+        .I_mc_app_wdf_mask      ( S_mc_app_wdf_mask      ),
+        .I_mc_app_wdf_wren      ( S_mc_app_wdf_wren      ),
+        .O_mc_app_rd_data       ( S_mc_app_rd_data       ),
+        .O_mc_app_rd_data_end   ( S_mc_app_rd_data_end   ),
+        .O_mc_app_rd_data_valid ( S_mc_app_rd_data_valid ),
+        .O_mc_app_rdy           ( S_mc_app_rdy           ),
+        .O_mc_app_wdf_rdy       ( S_mc_app_wdf_rdy       ),
+
+        .ddr_addr               ( ddr_addr               ),
+        .ddr_ba                 ( ddr_ba                 ),
+        .ddr_cke                ( ddr_cke                ),
+        .ddr_odt                ( ddr_odt                ),
+        .ddr_cs_n               ( ddr_cs_n               ),
+        .ddr_ras_n              ( ddr_ras_n              ),
+        .ddr_cas_n              ( ddr_cas_n              ),
+        .ddr_we_n               ( ddr_we_n               ),
+        .ddr_ck_p               ( ddr_ck_p               ),
+        .ddr_ck_n               ( ddr_ck_n               ),
+        .ddr_dm                 ( ddr_dm                 ),
+        .ddr_dq                 ( ddr_dq                 ),
+        .ddr_dqs_p              ( ddr_dqs_p              ),
+        .ddr_dqs_n              ( ddr_dqs_n              )
+    );
+
+
+
+    uivtc #(
+        .H_ActiveSize ( 1280 ),
+        .H_FrameSize  ( 1650 ),
+        .H_SyncStart  ( 1390 ),
+        .H_SyncEnd    ( 1430 ),
+        .V_ActiveSize ( 720  ),
+        .V_FrameSize  ( 750  ),
+        .V_SyncStart  ( 725  ),
+        .V_SyncEnd    ( 730  )
+    )u_hdmi_vtc(
+        .I_vtc_rstn    ( S_hdmi_rst_n    ),
+        .I_vtc_clk     ( S_hdmi_pixel_clk ),
+        .O_vtc_vs      ( S_hdmi_vsync     ),
+        .O_vtc_hs      ( S_hdmi_hsync     ),
+        .O_vtc_de_valid( S_hdmi_de        ),
+        .O_vtc_user    ( S_hdmi_user      ),
+        .O_vtc_last    ( S_hdmi_last      )
+    );
+
+    hdmi_mixer #(
+        .H_OFFSET   ( 0    ),
+        .V_OFFSET   ( 0    ),
+        .IMG_WIDTH  ( 1280 ),
+        .IMG_HEIGHT ( 720  ),
+        .DEBUG_MODE ( 0    )
+    )u_hdmi_mixer(
+        .I_clk           ( S_hdmi_pixel_clk   ),
+        .I_rst_n         ( S_hdmi_rst_n       ),
+        .I_video_vsync   ( S_hdmi_vsync       ),
+        .I_video_hsync   ( S_hdmi_hsync       ),
+        .I_video_de      ( S_hdmi_de          ),
+        .I_video_user    ( S_hdmi_user        ),
+        .I_video_last    ( S_hdmi_last        ),
+        .I_debug_status  ( S_hdmi_debug_status),
+        .O_video_rd_en   ( S_hdmi_window_rd_en),
+        .I_video_rd_data ( S_video_rd_data    ),
+        .O_hdmi_vsync    ( S_hdmi_out_vsync   ),
+        .O_hdmi_hsync    ( S_hdmi_out_hsync   ),
+        .O_hdmi_de       ( S_hdmi_out_de      ),
+        .O_hdmi_data     ( S_hdmi_out_data    )
+    );
+
+    // -------------------------------------------------------------------------
+    // user/last 延迟 3 拍: hdmi_mixer 输出 de/data 是 VTC 的 +3 拍
+    // (S_video_de_1d -> S_video_de_2d -> O_hdmi_de 三级寄存), 而 VTC 的
+    // user/last 与 VTC de_valid(+2拍) 对齐, 因此需延迟 3 拍与 mixer 输出对齐。
+    // (寄存器声明已提前到自动曝光亮度统计块之前)
+    // -------------------------------------------------------------------------
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n) begin
+            S_vpp_user_d1 <= 1'b0;
+            S_vpp_user_d2 <= 1'b0;
+            S_vpp_user_d3 <= 1'b0;
+            S_vpp_last_d1 <= 1'b0;
+            S_vpp_last_d2 <= 1'b0;
+            S_vpp_last_d3 <= 1'b0;
+        end else begin
+            S_vpp_user_d1 <= S_hdmi_user;
+            S_vpp_user_d2 <= S_vpp_user_d1;
+            S_vpp_user_d3 <= S_vpp_user_d2;
+            S_vpp_last_d1 <= S_hdmi_last;
+            S_vpp_last_d2 <= S_vpp_last_d1;
+            S_vpp_last_d3 <= S_vpp_last_d2;
+        end
+    end
+
+    // -------------------------------------------------------------------------
+    // vs 延迟 **27** 拍: vpp 流水线给 de/data 增加 27 拍
+    // (22 拍算法 + 2 拍 Logo/模式 OSD + **1 拍画框 osd_box_drawer** + 2 拍延迟 OSD),
+    // 为保证 hdmi_tx 看到的 vs 与 de 保持和现在(直连 mixer)相同的相位关系,
+    // 将 vs 同步延迟 27 拍。只影响 hdmi_tx 一路, DDR 读侧不受影响。
+    //
+    // [双边滤波变更] 卡通档引入 8 拍双边滤波, 整条 vpp 对齐由 16 拍放宽到 22 拍,
+    //   故同步由 20 拍改为 26 拍 (22 算法 + 2 Logo/模式 OSD + 2 延迟 OSD)。
+    // [P0-5 画框] 在 osd_overlay 与 delay_osd 之间插入 osd_box_drawer(1 拍寄存输出),
+    //   故同步由 26 拍改为 27 拍。
+    // [AE 模式提示] "自动曝光/手动曝光"复用 osd_overlay 内部已有的第一/第二级
+    //   流水（只是多一路并行的汉字字模查表，合并进 cn_hit_r2），**没有新增
+    //   寄存器级**，因此这里仍保持 27 拍不变。
+    //   ⚠ 今后只要在 vpp → osd_overlay → osd_box_drawer → delay_osd 这条 DE 链路上
+    //     增删寄存器级, 必须同步修改这里的拍数, 否则 hdmi_tx 的 vs/de 相位错位
+    //     (画面横向偏移)。
+    // -------------------------------------------------------------------------
+    reg [26:0] S_vsync_dly;
+    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+        if (!S_hdmi_rst_n)
+            S_vsync_dly <= 27'd0;
+        else
+            S_vsync_dly <= {S_vsync_dly[25:0], S_hdmi_out_vsync};
+    end
+
+    // =========================================================================
+    // VPP 图像算法处理: 按键切换 原图/灰度/直方图均衡/Sobel 边缘
+    // =========================================================================
+    vpp_top #(
+        .IMG_WIDTH       ( 1280 ),
+        .IMG_HEIGHT      ( 720  ),
+        .SOBEL_THRESHOLD ( 60   )
+    ) u_vpp_top (
+        .I_button        ( {I_button[3], I_button[2]} ), // vpp_btn[0]=物理按键2(模式切换), vpp_btn[1]=物理按键3(备用)
+        .I_clk           ( S_hdmi_pixel_clk ),
+        .I_rst_n         ( S_hdmi_rst_n     ),
+        .I_tlast         ( S_vpp_last_d3    ),
+        .I_tuser         ( S_vpp_user_d3    ),
+        .I_tdata         ( S_hdmi_out_data  ),
+        .I_tvalid        ( S_hdmi_out_de    ),
+        .I_tdest         ( 1'b0             ),
+        .I_tready        ( 1'b1             ),
+
+        .O_tdata         ( S_vpp_out_data   ),
+        .O_tlast         ( S_vpp_out_last   ),
+        .O_tuser         ( S_vpp_out_user   ),
+        .O_tvalid        ( S_vpp_out_de     ),
+        .O_tready        (                  ),
+        .O_display_mode  ( S_vpp_display_mode ),
+
+        // [以太网改造 第3步] CNN 取数口（raw_rgb_d[21] + 同拍控制信号）
+        .O_raw_tdata     ( S_cnn_raw_tdata    ),
+        .O_raw_tvalid    ( S_cnn_raw_tvalid   ),
+        .O_raw_tuser     ( S_cnn_raw_tuser    ),
+        .O_raw_tlast     ( S_cnn_raw_tlast    )
+
+    );
+
+    osd_overlay #(
+        .IMG_WIDTH      ( 1280 ),
+        .IMG_HEIGHT     ( 720  ),
+        .LOGO_X         ( 8    ),
+        .LOGO_Y         ( 8    ),
+        .LOGO_W         ( 160  ),
+        .LOGO_H         ( 160  ),
+        .TXT_X          ( 16   ),
+        .TXT_Y          ( 682  ),
+        .CN_X           ( 64   ),
+        .CN_Y           ( 172  ),
+        // 曝光模式提示："自动曝光" / "手动曝光"，贴屏幕左侧 (8,288)，
+        // 24 px 汉字（与"安路"同色同尺寸），上电及每次按键切换后显示 3 s。
+        .AE_X           ( 8    ),
+        .AE_Y           ( 288  ),
+        .AE_SHOW_FRAMES ( 180  )   // 180 帧 ≈ 3.0 s @60 fps
+    ) u_osd_overlay (
+        .I_clk          ( S_hdmi_pixel_clk ),
+        .I_rst_n        ( S_hdmi_rst_n     ),
+        .I_mode         ( S_vpp_display_mode ),
+        .I_ae_manual    ( S_ae_manual_pix  ),
+        .I_ae_ready     ( S_ae_osd_ready_pix ),
+        .I_tuser        ( S_vpp_out_user   ),
+        .I_tlast        ( S_vpp_out_last   ),
+        .I_tvalid       ( S_vpp_out_de     ),
+        .I_tdata        ( S_vpp_out_data   ),
+        .O_tuser        ( S_osd_overlay_user ),
+        .O_tlast        ( S_osd_overlay_last ),
+        .O_tvalid       ( S_osd_overlay_de   ),
+        .O_tdata        ( S_osd_overlay_data )
+    );
+
+    // ---- ★ [P0-5] 板 B 回来的人脸框 + 坐标数字：×10 画到 1280x720 显示流上 ----
+    //   插在 osd_overlay（Logo/模式字符）之后、delay_osd 之前。
+    //   注意：CNN 取数口是 vpp_top 的 O_raw_*（在更前面），所以 CNN 永远看不到
+    //   自己画的绿框，不存在"自反馈"。
+    //   ★ 本模块除绿框外，还在右上角以黑底白字叠加
+    //     "X:nnnn Y:nnnn W:nnnn H:nnnn"（27 字符 × 16 像素），
+    //     与绿框共用同一份锁存坐标和保持计时器。
+    //   ⚠ 本模块有 1 拍寄存输出 → 下面 S_vsync_dly 的拍数已同步 +1（26 → 27）。
+    wire        face_v_final;
+    wire [7:0]  face_x_final, face_y_final, face_w_final, face_h_final;
+
+    // ★★ 一键自检开关：把下面这行的注释去掉就打开（改完需重新综合+布线+烧写）★★
+    //   打开后：复位起前 6 秒，每帧画一个固定框 (200,200)-(500,500) 并显示
+    //   "X:0200 Y:0200 W:0300 H:0300"，完全绕开网络；6 秒后自动切回真实坐标。
+    //     6 s 内看得到固定框 → 显示通路 OK，问题只在网络/解析
+    //     6 s 内也看不到框   → 显示通路（画框模块或 OSD 链路拍数）有问题
+    // `define OSD_BOX_TEST
+
+//`ifdef OSD_BOX_TEST
+//    // ---- 临时自检：仅在仿真/测试显式定义 OSD_BOX_TEST 时，复位后前 ~6 秒
+//    //   每帧画一个**固定框**（位置 (20,20) 尺寸 30x30 → 显示 (200,200)-(500,500)）。
+//    //   用途：把"画框通路本身通不通"和"网络/解析有没有数据"彻底分开。
+//    //     看得到固定框  → 画框模块+插入位置都 OK（那没框就是网络/解析那边的问题）
+//    //     连固定框都没有 → 插入的画框模块没生效（或 osd 链路拍数不对）
+//    //   综合默认不包含这段逻辑。
+//    reg [28:0] st_cnt = 29'd0;
+//    always @(posedge S_hdmi_pixel_clk or negedge S_hdmi_rst_n) begin
+//        if (!S_hdmi_rst_n) st_cnt <= 29'd0;
+//        else if (st_cnt != 29'd449_999_999) st_cnt <= st_cnt + 29'd1;   // 6s @75MHz
+//    end
+//    wire st_pulse = (st_cnt != 29'd449_999_999) && S_vpp_out_user;   // 每帧起点触发一次
+//    assign face_v_final = S_face_valid | st_pulse;
+//    assign face_x_final = st_pulse ? 8'd20 : S_face_x;
+//    assign face_y_final = st_pulse ? 8'd20 : S_face_y;
+//    assign face_w_final = st_pulse ? 8'd30 : S_face_w;
+//    assign face_h_final = st_pulse ? 8'd30 : S_face_h;
+//`else
+//    assign face_v_final = S_face_valid;
+//    assign face_x_final = S_face_x;
+//    assign face_y_final = S_face_y;
+//    assign face_w_final = S_face_w;
+//    assign face_h_final = S_face_h;
+//`endif
+
+    osd_box_drawer #(
+        .IN_WIDTH     ( 1280 ),
+        .IN_HEIGHT    ( 720  ),
+        .SCALE_FACTOR ( 10   ),          // 128x72 检测空间 → 1280x720 显示空间
+        .LINE_THICK   ( 3    ),
+        .BOX_COLOR    ( 24'h00FF00 ),    // 亮绿
+        .HOLD_FRAMES  ( 30  ),          // ★ 原 15 帧=0.25s 太短：B 一旦漏检几次框就没了。
+                                         //   120 帧 ≈ 2 秒 @60fps，能跨过连续几次漏检；
+                                         //   想更跟手就调小（60=1s），想更"黏"就调大。
+                                         //   模块内的保持计数器是 8 位，>63 不会被截断。
+        .MIN_WH       ( 8'd2 ),          // 宽或高 < 2（128x72 空间）视为"本帧无检测"
+        // 如果"框还是太大"，在**不改板 B** 的前提下按这几组参数往回收：
+        //   SANITIZE    : h > 1.5w 时按 1.25w 重算（把"整幅高"的假框收回来）
+        //   SHRINK_LOG2 : 0=不收缩 1=×0.5 2=×0.75 3=×0.875（围绕框中心收，脸不会偏）
+        //   MAX_*_CELLS : 最大框（128x72 检测格）
+        //   2026-10-25 上板实测：板 B 现在会把 h 报到上限（h>=72 格 = 整幅高），
+        //   所以先按 70 格 / 72 格封顶；**板 B 的 w/h 恢复正常后请把 MAX_W_CELLS 调回 128**。
+        .SANITIZE     ( 1'b1 ),
+        .SHRINK_LOG2  ( 2'd0 ),
+        .MAX_W_CELLS  ( 8'd70 ),
+        .MAX_H_CELLS  ( 8'd72 )
+    ) u_box_drawer (
+        .I_clk        ( S_hdmi_pixel_clk  ),
+        .I_rst_n      ( S_hdmi_rst_n      ),
+        .I_tvalid     ( S_osd_overlay_de   ),
+        .I_tuser      ( S_osd_overlay_user ),
+        .I_tlast      ( S_osd_overlay_last ),
+        .I_tdata      ( S_osd_overlay_data ),
+        .I_face_valid ( face_v_final     ),
+        .I_face_x     ( face_x_final     ),
+        .I_face_y     ( face_y_final     ),
+        .I_face_w     ( face_w_final     ),
+        .I_face_h     ( face_h_final     ),
+        .O_tvalid     ( S_box_de          ),
+        .O_tuser      ( S_box_user        ),
+        .O_tlast      ( S_box_last        ),
+        .O_tdata      ( S_box_data        )
+    );
+
+    // ---- ★ [延迟 / 帧率可视化] OSD 显示真实帧龄、毫秒数与 CSI 输入帧率 ----
+    //   u_frame_delay_tracker 已在像素域给出稳定结果；页标签无效时 delay_valid=0，
+    //   数字区域自动隐藏（不显示伪造值）。
+    delay_osd #(
+        .IMG_WIDTH        ( 1280 ),
+        .IMG_HEIGHT       ( 720  )
+    ) u_delay_osd (
+        .I_clk             ( S_hdmi_pixel_clk ),
+        .I_rst_n           ( S_hdmi_rst_n     ),
+        .I_delay_valid     ( S_frame_delay_valid  ),
+        .I_delay_frames    ( S_frame_delay_frames ),
+        .I_delay_ms        ( S_frame_delay_ms     ),
+        .I_fps_valid       ( S_capture_fps_valid  ),
+        .I_fps_tenths      ( S_capture_fps_tenths ),
+        .I_tuser           ( S_box_user ),
+        .I_tlast           ( S_box_last ),
+        .I_tvalid          ( S_box_de   ),
+        .I_tdata           ( S_box_data ),
+        .O_tuser           ( S_delay_osd_user ),
+        .O_tlast           ( S_delay_osd_last ),
+        .O_tvalid          ( S_delay_osd_de   ),
+        .O_tdata           ( S_delay_osd_data )
+    );
+
+    hdmi_tx u_hdmi_tx(
+        .I_pixel_clk        ( S_hdmi_pixel_clk  ),
+        .I_serial_clk       ( S_hdmi_serial_clk ),
+        .I_rst              ( ~S_hdmi_rst_n     ),
+        .I_key_in           ( 1'b0              ),
+        .I_edid_read_trig   ( 1'b0              ),
+        .O_edid_read_valid  (                   ),
+        .O_edid_read_data   (                   ),
+        .I_video_rgb_enable ( 1'b1              ),
+        .I_video_in_vs      ( S_vsync_dly[26]   ), // 与 OSD 输出 de 同相位 (延迟 27 拍, 见上方说明)
+        .I_video_in_de      ( S_delay_osd_de    ), // VPP/OSD 处理后的数据有效使能
+        .I_video_in_user    ( 1'b0              ),
+        .I_video_in_valid   ( 1'b0              ),
+        .I_video_in_last    ( 1'b0              ),
+        .O_video_in_ready   (                   ),
+        .I_video_in_data    ( S_delay_osd_data  ), // VPP/OSD 处理后的 24 位像素
+        .I_audio_valid      ( 1'b0              ),
+        .I_audio_left_data  ( 24'd0             ),
+        .I_audio_right_data ( 24'd0             ),
+        .I_i2s_BCLK         ( 1'b0              ),
+        .I_i2s_LRCK         ( 1'b0              ),
+        .I_i2s_DOUT         ( 1'b0              ),
+        .O_ddc_scl          (                   ),
+        .O_hdmi_clk_p       (                   ),
+        .O_hdmi_tx_p        (                   ),
+        .O_tmds_ch0_p       ( O_tmds_ch0_p      ),
+        .O_tmds_ch1_p       ( O_tmds_ch1_p      ),
+        .O_tmds_ch2_p       ( O_tmds_ch2_p      ),
+        .O_tmds_clk_p       ( O_tmds_clk_p      )
+    );
+
+
+    
+endmodule
