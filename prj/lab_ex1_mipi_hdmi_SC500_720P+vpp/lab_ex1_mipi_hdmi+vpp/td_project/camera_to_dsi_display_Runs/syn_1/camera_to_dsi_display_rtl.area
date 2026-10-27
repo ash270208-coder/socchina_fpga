@@ -8,24 +8,24 @@ IO Statistics
   #inout                   37
 
 Gate Statistics
-#Basic gates            63582
-  #and                  22391
+#Basic gates            63784
+  #and                  22403
   #nand                     0
-  #or                     823
+  #or                     825
   #nor                      0
   #xor                     97
   #xnor                     0
   #buf                      0
-  #not                  18128
+  #not                  18153
   #bufif1                   1
   #MX21                  4432
   #FADD                     0
-  #DFF                  17710
+  #DFF                  17873
   #LATCH                    0
-#MACRO_ADD                645
-#MACRO_EQ                 313
+#MACRO_ADD                654
+#MACRO_EQ                 317
 #MACRO_MULT                27
-#MACRO_MUX               8790
+#MACRO_MUX               9014
 #MACRO_OTHERS              18
 
 LUT Statistics
@@ -40,7 +40,7 @@ Report Hierarchy Area:
 +-----------------------------------------------------------------------------------------------------------------------------------------+
 |Instance                                                         |Module                                         |gates  |seq    |macros |
 +-----------------------------------------------------------------------------------------------------------------------------------------+
-|top                                                              |design_top_wrapper                             |45872  |17710  |1003   |
+|top                                                              |design_top_wrapper                             |45911  |17873  |1016   |
 |  u_PLL                                                          |PLL                                            |0      |0      |1      |
 |    ph1p_phy_pll_wrapper_25a56e5ce2f9_Inst                       |ph1p_phy_pll_wrapper_25a56e5ce2f9              |0      |0      |0      |
 |  u_ae_auto                                                      |ae_auto                                        |16     |47     |17     |
@@ -104,8 +104,8 @@ Report Hierarchy Area:
 |      ALIGNER_CHANNEL_GEN[1]$u_channel_aligner                   |channel_aligner                                |7      |40     |0      |
 |    u_ph1p_mipiio_rx_wrapper                                     |ph1p_mipiio_rx_wrapper                         |8      |147    |15     |
 |      u_lane0_hs_detect                                          |hs_detect                                      |4      |12     |3      |
-|  u_osd_overlay                                                  |osd_overlay                                    |38769  |103    |44     |
-|    u_anlogic_logo_rom                                           |anlogic_logo_rom                               |38511  |0      |0      |
+|  u_osd_overlay                                                  |osd_overlay                                    |38797  |103    |44     |
+|    u_anlogic_logo_rom                                           |anlogic_logo_rom                               |38539  |0      |0      |
 |    u_osd_char_lib                                               |osd_char_lib                                   |53     |0      |3      |
 |  u_ph1p35_324_ddr_wrapper                                       |ph1p35_324_ddr_wrapper                         |4573   |3636   |327    |
 |    u_ddr2                                                       |ddr2                                           |4573   |3636   |327    |
@@ -185,7 +185,7 @@ Report Hierarchy Area:
 |    u_ae_table                                                   |uics500regAE                                   |30     |0      |0      |
 |    u_i2c                                                        |uii2c                                          |53     |33     |13     |
 |    u_init_table                                                 |uics500reg_720p60                              |161    |0      |0      |
-|  u_video_in                                                     |video_in                                       |61     |268    |13     |
+|  u_video_in                                                     |video_in                                       |63     |268    |13     |
 |    U_w128_d512_fifo                                             |w128_d512_fifo                                 |38     |222    |6      |
 |      soft_fifo_al_4057d6b76aa6_Inst                             |soft_fifo_al_4057d6b76aa6                      |38     |222    |6      |
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
@@ -197,7 +197,7 @@ Report Hierarchy Area:
 |        ram_inst                                                 |ram_infer_4057d6b76aa6                         |0      |128    |0      |
 |        rd_to_wr_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
 |        wr_to_rd_cross_inst                                      |fifo_cross_domain_addr_process_al_4057d6b76aa6 |16     |36     |0      |
-|  u_vpp_top                                                      |vpp_top                                        |198    |2014   |141    |
+|  u_vpp_top                                                      |vpp_top                                        |207    |2177   |154    |
 |    u_RGB888_YCbCr444                                            |RGB888_YCbCr444                                |5      |173    |13     |
 |    u_Sobel_edge                                                 |Sobel_edge_detection_top                       |81     |337    |26     |
 |      u_Dilation                                                 |Bit_Dilation_Detector                          |28     |36     |2      |
@@ -213,7 +213,7 @@ Report Hierarchy Area:
 |      u_Color_Quantize                                           |Color_Quantize                                 |0      |24     |0      |
 |    u_chroma_nr                                                  |chroma_nr                                      |3      |24     |22     |
 |    u_gamma_lut                                                  |gamma_lut                                      |0      |0      |6      |
-|    u_histogram_equ                                              |histogram_equ                                  |21     |127    |13     |
+|    u_histogram_equ                                              |histogram_equ                                  |30     |290    |26     |
 |      u_ram_accumulate                                           |ram_accumulate                                 |0      |0      |1      |
 |        ram_5b7716d404a0_Inst                                    |ram_5b7716d404a0                               |0      |0      |1      |
 |      u_ram_his                                                  |ram_2port                                      |0      |0      |1      |
