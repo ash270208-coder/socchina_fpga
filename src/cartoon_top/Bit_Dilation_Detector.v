@@ -16,10 +16,7 @@ module Bit_Dilation_Detector#(
     output  	        O_tvalid
 );
 
-
-    // =========================================================================
     // 1. 行列坐标计数器
-    // =========================================================================
     reg [11:0] col_cnt;
     reg [11:0] row_cnt;
 
@@ -46,9 +43,7 @@ module Bit_Dilation_Detector#(
         end
     end
     
-    // =========================================================================
-    // 2. 双行缓存（加入仿真 initial 清零，彻底消除 xxxxxx 不定态）
-    // =========================================================================
+    // 2. 双行缓存
     (* ram_style = "block" *) reg  line_buf0 [0:IMG_WIDTH-1];
     (* ram_style = "block" *) reg  line_buf1 [0:IMG_WIDTH-1];
 
@@ -78,10 +73,7 @@ module Bit_Dilation_Detector#(
         end
     end
     
-    
-    // =========================================================================
     // 3. 构建 3x3 滑动窗口矩阵
-    // =========================================================================
     reg  p11, p12, p13;
     reg  p21, p22, p23;
     reg  p31, p32, p33;
@@ -99,12 +91,7 @@ module Bit_Dilation_Detector#(
         end
     end
     
-    //PIXEL
-    //P11   P12     P13
-    //P21   P22     P23
-    //P31   P32     P33
     //采用3x3矩阵进行卷积
-    //Dilation Step 1
     reg O_img_Bit1,O_img_Bit2,O_img_Bit3;
     
     always @(posedge I_clk or negedge I_rst_n) begin

@@ -4,7 +4,7 @@ module ptz_servo_ctrl #(
     parameter CLK_HZ        = 25_000_000, 
     parameter ANGLE_MAX     = 270,        // 舵机最大角度
     parameter CENTER_CX2    = 128,        // 128空间下，中心点64，乘2为128
-    parameter DEADZONE      = 12,         // 死区（形心x2误差），12对应原空间6个像素
+    parameter DEADZONE      = 12,         // 死区，12对应原空间6个像素
     parameter STEP_DEG      = 2,          // 追踪时，每次收到结果最多转动的度数
     
     // ---- 回中相关参数 ----
@@ -65,7 +65,6 @@ module ptz_servo_ctrl #(
     // =========================================================================
     // 2. 超时与回中节拍逻辑
     // =========================================================================
-    // 丢失目标超时逻辑：只要收到有效人脸，计数器清零；否则一直累加
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             lost_cnt <= 32'd0;
@@ -78,7 +77,7 @@ module ptz_servo_ctrl #(
     
     wire target_lost = (lost_cnt >= TIMEOUT_CNT);
 
-    // 回中节拍发生器（类似 PWM，但周期是 20ms）
+    // 回中节拍发生器
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             mid_cnt <= 22'd0;
@@ -91,7 +90,7 @@ module ptz_servo_ctrl #(
     assign mid_tick = (mid_cnt == MID_UPD_CNT - 1);
 
     // =========================================================================
-    // 3. 舵机控制逻辑（包含 PWM 与 追踪/回中 状态机）
+    // 3. 舵机控制逻辑
     // =========================================================================
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -100,29 +99,29 @@ module ptz_servo_ctrl #(
             angle     <= CENTER_ANG;
         end
         else begin
-            // ---- PWM 发生器 (后台一直运行) ----
+            // PWM 发生器 
             if (pwm_cnt == PWM_PERIOD - 1)
                 pwm_cnt <= 0;
             else
                 pwm_cnt <= pwm_cnt + 1'b1;
 
-            // ---- 动态更新脉宽 ----
+            // 动态更新脉宽
             pulse_reg <= PULSE_MIN + (angle * (PULSE_RANGE / ANGLE_MAX));
 
-            // ---- 目标追踪 (优先级最高) ----
+            // 目标追踪 (优先级最高) 
             if (true_face_found) begin
-                // 目标偏右：角度减少 (反向)
+                // 目标偏右：角度减少 
                 if (error > DEADZONE) begin
                     if (angle >= step) angle <= angle - step;
                     else               angle <= 9'd0;
                 end
-                // 目标偏左：角度增加 (反向)
+                // 目标偏左：角度增加 
                 else if (error < -DEADZONE) begin
                     if (angle + step <= ANGLE_MAX) angle <= angle + step;
                     else                           angle <= ANGLE_MAX;
                 end
             end
-            // ---- 丢失目标超时 -> 平滑回中 ----
+            // 丢失目标超时,平滑回中 
             else if (target_lost && mid_tick) begin
                 if (angle > CENTER_ANG) begin
                     if (angle >= CENTER_ANG + MID_STEP_DEG) angle <= angle - MID_STEP_DEG;
